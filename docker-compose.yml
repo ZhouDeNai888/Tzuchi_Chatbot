@@ -1,0 +1,110 @@
+services:
+  nextjs:
+    build:
+      context: ./my-ai-chat
+      dockerfile: Dockerfile
+    ports:
+      - "80:3000"
+    environment:
+      - NODE_ENV=production
+      # - NEXT_PUBLIC_API_URL=http://localhost:80
+    networks:
+      - app_network
+
+  ai_server:
+    build: ./ai_server
+    ports:
+      - "8000:8000"
+    networks:
+      - app_network
+      
+    depends_on:
+      - ollama
+    environment:
+      - '/ollama/api=http://ollama:11434/api'
+    volumes:
+      - ./ai_server:/app  # Mount source code for live updates
+      - ai_server_data:/app/data  # Volume for persistent data
+
+  ngrok:
+    image: ngrok/ngrok
+    command:
+      - "http"
+      - "http://host.docker.internal:80"
+    networks:
+      - app_network
+    environment:
+      - NGROK_AUTHTOKEN=2qZIswww1OIlayRaOUMNGW9B6aT_4119Wkrbz1Ut97MMhSo4K
+    ports:
+      - 4040:4040
+
+  qdrant:
+    image: qdrant/qdrant
+    ports:
+      - "6333:6333"
+      - "6334:6334"
+    volumes:
+      - qdrant_data:/qdrant/storage
+    networks:
+      - app_network
+
+  # libretranslate:
+  #   image: libretranslate/libretranslate
+  #   container_name: libretranslate
+  #   restart: unless-stopped
+  #   ports:
+  #     - "5000:5000"
+  #   networks:
+  #     - app_network
+  #   environment:
+  #     - LT_API_KEYS= # สามารถปล่อยว่างไว้ (ถ้าไม่ต้องการ API Key)
+  #     - LT_DEBUG=true
+
+  # GPU Version
+  ollama:
+    volumes:
+      - ./ollama/ollama:/root/.ollama
+    container_name: ollama
+    pull_policy: always
+    tty: true
+    restart: unless-stopped
+    image: ollama/ollama:latest
+    ports:
+      - 11434:11434
+    networks:
+      - app_network
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+
+
+# # cpu version
+#   ollama:
+#     image: ollama/ollama:latest
+#     ports:
+#       - 11434:11434
+#     volumes:
+#       - .:/code
+#       - ./ollama/ollama:/root/.ollama
+#     container_name: ollama
+#     pull_policy: always
+#     tty: true
+#     restart: always
+#     networks:
+#       - app_network
+
+networks:
+  app_network:
+    driver: bridge
+
+  # nextjs_network:
+  #   driver: bridge
+  #   external: true
+
+volumes:
+  ai_server_data:
+  qdrant_data:

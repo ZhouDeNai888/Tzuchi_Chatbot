@@ -1,0 +1,5 @@
+/* This file is used to define global styles for the application. */
+@import "tailwindcss";
+
+@custom-variant dark (&:where(.dark, .dark *));
+
