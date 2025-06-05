@@ -14,4 +14,5 @@ export const metadata = {
   title: "Login",
   description: "Login page",
 };
-export const dynamic = "force-dynamic"; // force dynamic rendering
+
+export const dynamic = "force-dynamic"; // Force dynamic rendering to prevent stale state

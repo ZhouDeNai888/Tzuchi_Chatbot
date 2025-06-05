@@ -5,7 +5,7 @@ const API_BASE_URL = 'http://ai_server:8000';
 export async function POST(request: NextRequest) {
   try {
     const token = request.cookies.get('access_token')?.value;
-    
+
     if (!token) {
       return NextResponse.json({ error: 'No authentication token' }, { status: 401 });
     }
@@ -43,7 +43,7 @@ export async function POST(request: NextRequest) {
 export async function GET(request: NextRequest) {
   try {
     const token = request.cookies.get('access_token')?.value;
-    
+
     if (!token) {
       return NextResponse.json({ error: 'No authentication token' }, { status: 401 });
     }

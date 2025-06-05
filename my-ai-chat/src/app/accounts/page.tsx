@@ -15,6 +15,7 @@ import {
   Department,
   Permission as ApiPermission
 } from '@/utils/apiService';
+import ConfirmDeleteModal from '@/components/ConfirmDeleteModal';
 
 // Use a more specific type for our local permissions
 type AccountPermission = string | { PermissionName: string };
@@ -65,7 +66,7 @@ export default function AccountsPage() {
     email: '',
     first_name: '',
     last_name: '',
-    role: 'User',
+    role: 'user',
     department: '',
     permissions: []
   });
@@ -74,6 +75,15 @@ export default function AccountsPage() {
   const [availablePermissions, setAvailablePermissions] = useState<ApiPermission[]>([]);
   const [loading, setLoading] = useState(true);
   const [permissionsLoading, setPermissionsLoading] = useState(true);
+
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const [inputPage, setInputPage] = useState('');
+  const accountsPerPage = 10;
+
+  // Search functionality
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchType, setSearchType] = useState('all');
 
   // Fallback permissions in case API fails
   const defaultPermissions: ApiPermission[] = [
@@ -127,8 +137,12 @@ export default function AccountsPage() {
           id: String(user.UserID),
           username: user.Username,
           email: user.Email,
-          role: user.UserRole || 'User',
-          department: user.departments && user.departments.length > 0 ? user.departments[0].name : '',
+          role: user.UserRole || 'user',
+          department: user.departments && user.departments.length > 0
+            ? user.departments[0].name || // Try lowercase first (original code)
+            (user.departments[0] as any).Name || // Try uppercase (API response)
+            '' // Fallback if neither exists
+            : '',
           permissions: user.permissions || [],
           status: user.IsActive ? 'active' : 'inactive'
         } as Account));
@@ -142,8 +156,39 @@ export default function AccountsPage() {
       }
     };
     fetchData();
-
   }, []);
+
+  // Store the original accounts data when it's first loaded
+  const [originalAccounts, setOriginalAccounts] = useState<Account[]>([]);
+
+  useEffect(() => {
+    if (accounts.length > 0 && originalAccounts.length === 0) {
+      setOriginalAccounts(accounts);
+    }
+  }, [accounts, originalAccounts]);
+
+  // Filter accounts based on search query
+  useEffect(() => {
+    if (!searchQuery.trim()) {
+      // If search is cleared, restore original accounts
+      if (originalAccounts.length > 0) {
+        setAccounts(originalAccounts);
+      }
+      return;
+    }
+
+    const lowerQuery = searchQuery.toLowerCase();
+    const filtered = originalAccounts.filter(account => {
+      console.log('Filtering account:', account);
+      return (account.username?.toLowerCase() || '').includes(lowerQuery) ||
+        (account.email?.toLowerCase() || '').includes(lowerQuery) ||
+        (account.role?.toLowerCase() || '').includes(lowerQuery) ||
+        (account.department?.toLowerCase() || '').includes(lowerQuery);
+    });
+
+    setAccounts(filtered);
+    setCurrentPage(1); // Reset to first page on new search
+  }, [searchQuery, originalAccounts]);
 
   const isDuplicateUsername = (username: string): boolean => {
     return accounts.some(account => account.username.toLowerCase() === username.toLowerCase());
@@ -166,10 +211,10 @@ export default function AccountsPage() {
       // Find department id by name
       let departmentIds: number[] = [];
       if (newAccount.department) {
-        const dept = departments.find(d => d.name === newAccount.department);
+        const dept = departments.find(d => ((d as any).Name || d.name) === newAccount.department);
         console.log('Department found:', dept);
         if (dept) {
-          const deptId = Number(dept.department_id);
+          const deptId = Number((dept as any).DepartmentID || dept.department_id);
           if (!isNaN(deptId)) {
             departmentIds.push(deptId);
           }
@@ -217,7 +262,7 @@ export default function AccountsPage() {
         email: '',
         first_name: '',
         last_name: '',
-        role: 'User',
+        role: 'user',
         department: '',
         permissions: []
       });
@@ -247,7 +292,7 @@ export default function AccountsPage() {
   };
 
   const handleRoleChange = (role: string) => {
-    if (role === 'Administrator') {
+    if (role === 'admin') {
       setNewAccount(prev => ({
         ...prev,
         role,
@@ -262,6 +307,10 @@ export default function AccountsPage() {
     }
   };
 
+  // Modal state for delete confirmation
+  const [showDeleteModal, setShowDeleteModal] = useState<boolean>(false);
+  const [accountToDelete, setAccountToDelete] = useState<string | null>(null);
+
   const handleDelete = async (id: string) => {
     const currentUserId = localStorage.getItem('user_id');
 
@@ -270,20 +319,27 @@ export default function AccountsPage() {
       return;
     }
 
-    if (window.confirm(t.confirmDelete)) {
-      try {
-        setLoading(true);
+    setAccountToDelete(id);
+    setShowDeleteModal(true);
+  };
 
-        await deleteUser(id);
+  const confirmDelete = async () => {
+    if (!accountToDelete) return;
 
-        setAccounts(accounts.filter(account => account.id !== id));
-        toast.success('Account deleted successfully');
-      } catch (error) {
-        console.error('Error deleting account:', error);
-        toast.error(error instanceof Error ? error.message : 'Failed to delete account');
-      } finally {
-        setLoading(false);
-      }
+    try {
+      setLoading(true);
+
+      await deleteUser(accountToDelete);
+
+      setAccounts(accounts.filter(account => account.id !== accountToDelete));
+      toast.success('Account deleted successfully');
+    } catch (error) {
+      console.error('Error deleting account:', error);
+      toast.error(error instanceof Error ? error.message : 'Failed to delete account');
+    } finally {
+      setLoading(false);
+      setShowDeleteModal(false);
+      setAccountToDelete(null);
     }
   };
 
@@ -295,6 +351,47 @@ export default function AccountsPage() {
     const permission = availablePermissions.find(p => p.permission_name === permissionName);
     return permission?.description || permissionName;
   };
+
+  // Pagination logic
+  const totalPages = Math.ceil(accounts.length / accountsPerPage);
+
+  const handleNextPage = () => {
+    if (currentPage < totalPages) {
+      setCurrentPage(prev => prev + 1);
+    }
+  };
+
+  const handlePrevPage = () => {
+    if (currentPage > 1) {
+      setCurrentPage(prev => prev - 1);
+    }
+  };
+
+  const handlePageInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    setInputPage(value);
+
+    const page = Number(value);
+    if (!isNaN(page) && page >= 1 && page <= totalPages) {
+      setCurrentPage(page);
+    }
+  };
+
+  const handlePageSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    const page = Number(inputPage);
+    if (!isNaN(page) && page >= 1 && page <= totalPages) {
+      setCurrentPage(page);
+    } else {
+      setInputPage('');
+      setCurrentPage(1);
+    }
+  };
+
+  // Get current accounts for the displayed page
+  const startIndex = (currentPage - 1) * accountsPerPage;
+  const endIndex = startIndex + accountsPerPage;
+  const displayedAccounts = accounts.slice(startIndex, endIndex);
 
   return (
     <div className="min-h-screen bg-white dark:bg-black text-gray-900 dark:text-white p-8 pt-16">
@@ -345,8 +442,8 @@ export default function AccountsPage() {
           >
             <option key="default-department" value="">{t.form.selectDepartment}</option>
             {departments.map((dept) => (
-              <option key={dept.id} value={dept.name}>
-                {dept.name}
+              <option key={(dept as any).DepartmentID || dept.department_id || dept.id} value={(dept as any).Name || dept.name}>
+                {(dept as any).Name || dept.name}
               </option>
             ))}
           </select>
@@ -355,12 +452,12 @@ export default function AccountsPage() {
             onChange={(e) => handleRoleChange(e.target.value)}
             className="bg-white dark:bg-gray-700 text-gray-900 dark:text-white p-2 rounded border border-gray-300 dark:border-gray-600 focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400"
           >
-            <option key="user-role" value="User">{t.roles.user}</option>
-            <option key="admin-role" value="Administrator">{t.roles.administrator}</option>
+            <option key="user-role" value="user">{t.roles.user}</option>
+            <option key="admin-role" value="admin">{t.roles.administrator}</option>
           </select>
         </div>
 
-        {newAccount.role !== 'Administrator' && (
+        {newAccount.role !== 'admin' && (
           <div className="mb-4">
             <h3 className="text-sm font-bold mb-2">{t.form.permissions}</h3>
 
@@ -379,7 +476,7 @@ export default function AccountsPage() {
                       )}
                       onChange={() => handlePermissionChange(permission.permission_name)}
                       className="rounded bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600"
-                      disabled={newAccount.role === 'Administrator'}
+                      disabled={newAccount.role === 'admin'}
                     />
                     <div>
                       <span className="text-gray-700 dark:text-gray-300">{permission.permission_name}</span>
@@ -409,8 +506,25 @@ export default function AccountsPage() {
         </div>
       )}
 
+      {/* Search bar */}
+      <div className="mb-4">
+        <input
+          type="text"
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          placeholder={t.search.placeholder}
+          className="bg-white dark:bg-gray-700 text-gray-900 dark:text-white p-2 rounded border border-gray-300 dark:border-gray-600 focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 w-full"
+        />
+
+        {searchQuery && (
+          <div className="text-sm mt-2 text-gray-600 dark:text-gray-400">
+            {t.search.results.replace('{count}', accounts.length.toString())}
+          </div>
+        )}
+      </div>
+
       <div className="grid gap-4">
-        {accounts.map((account) => (
+        {displayedAccounts.map((account) => (
           <div
             key={account.id}
             className="bg-gray-100 dark:bg-gray-800 p-4 rounded-lg cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors shadow-md"
@@ -461,6 +575,57 @@ export default function AccountsPage() {
           </div>
         ))}
       </div>
+
+      {/* Pagination controls */}
+      <div className="mt-4 flex justify-between items-center">
+        <div className="text-sm text-gray-500 dark:text-gray-400">
+          {t.pagination.showing} {startIndex + 1} - {Math.min(endIndex, accounts.length)} {t.pagination.of} {accounts.length}
+        </div>
+        <div className="flex gap-2">
+          <button
+            onClick={handlePrevPage}
+            disabled={currentPage === 1}
+            className="bg-gray-200 dark:bg-gray-700 text-gray-900 dark:text-white px-3 py-1 rounded hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors disabled:opacity-50"
+          >
+            {t.pagination.prev}
+          </button>
+          <button
+            onClick={handleNextPage}
+            disabled={currentPage === totalPages}
+            className="bg-gray-200 dark:bg-gray-700 text-gray-900 dark:text-white px-3 py-1 rounded hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors disabled:opacity-50"
+          >
+            {t.pagination.next}
+          </button>
+        </div>
+      </div>
+
+      {/* Page number input */}
+      <div className="mt-2">
+        <form onSubmit={handlePageSubmit} className="flex gap-2">
+          <input
+            type="text"
+            value={inputPage}
+            onChange={handlePageInputChange}
+            placeholder={String(currentPage)}
+            className="bg-white dark:bg-gray-700 text-gray-900 dark:text-white p-2 rounded border border-gray-300 dark:border-gray-600 focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 w-16"
+          />
+          <button
+            type="submit"
+            className="bg-blue-600 dark:bg-blue-500 text-white px-3 py-1 rounded hover:bg-blue-700 dark:hover:bg-blue-600 transition-colors"
+          >
+            {t.pagination.go}
+          </button>
+        </form>
+      </div>
+
+      {/* Delete confirmation modal */}
+      <ConfirmDeleteModal
+        isOpen={showDeleteModal}
+        onClose={() => setShowDeleteModal(false)}
+        onConfirm={confirmDelete}
+        title="Confirm Delete Account"
+        message={t.confirmDelete || 'Are you sure you want to delete this account? This action cannot be undone.'}
+      />
     </div>
   );
 }

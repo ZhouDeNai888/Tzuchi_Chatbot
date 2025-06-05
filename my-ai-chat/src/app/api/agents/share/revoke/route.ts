@@ -1,77 +1,50 @@
 import { NextRequest, NextResponse } from 'next/server';
-import * as fs from 'fs';
-import * as path from 'path';
 
-// Interface for our stored shared agents
-interface SharedAgent {
-  id: string;
-  apiKey: string;
-  agentId: string;
-  name: string;
-  description: string;
-  allowedOrigins: string[];
-  usageLimit: number | null;
-  usageCount: number;
-  createdAt: string;
-  expiresAt: string | null;
-}
-
-// Path to shared agents file
-const DATA_DIR = path.join(process.cwd(), 'data');
-const SHARED_AGENTS_FILE = path.join(DATA_DIR, 'shared-agents.json');
-
-// Helper to load shared agents
-function loadSharedAgents(): SharedAgent[] {
-  try {
-    if (!fs.existsSync(SHARED_AGENTS_FILE)) {
-      return [];
-    }
-    
-    const data = fs.readFileSync(SHARED_AGENTS_FILE, 'utf8');
-    return JSON.parse(data);
-  } catch (error) {
-    console.error('Error loading shared agents:', error);
-    return [];
-  }
-}
-
-// Helper to save shared agents
-function saveSharedAgents(agents: SharedAgent[]): void {
-  try {
-    if (!fs.existsSync(DATA_DIR)) {
-      fs.mkdirSync(DATA_DIR, { recursive: true });
-    }
-    fs.writeFileSync(SHARED_AGENTS_FILE, JSON.stringify(agents, null, 2));
-  } catch (error) {
-    console.error('Error saving shared agents:', error);
-  }
-}
+const API_BASE_URL = 'http://ai_server:8000';
 
 export async function POST(request: NextRequest) {
   try {
-    const { apiKey } = await request.json();
-    
+    const token = request.cookies.get('access_token')?.value;
+
+    if (!token) {
+      return NextResponse.json({ error: 'No authentication token' }, { status: 401 });
+    }
+
+    // Parse the request body
+    const requestData = await request.json();
+    const apiKey = requestData.apiKey;
+
     if (!apiKey) {
-      return NextResponse.json({ error: 'API key is required' }, { status: 400 });
+      return NextResponse.json(
+        { error: 'API key is required' },
+        { status: 400 }
+      );
     }
-    
-    // Load existing shared agents
-    const sharedAgents = loadSharedAgents();
-    
-    // Remove the agent with the matching API key
-    const filteredAgents = sharedAgents.filter(agent => agent.apiKey !== apiKey);
-    
-    // Check if any agent was removed
-    if (filteredAgents.length === sharedAgents.length) {
-      return NextResponse.json({ error: 'API key not found' }, { status: 404 });
+
+    // Make request to backend API to update/revoke the shared agent
+    const response = await fetch(`${API_BASE_URL}/api/agents/share/revoke`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ api_key: apiKey }),
+    });
+
+    if (!response.ok) {
+      const data = await response.json();
+      return NextResponse.json(
+        { error: data.detail || 'Failed to revoke shared agent' },
+        { status: response.status }
+      );
     }
-    
-    // Save the updated list back to the file
-    saveSharedAgents(filteredAgents);
-    
+
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error('Error revoking API key:', error);
-    return NextResponse.json({ error: 'Failed to revoke API key' }, { status: 500 });
+    console.error('Revoke shared agent error:', error);
+    return NextResponse.json(
+      { error: 'Internal server error' },
+      { status: 500 }
+    );
   }
 }

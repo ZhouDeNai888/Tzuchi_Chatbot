@@ -1,49 +1,40 @@
 import { NextRequest, NextResponse } from 'next/server';
-import * as fs from 'fs';
-import * as path from 'path';
 
-// Interface for our stored shared agents
-interface SharedAgent {
-  id: string;
-  apiKey: string;
-  agentId: string;
-  name: string;
-  description: string;
-  allowedOrigins: string[];
-  usageLimit: number | null;
-  usageCount: number;
-  createdAt: string;
-  expiresAt: string | null;
-}
-
-// Path to shared agents file
-const DATA_DIR = path.join(process.cwd(), 'data');
-const SHARED_AGENTS_FILE = path.join(DATA_DIR, 'shared-agents.json');
-
-// Helper to load shared agents
-function loadSharedAgents(): SharedAgent[] {
-  try {
-    if (!fs.existsSync(SHARED_AGENTS_FILE)) {
-      return [];
-    }
-    
-    const data = fs.readFileSync(SHARED_AGENTS_FILE, 'utf8');
-    return JSON.parse(data);
-  } catch (error) {
-    console.error('Error loading shared agents:', error);
-    return [];
-  }
-}
+const API_BASE_URL = 'http://ai_server:8000';
 
 export async function GET(request: NextRequest) {
   try {
-    // Load the shared agents from the file system
-    const sharedAgents = loadSharedAgents();
-    
-    // Return the list of shared agents
-    return NextResponse.json({ sharedAgents });
+    const token = request.cookies.get('access_token')?.value;
+
+    if (!token) {
+      return NextResponse.json({ error: 'No authentication token' }, { status: 401 });
+    }
+
+    // Make request to backend API
+    const response = await fetch(`${API_BASE_URL}/api/agents/shared`, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+    });
+
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      return NextResponse.json(
+        { error: data.detail || 'Failed to get shared agents' },
+        { status: response.status }
+      );
+    }
+
+    return NextResponse.json(data);
   } catch (error) {
-    console.error('Error fetching shared agents:', error);
-    return NextResponse.json({ error: 'Failed to fetch shared agents' }, { status: 500 });
+    console.error('Get shared agents error:', error);
+    return NextResponse.json(
+      { error: 'Internal server error' },
+      { status: 500 }
+    );
   }
 }

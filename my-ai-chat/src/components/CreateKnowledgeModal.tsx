@@ -37,13 +37,12 @@ export default function CreateKnowledgeModal({ isOpen, onClose, onSubmit }: Crea
             />
           </div>
           <div className="mb-4">
-            <label htmlFor="description" className="block text-gray-700 dark:text-gray-300 mb-2">Description</label>
+            <label htmlFor="description" className="block text-gray-700 dark:text-gray-300 mb-2">Description (Optional)</label>
             <textarea
               id="description"
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               className="w-full bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-white p-2 rounded-lg border border-gray-300 dark:border-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 transition-colors h-32"
-              required
             />
           </div>
           <div className="flex justify-end gap-4">

@@ -5,12 +5,25 @@ const API_BASE_URL = 'http://ai_server:8000';
 export async function GET(request: NextRequest) {
   try {
     const token = request.cookies.get('access_token')?.value;
-    
+
     if (!token) {
       return NextResponse.json({ error: 'No authentication token' }, { status: 401 });
     }
 
-    const response = await fetch(`${API_BASE_URL}/api/agents`, {
+    // Get department_ids from URL search params
+    const searchParams = request.nextUrl.searchParams;
+    const departmentIds = searchParams.get('department_ids');
+    const departmentId = searchParams.get('department_id');
+
+    // Construct API URL with query parameters if present
+    let apiUrl = `${API_BASE_URL}/api/agents`;
+    if (departmentIds) {
+      apiUrl += `?department_ids=${departmentIds}`;
+    } else if (departmentId) {
+      apiUrl += `?department_id=${departmentId}`;
+    }
+
+    const response = await fetch(apiUrl, {
       method: 'GET',
       headers: {
         'Authorization': `Bearer ${token}`,
@@ -40,7 +53,7 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const token = request.cookies.get('access_token')?.value;
-    
+
     if (!token) {
       return NextResponse.json({ error: 'No authentication token' }, { status: 401 });
     }

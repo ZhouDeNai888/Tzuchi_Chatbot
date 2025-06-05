@@ -242,7 +242,7 @@ CREATE TABLE FeedbackRatings (
     FeedbackID INT IDENTITY(1,1) PRIMARY KEY,
     MessageID INT NOT NULL,
     UserID INT,
-    Rating INT NOT NULL, -- 1-5 stars
+    Rating INT NULL, -- 1-5 stars
     Comment NVARCHAR(500),
     CreatedAt DATETIME DEFAULT GETDATE() NOT NULL,
     FOREIGN KEY (MessageID) REFERENCES Messages(MessageID) ON DELETE CASCADE,
@@ -273,12 +273,12 @@ VALUES
     ('writing', 'Writing Assistant', 'Content creation, grammar, and writing improvement', 1);
 GO
 
--- Insert admin user with hashed password (password: Admin@123)
+-- Insert admin user with hashed password (password: admin1234)
 -- Note: In a production environment, use a proper password hashing function
 INSERT INTO Users (Username, Email, PasswordHash, FirstName, LastName, UserRole, IsActive)
 VALUES ('admin', 'admin@example.com', 
-        -- This is a bcrypt hash of 'Admin@123'
-        '$2a$12$tRCE4uYKEjVPzJ1Eq1xhNepBbQYxpNZZbtYqkRUxRTXXJQXBLfTZW', 
+        -- This is a bcrypt hash of 'admin1234'
+        '$2b$12$pMtKDqzCvp3JJmMRpv.TZuIzILuuHN7z8kAAttyTEdchLUEsXPKt.', 
         'System', 'Administrator', 'admin', 1);
 
 -- Get the admin UserID

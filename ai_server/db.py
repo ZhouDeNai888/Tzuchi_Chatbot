@@ -100,19 +100,30 @@ class Database():
                 # Add permissions
                 if user_id:
                     for permission_name in permissions:
-                        cursor.execute(
-                            "EXEC GrantPermissionToUser @UserID=?, @PermissionName=?, @GrantedBy=?",
-                            (user_id, permission_name, user_id)
-                        )
+                        # Check if user already has this permission
+                        cursor.execute("""
+                            SELECT 1 FROM UserPermissions up
+                            JOIN Permissions p ON up.PermissionID = p.PermissionID
+                            WHERE up.UserID = ? AND p.PermissionName = ?
+                        """, (user_id, permission_name))
+                        
+                        if not cursor.fetchone():
+                            try:
+                                cursor.execute(
+                                    "EXEC GrantPermissionToUser @UserID=?, @PermissionName=?, @GrantedBy=?",
+                                    (user_id, permission_name, user_id)
+                                )
+                            except pyodbc.Error as perm_err:
+                                # Log the permission error but continue with other permissions
+                                logger.warning(f"Could not add permission '{permission_name}' to user '{username}': {perm_err}")
+                                continue
                     
                     self.conn.commit()
                     cursor.close()
                     logger.info(f"User '{username}' created with ID: {user_id} and permissions added")
                     return user_id
-            
             logger.info(f"User '{username}' created successfully")
             return None
-
         except pyodbc.Error as e:
             logger.error("Error creating user: %s", e)
             if self.conn:
@@ -215,9 +226,18 @@ class Database():
             ]
             
             for field in updateable_fields:
-                if field.lower() in kwargs:
+                if (field.lower() in kwargs and field != 'IsActive'):
                     update_fields.append(f"{field} = ?")
                     update_values.append(kwargs[field.lower()])
+                elif 'first_name' in kwargs and field == 'FirstName':
+                    update_fields.append("FirstName = ?")
+                    update_values.append(kwargs['first_name'])
+                elif 'last_name' in kwargs and field == 'LastName':
+                    update_fields.append("LastName = ?")
+                    update_values.append(kwargs['last_name'])
+            if 'is_active' in kwargs:
+                update_fields.append("IsActive = ?")
+                update_values.append(1 if kwargs['is_active'] else 0)
             
             # Handle password update separately (needs hashing)
             if 'password' in kwargs:
@@ -370,12 +390,17 @@ class Database():
             cursor = self.conn.cursor()
             
             # Get user by username
-            cursor.execute("SELECT UserID, PasswordHash,UserRole FROM Users WHERE Username = ? AND IsActive = 1", (username,))
+            cursor.execute("SELECT UserID, PasswordHash, UserRole, IsActive FROM Users WHERE Username = ?", (username,))
             user = cursor.fetchone()
             
             if not user:
-                logger.warning(f"Authentication failed: User '{username}' not found or not active")
-                return None
+                logger.warning(f"Authentication failed: User '{username}' not found")
+                return {"error_code": 1, "error_message": "Incorrect username or password"}
+            
+            # Check if account is active
+            if not user.IsActive:
+                logger.warning(f"Authentication failed: Account for user '{username}' is inactive")
+                return {"error_code": 2, "error_message": "Account is inactive"}
                 
             # Verify password
             stored_hash = user.PasswordHash
@@ -390,11 +415,11 @@ class Database():
                 return user
             else:
                 logger.warning(f"Authentication failed: Invalid password for user '{username}'")
-                return None
+                return {"error_code": 1, "error_message": "Incorrect username or password"}
                 
         except pyodbc.Error as e:
             logger.error("Error authenticating user: %s", e)
-            return None
+            return {"error_code": 3, "error_message": "An error occurred during authentication"}
         finally:
             if cursor:
                 cursor.close()
@@ -432,13 +457,26 @@ class Database():
                 return True
                 
             # Check if permission exists
-            cursor.execute("SELECT 1 FROM Permissions WHERE PermissionName = ?", (permission_name,))
-            if not cursor.fetchone():
+            cursor.execute("SELECT PermissionID FROM Permissions WHERE PermissionName = ?", (permission_name,))
+            permission = cursor.fetchone()
+            if not permission:
                 logger.warning(f"Permission '{permission_name}' does not exist")
                 cursor.close()
                 return False
             
-            # Call stored procedure
+            # Check if user already has this permission
+            cursor.execute("""
+                SELECT 1 FROM UserPermissions up
+                JOIN Permissions p ON up.PermissionID = p.PermissionID
+                WHERE up.UserID = ? AND p.PermissionName = ?
+            """, (user_id, permission_name))
+            
+            if cursor.fetchone():
+                logger.info(f"User ID {user_id} already has permission '{permission_name}'")
+                cursor.close()
+                return True
+            
+            # Call stored procedure to grant the permission
             cursor.execute(
                 "EXEC GrantPermissionToUser @UserID=?, @PermissionName=?, @GrantedBy=?",
                 (user_id, permission_name, granted_by)
@@ -925,10 +963,10 @@ class Database():
             
     def get_all_departments(self):
         """
-        Get all departments in the database.
+        Get all departments in the database, including user and knowledge base counts.
         
         Returns:
-            list: List of all departments with user counts
+            list: List of all departments with user and knowledge base counts
         """
         try:
             if not self.conn:
@@ -938,7 +976,8 @@ class Database():
             
             cursor.execute("""
                 SELECT d.*, 
-                       (SELECT COUNT(*) FROM UserDepartments WHERE DepartmentID = d.DepartmentID) AS UserCount
+                       (SELECT COUNT(*) FROM UserDepartments WHERE DepartmentID = d.DepartmentID) AS UserCount,
+                       (SELECT COUNT(*) FROM KnowledgeBases WHERE DepartmentID = d.DepartmentID) AS KnowledgeBaseCount
                 FROM Departments d
                 ORDER BY d.Name
             """)
@@ -953,7 +992,7 @@ class Database():
             
             cursor.close()
             
-            logger.info(f"Retrieved {len(departments)} departments")
+            logger.info(f"Retrieved {len(departments)} departments with user and knowledge base counts")
             return departments
             
         except pyodbc.Error as e:
@@ -1412,14 +1451,14 @@ class Database():
                 cursor.close()
                 return False
                 
-            # Check if agent is referenced by other tables (like Messages)
-            cursor.execute("SELECT COUNT(*) AS MessageCount FROM Messages WHERE AgentID = ?", (agent_id,))
-            message_count = cursor.fetchone().MessageCount
+            # # Check if agent is referenced by other tables (like Messages)
+            # cursor.execute("SELECT COUNT(*) AS MessageCount FROM Messages WHERE AgentID = ?", (agent_id,))
+            # message_count = cursor.fetchone().MessageCount
             
-            if message_count > 0:
-                logger.warning(f"Agent ID {agent_id} has {message_count} messages using it. Cannot delete.")
-                cursor.close()
-                return False
+            # if message_count > 0:
+            #     logger.warning(f"Agent ID {agent_id} has {message_count} messages using it. Cannot delete.")
+            #     cursor.close()
+            #     return False
                 
             # Delete the agent (cascades to AgentKnowledgeBases and SharedAgents)
             cursor.execute("DELETE FROM Agents WHERE AgentID = ?", (agent_id,))
@@ -2001,7 +2040,7 @@ class Database():
             cursor.execute(
                 """
                 INSERT INTO KnowledgeDocuments (KnowledgeBaseID, Title, Content, FileURL, FileType, IsProcessed)
-                VALUES (?, ?, ?, ?, ?, 0)
+                VALUES (?, ?, ?, ?, ?, 1)
                 """,
                 (knowledge_base_id, title, content, file_url, file_type)
             )
@@ -2697,7 +2736,7 @@ class Database():
                 # Update existing rating
                 cursor.execute("""
                     UPDATE FeedbackRatings 
-                    SET Rating = ?,UserID = ?, LastUpdatedAt = GETDATE()
+                    SET Rating = ?,UserID = ?, CreatedAt = GETDATE()
                     WHERE FeedbackID = ?
                 """, (rating,user_id, existing_rating[0]))
             
@@ -2842,10 +2881,7 @@ class Database():
         except pyodbc.Error as e:
             logger.error(f"Error getting all messages: {e}")
             return []
-
-
-
-
+            
     def get_shared_agents(self, user_id):
         """
         Get all shared agents created by a user.
@@ -2889,7 +2925,7 @@ class Database():
 
 
     # Shared Agent Management Functions
-    def create_shared_agent(self, agent_id, shared_by_user_id, name, description=None, allowed_origins=None, usage_limit=None, expires_at=None):
+    def create_shared_agent(self, agent_id, shared_by_user_id, name, description=None, allowed_origins=None, usage_limit=None, expires_at=None, api_key=None):
         """
         Create a new shared agent using the stored procedure.
         
@@ -2900,8 +2936,8 @@ class Database():
             description (str, optional): Description for external users
             allowed_origins (str, optional): Comma-separated list of allowed website origins
             usage_limit (int, optional): Maximum number of API calls allowed
-            expires_at (datetime, optional): Expiration date
-            
+            expires_at (datetime or int, optional): Expiration date or timestamp
+            api_key (str, optional): API key for the shared agent
         Returns:
             dict: Details of the newly created shared agent including API key, or None if failed
         """
@@ -2924,28 +2960,92 @@ class Database():
                 logger.warning(f"User ID {shared_by_user_id} not found")
                 cursor.close()
                 return None
+            
+            # Handle expires_at conversion to SQL Server compatible datetime
+            sql_expires_at = None
+            if expires_at is not None:
+                try:
+                    # If it's already a datetime object, use it directly
+                    if isinstance(expires_at, datetime):
+                        sql_expires_at = expires_at
+                    # If it's an integer (timestamp), convert to datetime
+                    elif isinstance(expires_at, int):
+                        sql_expires_at = datetime.fromtimestamp(expires_at)
+                    # Otherwise try to convert from string format
+                    else:
+                        logger.info(f"Converting expires_at value: {expires_at}")
+                        sql_expires_at = datetime.fromtimestamp(expires_at)
+                except Exception as e:
+                    logger.error(f"Error converting expires_at to datetime: {e}")
+                    logger.info(f"Setting expires_at to None due to conversion error")
+                    sql_expires_at = None
                 
-            # Call stored procedure
+                # Ensure date is within SQL Server's valid range
+                min_date = datetime(1753, 1, 1)
+                max_date = datetime(9999, 12, 31)
+                if sql_expires_at and (sql_expires_at < min_date or sql_expires_at > max_date):
+                    logger.warning(f"expires_at date {sql_expires_at} out of range for SQL Server datetime, using NULL")
+                    sql_expires_at = None
+            
+            # Call stored procedure with properly converted datetime
             cursor.execute(
                 """
-                EXEC CreateSharedAgent 
-                    @AgentID=?, @SharedByUserID=?, @Name=?, @Description=?, 
-                    @AllowedOrigins=?, @UsageLimit=?, @ExpiresAt=?
+                INSERT INTO SharedAgents (
+                    AgentID, SharedByUserID, Name, Description, 
+                    AllowedOrigins, UsageLimit, ExpiresAt, ApiKey, IsActive, CreatedAt
+                )
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1, GETDATE())
                 """,
-                (agent_id, shared_by_user_id, name, description, allowed_origins, usage_limit, expires_at)
+                (agent_id, shared_by_user_id, name, description, allowed_origins, usage_limit, sql_expires_at, api_key)
             )
             
-            # Get the shared agent details
-            row = cursor.fetchone()
-            if not row:
-                logger.warning("Failed to create shared agent")
-                self.conn.rollback()
-                cursor.close()
-                return None
+            # Manually fetch the results since some ODBC drivers don't handle
+            # stored procedures that both modify data and return results well
+            shared_agent = None
+            
+            # Check if there are results to fetch
+            if cursor.description:
+                # Get the result from the stored procedure
+                row = cursor.fetchone()
+                if row:
+                    columns = [column[0] for column in cursor.description]
+                    shared_agent = dict(zip(columns, row))
+            
+            # If no results from fetch, we need to execute another query to get the shared agent details
+            if not shared_agent:
+                # Get the ShareID of the newly created shared agent
+                cursor.execute("""
+                    SELECT ShareID FROM SharedAgents 
+                    WHERE AgentID = ? AND SharedByUserID = ? AND Name = ?
+                    ORDER BY CreatedAt DESC
+                """, (agent_id, shared_by_user_id, name))
                 
-            # Convert to dictionary
-            columns = [column[0] for column in cursor.description]
-            shared_agent = dict(zip(columns, row))
+                share_id_row = cursor.fetchone()
+                if not share_id_row:
+                    logger.warning("Failed to retrieve ShareID of newly created shared agent")
+                    self.conn.rollback()
+                    cursor.close()
+                    return None
+                
+                share_id = share_id_row[0]
+                
+                # Now get the complete shared agent details
+                cursor.execute("""
+                    SELECT sa.*, a.Name AS AgentName, a.Description AS AgentDescription
+                    FROM SharedAgents sa
+                    JOIN Agents a ON sa.AgentID = a.AgentID
+                    WHERE sa.ShareID = ?
+                """, (share_id,))
+                
+                row = cursor.fetchone()
+                if not row:
+                    logger.warning(f"Failed to retrieve details for ShareID {share_id}")
+                    self.conn.rollback()
+                    cursor.close()
+                    return None
+                
+                columns = [column[0] for column in cursor.description]
+                shared_agent = dict(zip(columns, row))
             
             self.conn.commit()
             cursor.close()
@@ -2961,14 +3061,13 @@ class Database():
     
     def get_shared_agent_by_api_key(self, api_key):
         """
-        Get shared agent details by API key using the stored procedure.
-        Also updates the last used timestamp and usage count.
+        Get shared agent details by API key.
         
         Args:
             api_key (str): The API key of the shared agent
             
         Returns:
-            dict: Shared agent details, or None if not found/expired/over limit
+            dict: Shared agent details, or None if not found
         """
         try:
             if not self.conn:
@@ -2976,12 +3075,14 @@ class Database():
                 
             cursor = self.conn.cursor()
             
-            # Call stored procedure
-            cursor.execute("EXEC GetSharedAgentByApiKey @ApiKey=?", (api_key,))
-            
+            # Query shared agent by API key
+            cursor.execute("SELECT * FROM SharedAgents WHERE ApiKey = ?", (api_key,))
             row = cursor.fetchone()
+
+            print(f'Row: {row}')
+            
             if not row:
-                logger.warning(f"Shared agent with API key '{api_key}' not found, expired, or over usage limit")
+                logger.warning(f"No shared agent found with API key '{api_key}'")
                 cursor.close()
                 return None
                 
@@ -2989,11 +3090,8 @@ class Database():
             columns = [column[0] for column in cursor.description]
             shared_agent = dict(zip(columns, row))
             
-            # Commit the updates made by the stored procedure
-            self.conn.commit()
             cursor.close()
-            
-            logger.info(f"Retrieved and updated shared agent with API key: {api_key}")
+            logger.info(f"Retrieved shared agent with API key: {api_key}")
             return shared_agent
             
         except pyodbc.Error as e:
@@ -3118,13 +3216,13 @@ class Database():
     
     def delete_shared_agent(self, share_id):
         """
-        Delete a shared agent.
+        Delete a shared agent by ID.
         
         Args:
             share_id (int): The ID of the shared agent to delete
             
         Returns:
-            bool: True if deletion successful, False otherwise
+            bool: True if successful, False otherwise
         """
         try:
             if not self.conn:
@@ -3132,21 +3230,15 @@ class Database():
                 
             cursor = self.conn.cursor()
             
-            # Check if shared agent exists
-            cursor.execute("SELECT 1 FROM SharedAgents WHERE ShareID = ?", (share_id,))
-            if not cursor.fetchone():
-                logger.warning(f"Shared Agent ID {share_id} not found")
-                cursor.close()
-                return False
-                
-            # Delete the shared agent
+            # Delete the shared agent record
             cursor.execute("DELETE FROM SharedAgents WHERE ShareID = ?", (share_id,))
             
             self.conn.commit()
+            result = cursor.rowcount > 0
             cursor.close()
             
-            logger.info(f"Shared Agent ID {share_id} deleted successfully")
-            return True
+            logger.info(f"Shared agent with ID {share_id} deleted successfully: {result}")
+            return result
             
         except pyodbc.Error as e:
             logger.error(f"Error deleting shared agent: {e}")

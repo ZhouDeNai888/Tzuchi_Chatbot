@@ -5,8 +5,8 @@ const API_BASE_URL = 'http://ai_server:8000';
 export async function POST(request: NextRequest) {
   try {
     const token = request.cookies.get('access_token')?.value;
-    
-    if (!token) {
+    const api_key = request.headers.get('x-api-key') || 'Unknown';
+    if (!token && !api_key) {
       return NextResponse.json({ error: 'No authentication token' }, { status: 401 });
     }
 
@@ -19,6 +19,7 @@ export async function POST(request: NextRequest) {
       headers: {
         'Authorization': `Bearer ${token}`,
         'Content-Type': 'application/json',
+        'x-api-key': api_key,
       },
       body: JSON.stringify(body),
     });

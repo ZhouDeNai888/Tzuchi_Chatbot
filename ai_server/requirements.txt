@@ -20,3 +20,4 @@ qdrant-client
 langchain-qdrant
 PyJWT
 validators
+playwright

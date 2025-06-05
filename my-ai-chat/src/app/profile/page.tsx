@@ -2,36 +2,41 @@
 
 import { useState, useRef, useEffect } from 'react';
 import { useAuth } from '@/context/AuthContext';
-import { getUserProfile, updateUserProfile, uploadAvatar } from '@/utils/apiService';
+import { getUserProfile, updateUserProfile, uploadAvatar, updateUser, getUserPermissions } from '@/utils/apiService';
+import { useLanguage } from '@/context/LanguageContext';
+import { translations } from '@/utils/translations';
 
 interface UserProfile {
-  id?: number;
-  username: string;
-  email?: string;
-  first_name?: string;
-  last_name?: string;
-  bio?: string;
+  UserID?: number;
+  Username: string;
+  Email?: string;
+  FirstName?: string;
+  LastName?: string;
   avatar_url?: string;
-  role?: string;
+  UserRole?: string;
+  departments?: Array<{ id: number, name: string }>;
+  permissions?: Array<string | { PermissionID: number, PermissionName: string, Description?: string, GrantedAt?: string, GrantedByUsername?: string }>;
+  IsActive?: boolean;
 }
 
 export default function Profile() {
   const { user, isAuthenticated, isLoading } = useAuth();
   const [profile, setProfile] = useState<UserProfile>({
-    username: '',
-    bio: 'Write something about yourself...',
+    Username: '',
     avatar_url: ''
   });
   const [isEditing, setIsEditing] = useState(false);
   const [tempProfile, setTempProfile] = useState<UserProfile>({
-    username: '',
-    bio: '',
+    Username: '',
     avatar_url: ''
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isLoadingProfile, setIsLoadingProfile] = useState(false);
   const [error, setError] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [password, setPassword] = useState({ current: '', new: '', confirm: '' });
+  const [passwordError, setPasswordError] = useState('');
+  const [showPasswordFields, setShowPasswordFields] = useState(false);
 
   // Fetch user profile data from the backend
   useEffect(() => {
@@ -46,14 +51,16 @@ export default function Profile() {
 
           // Set default values for missing fields
           const profileData: UserProfile = {
-            id: userProfileData.id,
-            username: userProfileData.username || 'User',
-            email: userProfileData.email || '',
-            first_name: userProfileData.first_name || '',
-            last_name: userProfileData.last_name || '',
-            bio: userProfileData.bio || 'Write something about yourself...',
+            UserID: userProfileData.UserID,
+            Username: userProfileData.Username || 'User',
+            Email: userProfileData.Email || '',
+            FirstName: userProfileData.FirstName || '',
+            LastName: userProfileData.LastName || '',
             avatar_url: userProfileData.avatar_url || '',
-            role: userProfileData.role || 'User'
+            UserRole: userProfileData.UserRole || 'User',
+            departments: userProfileData.departments || [],
+            permissions: userProfileData.permissions || [],
+            IsActive: userProfileData.IsActive !== undefined ? userProfileData.IsActive : true
           };
 
           setProfile(profileData);
@@ -75,20 +82,37 @@ export default function Profile() {
     setError('');
 
     try {
-      if (!profile.id) {
+      if (!profile.UserID) {
         throw new Error('User ID not found');
       }
 
       // Prepare update data
       const updateData = {
-        first_name: tempProfile.first_name,
-        last_name: tempProfile.last_name,
-        email: tempProfile.email,
-        bio: tempProfile.bio
+        first_name: tempProfile.FirstName,
+        last_name: tempProfile.LastName,
+        email: tempProfile.Email
       };
 
       // Update user profile
       const updatedProfile = await updateUserProfile(updateData);
+
+      // If password fields are shown and have values, update password too
+      if (showPasswordFields && password.current && password.new && password.confirm) {
+        if (password.new !== password.confirm) {
+          setPasswordError('New password and confirmation do not match');
+          setIsSubmitting(false);
+          return;
+        }
+
+        // Update the user with the new password
+        await updateUser(profile.UserID, {
+          password: password.new
+        });
+
+        // Reset password fields
+        setPassword({ current: '', new: '', confirm: '' });
+        setPasswordError('');
+      }
 
       // Update local state
       setProfile({
@@ -96,6 +120,7 @@ export default function Profile() {
         ...updatedProfile
       });
       setIsEditing(false);
+      setShowPasswordFields(false);
     } catch (error) {
       console.error('Error updating profile:', error);
       setError('Failed to update profile. Please try again.');
@@ -160,24 +185,6 @@ export default function Profile() {
     }
   };
 
-  if (isLoading || isLoadingProfile) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-white dark:bg-black">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
-      </div>
-    );
-  }
-
-  if (!isAuthenticated) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-white dark:bg-black">
-        <div className="text-center">
-          <p className="text-red-500 dark:text-red-400 text-xl">You must be logged in to view this page.</p>
-        </div>
-      </div>
-    );
-  }
-
   return (
     <div className="min-h-screen bg-white dark:bg-black flex pt-16">
       <div className="flex-1">
@@ -231,8 +238,8 @@ export default function Profile() {
                       <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Username</label>
                       <input
                         type="text"
-                        name="username"
-                        value={tempProfile.username}
+                        name="Username"
+                        value={tempProfile.Username}
                         onChange={handleInputChange}
                         className="w-full bg-gray-200 dark:bg-gray-700 text-gray-900 dark:text-white p-2 rounded"
                         disabled // Username is typically not changeable
@@ -242,9 +249,9 @@ export default function Profile() {
                     <div>
                       <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Email</label>
                       <input
-                        type="email"
-                        name="email"
-                        value={tempProfile.email || ''}
+                        type="Email"
+                        name="Email"
+                        value={tempProfile.Email || ''}
                         onChange={handleInputChange}
                         className="w-full bg-gray-200 dark:bg-gray-700 text-gray-900 dark:text-white p-2 rounded"
                       />
@@ -255,8 +262,8 @@ export default function Profile() {
                         <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">First Name</label>
                         <input
                           type="text"
-                          name="first_name"
-                          value={tempProfile.first_name || ''}
+                          name="FirstName"
+                          value={tempProfile.FirstName || ''}
                           onChange={handleInputChange}
                           className="w-full bg-gray-200 dark:bg-gray-700 text-gray-900 dark:text-white p-2 rounded"
                         />
@@ -265,24 +272,62 @@ export default function Profile() {
                         <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Last Name</label>
                         <input
                           type="text"
-                          name="last_name"
-                          value={tempProfile.last_name || ''}
+                          name="LastName"
+                          value={tempProfile.LastName || ''}
                           onChange={handleInputChange}
                           className="w-full bg-gray-200 dark:bg-gray-700 text-gray-900 dark:text-white p-2 rounded"
                         />
                       </div>
                     </div>
 
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Bio</label>
-                      <textarea
-                        name="bio"
-                        value={tempProfile.bio || ''}
-                        onChange={handleInputChange}
-                        className="w-full bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 p-2 rounded"
-                        rows={3}
-                      />
+                    {/* Toggle for password change fields */}
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setShowPasswordFields(!showPasswordFields)}
+                        className="text-blue-600 dark:text-blue-400 underline text-sm"
+                      >
+                        {showPasswordFields ? 'Hide Password Fields' : 'Change Password'}
+                      </button>
                     </div>
+
+                    {/* Password Fields (conditionally shown) */}
+                    {showPasswordFields && (
+                      <div className="space-y-3 p-3 bg-gray-200 dark:bg-gray-700 rounded-lg">
+                        {passwordError && (
+                          <div className="p-2 bg-red-100 dark:bg-red-900 text-red-700 dark:text-red-200 rounded-md text-sm">
+                            {passwordError}
+                          </div>
+                        )}
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Current Password</label>
+                          <input
+                            type="password"
+                            value={password.current}
+                            onChange={(e) => setPassword({ ...password, current: e.target.value })}
+                            className="w-full bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-white p-2 rounded"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">New Password</label>
+                          <input
+                            type="password"
+                            value={password.new}
+                            onChange={(e) => setPassword({ ...password, new: e.target.value })}
+                            className="w-full bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-white p-2 rounded"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Confirm New Password</label>
+                          <input
+                            type="password"
+                            value={password.confirm}
+                            onChange={(e) => setPassword({ ...password, confirm: e.target.value })}
+                            className="w-full bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-white p-2 rounded"
+                          />
+                        </div>
+                      </div>
+                    )}
                   </div>
 
                   <div className="flex gap-4 mb-6 w-full">
@@ -297,6 +342,9 @@ export default function Profile() {
                       onClick={() => {
                         setTempProfile(profile);
                         setIsEditing(false);
+                        setShowPasswordFields(false);
+                        setPassword({ current: '', new: '', confirm: '' });
+                        setPasswordError('');
                       }}
                       disabled={isSubmitting}
                       className="flex-1 bg-gray-500 dark:bg-gray-600 text-white px-4 py-2 rounded hover:bg-gray-600 dark:hover:bg-gray-700 transition-colors disabled:opacity-50"
@@ -307,16 +355,15 @@ export default function Profile() {
                 </>
               ) : (
                 <>
-                  <h1 className="text-gray-900 dark:text-white text-2xl font-bold mb-2">{profile.username}</h1>
-                  {(profile.first_name || profile.last_name) && (
+                  <h1 className="text-gray-900 dark:text-white text-2xl font-bold mb-2">{profile.Username}</h1>
+                  {(profile.FirstName || profile.LastName) && (
                     <h2 className="text-gray-700 dark:text-gray-300 text-lg mb-2">
-                      {[profile.first_name, profile.last_name].filter(Boolean).join(' ')}
+                      {[profile.FirstName, profile.LastName].filter(Boolean).join(' ')}
                     </h2>
                   )}
-                  {profile.email && (
-                    <p className="text-gray-500 dark:text-gray-400 mb-4">{profile.email}</p>
+                  {profile.Email && (
+                    <p className="text-gray-500 dark:text-gray-400 mb-4">{profile.Email}</p>
                   )}
-                  <p className="text-gray-600 dark:text-gray-400 text-center mb-6">{profile.bio}</p>
                   <button
                     onClick={() => setIsEditing(true)}
                     className="bg-gray-200 dark:bg-gray-700 text-gray-900 dark:text-white px-4 py-2 rounded mb-6 hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors"
@@ -326,16 +373,51 @@ export default function Profile() {
                 </>
               )}
 
-              <div className="grid grid-cols-2 gap-4 w-full text-center">
+              <div className="grid grid-cols-2 gap-4 w-full text-center mb-6">
                 <div className="bg-gray-200 dark:bg-gray-700 p-4 rounded-lg">
                   <div className="text-gray-900 dark:text-white font-bold">Role</div>
-                  <div className="text-gray-600 dark:text-gray-400">{profile.role || 'User'}</div>
+                  <div className="text-gray-600 dark:text-gray-400">{profile.UserRole || 'User'}</div>
                 </div>
                 <div className="bg-gray-200 dark:bg-gray-700 p-4 rounded-lg">
                   <div className="text-gray-900 dark:text-white font-bold">Account ID</div>
-                  <div className="text-gray-600 dark:text-gray-400">#{profile.id}</div>
+                  <div className="text-gray-600 dark:text-gray-400">#{profile.UserID}</div>
                 </div>
               </div>
+
+              {/* Departments Section - Always show if available */}
+              {profile.departments && profile.departments.length > 0 && (
+                <div className="w-full p-4 bg-gray-200 dark:bg-gray-700 rounded-lg mb-6">
+                  <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Your Departments</h2>
+                  <div className="flex flex-wrap gap-2">
+                    {profile.departments.map((dept) => (
+                      <span key={dept.id} className="bg-blue-100 dark:bg-blue-800 text-blue-800 dark:text-blue-100 px-3 py-1 rounded-full text-sm">
+                        {dept.name}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Permissions Section - Always show if available */}
+              {profile.permissions && profile.permissions.length > 0 && (
+                <div className="w-full p-4 bg-gray-200 dark:bg-gray-700 rounded-lg">
+                  <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Your Permissions</h2>
+                  <div className="flex flex-wrap gap-2">
+                    {profile.permissions.map((perm, index) => {
+                      // Handle both string permissions and object permissions
+                      const permissionName = typeof perm === 'string'
+                        ? perm
+                        : perm.PermissionName;
+
+                      return (
+                        <span key={index} className="bg-green-100 dark:bg-green-800 text-green-800 dark:text-green-100 px-3 py-1 rounded-full text-sm">
+                          {permissionName}
+                        </span>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         </main>

@@ -4,6 +4,8 @@ import { useState, useEffect } from 'react';
 import { useLanguage } from '@/context/LanguageContext';
 import { translations } from '@/utils/translations';
 import { getDepartments, createDepartment, updateDepartment, deleteDepartment } from '@/utils/apiService';
+import { useRouter } from 'next/navigation';
+import ConfirmDeleteModal from '@/components/ConfirmDeleteModal';
 
 // Define an interface for API response
 interface DepartmentApiResponse {
@@ -11,6 +13,7 @@ interface DepartmentApiResponse {
   name: string;
   description?: string;
   user_count?: number;
+  knowledgebase_count?: number;
   created_at?: string;
 }
 
@@ -24,6 +27,7 @@ interface Department {
 }
 
 export default function DepartmentsPage() {
+  const router = useRouter();
   const { language } = useLanguage();
   const t = translations[language].departments;
 
@@ -32,10 +36,30 @@ export default function DepartmentsPage() {
   const [error, setError] = useState<string | null>(null);
   const [editingDepartment, setEditingDepartment] = useState<Department | null>(null);
 
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState<number>(1);
+  const [itemsPerPage, setItemsPerPage] = useState<number>(5);
+  const [totalPages, setTotalPages] = useState<number>(1);
+
+  // Search state
+  const [searchQuery, setSearchQuery] = useState<string>('');
+  const [filteredDepartments, setFilteredDepartments] = useState<Department[]>([]);
+
   const [newDepartment, setNewDepartment] = useState({
     name: '',
     description: '',
   });
+
+  // Modal state
+  const [showDeleteModal, setShowDeleteModal] = useState<boolean>(false);
+  const [departmentToDelete, setDepartmentToDelete] = useState<string | null>(null);
+
+  // Get paginated departments
+  const getPaginatedDepartments = () => {
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    const endIndex = startIndex + itemsPerPage;
+    return filteredDepartments.slice(startIndex, endIndex);
+  };
 
   const isDuplicateName = (name: string, excludeId?: string): boolean => {
     return departments.some(dept =>
@@ -71,7 +95,7 @@ export default function DepartmentsPage() {
           name: response.name,
           description: response.description || '',
           userCount: typeof response.user_count !== 'undefined' ? response.user_count : 0,
-          kbCount: 0, // API doesn't provide this yet
+          kbCount: typeof response.knowledgebase_count !== 'undefined' ? response.knowledgebase_count : 0,
           createdAt: response.created_at || new Date().toISOString()
         };
 
@@ -140,30 +164,37 @@ export default function DepartmentsPage() {
   };
 
   const handleDelete = async (id: string) => {
-    if (window.confirm(t.actions.confirmDelete)) {
-      try {
-        setLoading(true);
+    setDepartmentToDelete(id);
+    setShowDeleteModal(true);
+  };
 
-        // Delete department via API
-        const success = await deleteDepartment(id);
+  const confirmDelete = async () => {
+    if (!departmentToDelete) return;
 
-        if (success) {
-          const updatedDepartments = departments.filter(dept => dept.id !== id);
-          setDepartments(updatedDepartments);
-        } else {
-          setError('Failed to delete department');
-        }
-      } catch (err) {
-        console.error('Error deleting department:', err);
+    try {
+      setLoading(true);
+
+      // Delete department via API
+      const success = await deleteDepartment(departmentToDelete);
+
+      if (success) {
+        const updatedDepartments = departments.filter(dept => dept.id !== departmentToDelete);
+        setDepartments(updatedDepartments);
+      } else {
         setError('Failed to delete department');
-      } finally {
-        setLoading(false);
       }
+    } catch (err) {
+      console.error('Error deleting department:', err);
+      setError('Failed to delete department');
+    } finally {
+      setLoading(false);
+      setShowDeleteModal(false);
+      setDepartmentToDelete(null);
     }
   };
 
   const handleDepartmentClick = (id: string) => {
-    window.location.href = `/departments/${id}`;
+    router.push(`/departments/${id}`);
   };
 
   const handleEditStart = (department: Department) => {
@@ -172,6 +203,26 @@ export default function DepartmentsPage() {
 
   const handleEditCancel = () => {
     setEditingDepartment(null);
+  };
+
+  // Change items per page
+  const handleItemsPerPageChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    setItemsPerPage(Number(e.target.value));
+    setCurrentPage(1); // Reset to first page
+  };
+
+  // Go to next page
+  const handleNextPage = () => {
+    if (currentPage < totalPages) {
+      setCurrentPage(currentPage + 1);
+    }
+  };
+
+  // Go to previous page
+  const handlePrevPage = () => {
+    if (currentPage > 1) {
+      setCurrentPage(currentPage - 1);
+    }
   };
 
   useEffect(() => {
@@ -187,11 +238,12 @@ export default function DepartmentsPage() {
             name: dept.name,
             description: dept.description || '',
             userCount: dept.user_count || 0,
-            kbCount: 0, // API might not provide this
+            kbCount: dept.knowledgebase_count || 0, // Get KB count from API
             createdAt: dept.created_at || new Date().toISOString(),
           }));
 
           setDepartments(formattedDepts);
+          setTotalPages(Math.ceil(formattedDepts.length / itemsPerPage)); // Set total pages for pagination
         } else {
           // If no departments found, set empty array
           setDepartments([]);
@@ -209,6 +261,25 @@ export default function DepartmentsPage() {
 
     fetchDepartments();
   }, []);
+
+  // Update paginated departments when currentPage or itemsPerPage changes
+  useEffect(() => {
+    setTotalPages(Math.ceil(departments.length / itemsPerPage));
+  }, [departments, itemsPerPage]);
+
+  // Filter departments based on search query
+  useEffect(() => {
+    if (searchQuery.trim() === '') {
+      setFilteredDepartments(departments);
+    } else {
+      const lowerCaseQuery = searchQuery.toLowerCase();
+      const filtered = departments.filter(dept =>
+        dept.name.toLowerCase().includes(lowerCaseQuery) ||
+        dept.description.toLowerCase().includes(lowerCaseQuery)
+      );
+      setFilteredDepartments(filtered);
+    }
+  }, [searchQuery, departments]);
 
   return (
     <div className="min-h-screen bg-white dark:bg-black text-gray-900 dark:text-white p-8 pt-16">
@@ -253,18 +324,29 @@ export default function DepartmentsPage() {
         </button>
       </div>
 
+      {/* Search bar */}
+      <div className="mb-8">
+        <input
+          type="text"
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          placeholder={t.search.placeholder}
+          className="bg-white dark:bg-gray-700 text-gray-900 dark:text-white p-2 rounded border border-gray-300 dark:border-gray-600 focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 transition-colors w-full"
+        />
+      </div>
+
       {loading && !editingDepartment && departments.length === 0 ? (
         <div className="flex justify-center items-center p-8">
           <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
         </div>
       ) : (
         <div className="grid gap-4">
-          {departments.length === 0 ? (
+          {filteredDepartments.length === 0 ? (
             <div className="bg-gray-100 dark:bg-gray-800 p-4 rounded-lg text-center">
               {t.noDepartments}
             </div>
           ) : (
-            departments.map((department) => (
+            getPaginatedDepartments().map((department) => (
               <div
                 key={department.id}
                 className="bg-gray-100 dark:bg-gray-800 p-4 rounded-lg cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors shadow-md"
@@ -347,6 +429,51 @@ export default function DepartmentsPage() {
           )}
         </div>
       )}
+
+      {/* Pagination controls */}
+      {departments.length > itemsPerPage && (
+        <div className="mt-6 flex justify-between items-center">
+          <div className="flex gap-2">
+            <button
+              onClick={handlePrevPage}
+              disabled={currentPage === 1}
+              className="bg-gray-300 dark:bg-gray-600 text-gray-800 dark:text-white px-3 py-1 rounded hover:bg-gray-400 dark:hover:bg-gray-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {t.actions.prev}
+            </button>
+            <button
+              onClick={handleNextPage}
+              disabled={currentPage === totalPages}
+              className="bg-gray-300 dark:bg-gray-600 text-gray-800 dark:text-white px-3 py-1 rounded hover:bg-gray-400 dark:hover:bg-gray-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {t.actions.next}
+            </button>
+          </div>
+          <div className="text-gray-700 dark:text-gray-300">
+            {t.pagination.page} {currentPage} {t.pagination.of} {totalPages}
+          </div>
+          <div>
+            <select
+              value={itemsPerPage}
+              onChange={handleItemsPerPageChange}
+              className="bg-white dark:bg-gray-700 text-gray-900 dark:text-white p-2 rounded border border-gray-300 dark:border-gray-600 focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 transition-colors"
+            >
+              <option value={5}>5 {t.pagination.itemsPerPage}</option>
+              <option value={10}>10 {t.pagination.itemsPerPage}</option>
+              <option value={25}>25 {t.pagination.itemsPerPage}</option>
+            </select>
+          </div>
+        </div>
+      )}
+
+      {/* Delete confirmation modal */}
+      <ConfirmDeleteModal
+        isOpen={showDeleteModal}
+        onClose={() => setShowDeleteModal(false)}
+        onConfirm={confirmDelete}
+        title="Confirm Delete"
+        message={t.actions?.confirmDelete || 'Are you sure you want to delete this department? This action cannot be undone.'}
+      />
     </div>
   );
 }

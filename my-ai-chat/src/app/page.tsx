@@ -1,5 +1,7 @@
 'use client';
 
+export const dynamic = "force-dynamic"; // ✅ ใส่ไว้ด้านบนสุด (หลัง 'use client')
+
 import { useState, useEffect, useRef } from 'react';
 import { flushSync } from 'react-dom';
 
@@ -28,28 +30,47 @@ export default function Home() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [selectedAgent, setSelectedAgent] = useState('');
   const [isOpen, setIsOpen] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
+  const [isProcessing, setIsProcessing] = useState(false); // Renamed from isLoading2 to avoid confusion
   const [conversationId, setConversationId] = useState<number | null>(null);
   const [streamingContent, setStreamingContent] = useState('');
   const [agents, setAgents] = useState<Agent[]>([]);
-  const [isLoadingAgents, setIsLoadingAgents] = useState(true);
+  const [copyStatus, setCopyStatus] = useState<{ [key: number]: boolean }>({});
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const { language, toggleLanguage } = useLanguage();
-  const { isAuthenticated } = useAuth();
+  const { isLoading, isAuthenticated } = useAuth();
   const router = useRouter();
 
-  // Redirect to login if not authenticated
+
   useEffect(() => {
-    if (isAuthenticated === false) {
-      router.push('/login');
+    console.log('Home page - Auth state check:', { isAuthenticated, isLoading });
+
+    // Only redirect if not authenticated AND loading is complete
+    if (!isAuthenticated && !isLoading) {
+      console.log('Not authenticated and loading complete - redirecting to login page...');
+
+      // Store the current path for redirect back after login
+      const currentPath = window.location.pathname;
+      // Use window.location for a clean redirect
+      window.location.href = `/login?redirect=${encodeURIComponent(currentPath)}`;
+    } else if (isAuthenticated && !isLoading) {
+      // Successfully authenticated and loaded
+      console.log('Authentication confirmed - user can access home page');
+
+      // Clear any redirect flags
+      try {
+        localStorage.removeItem('redirect_after_login');
+        localStorage.removeItem('login_timestamp');
+        sessionStorage.removeItem('auth_success');
+      } catch (e) {
+        console.error('Error clearing storage:', e);
+      }
     }
-  }, [isAuthenticated, router]);
+  }, [isLoading, isAuthenticated]);
 
   // Fetch agents from API
   useEffect(() => {
     async function fetchAgents() {
       try {
-        setIsLoadingAgents(true);
         const agentsData = await getAgents();
         setAgents(agentsData);
 
@@ -72,7 +93,7 @@ export default function Home() {
             agent_key: 'general',
             name: 'General Assistant',
             description: 'General knowledge, daily tasks, and basic information',
-            model: 'gpt-3.5-turbo',
+            model: 'gpt-4o-mini',
             temperature: 0.7,
             max_tokens: 2000,
             system_prompt: '',
@@ -98,7 +119,7 @@ export default function Home() {
         // Select the first fallback agent
         setSelectedAgent('1');
       } finally {
-        setIsLoadingAgents(false);
+        console.log('Agents loaded:', agents);
       }
     }
 
@@ -148,7 +169,7 @@ export default function Home() {
 
 
   const handleSubmit = async () => {
-    if (!input.trim() || isLoading) return;
+    if (!input.trim() || isProcessing) return;
 
     const userMessage: Message = {
       text: input,
@@ -157,13 +178,13 @@ export default function Home() {
     };
 
     setMessages(prev => [...prev, userMessage]);
-    setIsLoading(true);
+    setIsProcessing(true); // Use the renamed variable
     setInput('');
 
     try {
       // Get the model for the selected agent
       const agent = agents.find(a => String(a.id) === selectedAgent);
-      const model = agent?.model || 'gpt-3.5-turbo';
+      const model = agent?.model || 'gpt-4o-mini';
 
       // Create conversation if none exists
       if (!conversationId) {
@@ -258,7 +279,7 @@ export default function Home() {
           },
           // On complete callback
           () => {
-            setIsLoading(false);
+            setIsProcessing(false); // Use the renamed variable
             setStreamingContent('');
             // Here we should set the message ID from the response if available
           }
@@ -276,7 +297,7 @@ export default function Home() {
         };
 
         setMessages(prev => [...prev, aiMessage]);
-        setIsLoading(false);
+        setIsProcessing(false); // Use the renamed variable
       }
     } catch (error) {
       console.error('Error sending message:', error);
@@ -285,9 +306,29 @@ export default function Home() {
         isUser: false
       };
       setMessages(prev => [...prev, errorMessage]);
-      setIsLoading(false);
+      setIsProcessing(false); // Use the renamed variable
     }
   };
+
+  const handleCopy = (messageId: number) => {
+    const message = messages.find(msg => msg.id === messageId);
+    if (!message) return;
+
+    // Copy to clipboard
+    navigator.clipboard.writeText(message.text)
+      .then(() => {
+        // Update copy status
+        setCopyStatus(prev => ({ ...prev, [messageId]: true }));
+
+        // Reset copy status after 2 seconds
+        setTimeout(() => {
+          setCopyStatus(prev => ({ ...prev, [messageId]: false }));
+        }, 2000);
+      })
+      .catch(err => console.error('Error copying text:', err));
+  };
+
+
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex flex-col transition-colors duration-300">
@@ -329,12 +370,7 @@ export default function Home() {
           )}
         </div>
 
-        <button
-          onClick={toggleLanguage}
-          className="ml-4 px-3 py-2 bg-white dark:bg-gray-800 text-gray-900 dark:text-white rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 hover:shadow-md transition-all duration-200"
-        >
-          {language === 'en' ? '中文' : 'EN'}
-        </button>
+
       </div>
 
       <div className="flex-1 flex flex-col max-w-4xl mx-auto w-full pb-24">
@@ -345,7 +381,6 @@ export default function Home() {
                 ? 'bg-blue-600 text-white'
                 : 'bg-white dark:bg-gray-800 text-gray-900 dark:text-white border border-gray-200 dark:border-gray-700'
                 }`}>
-
                 <div className="prose dark:prose-invert max-w-none">
                   <ReactMarkdown
                     rehypePlugins={[rehypeRaw]}
@@ -382,13 +417,22 @@ export default function Home() {
                         <h4 className="text-lg font-semibold my-2" {...props}>{children}</h4>
                       ),
                       table: ({ node, children, ...props }) => (
-                        <table className="border-collapse my-4" {...props}>{children}</table>
+                        <table className="border-collapse my-4 w-full" {...props}>{children}</table>
+                      ),
+                      thead: ({ node, children, ...props }) => (
+                        <thead className="bg-gray-100 dark:bg-gray-700" {...props}>{children}</thead>
+                      ),
+                      tbody: ({ node, children, ...props }) => (
+                        <tbody className="divide-y divide-gray-200 dark:divide-gray-700" {...props}>{children}</tbody>
+                      ),
+                      tr: ({ node, children, ...props }) => (
+                        <tr className="divide-x divide-gray-200 dark:divide-gray-700" {...props}>{children}</tr>
                       ),
                       th: ({ node, children, ...props }) => (
-                        <th className="border border-gray-600 px-4 py-2" {...props}>{children}</th>
+                        <th className="border border-gray-300 dark:border-gray-600 px-4 py-2 font-bold text-left" {...props}>{children}</th>
                       ),
                       td: ({ node, children, ...props }) => (
-                        <td className="border border-gray-600 px-4 py-2" {...props}>{children}</td>
+                        <td className="border border-gray-300 dark:border-gray-600 px-4 py-2" {...props}>{children}</td>
                       ),
                     }}
                   >
@@ -399,27 +443,33 @@ export default function Home() {
                   <div className="flex justify-end mt-2 space-x-2">
                     <button
                       onClick={() => handleFeedback(index, 'like')}
-                      className={`p-1 rounded ${message.feedback === 'like' ? 'bg-green-500' : 'hover:bg-gray-200 dark:hover:bg-gray-700'}`}
+                      className={`p-1 rounded ${message.feedback === 'like' ? 'bg-green-500 text-white' : 'hover:bg-gray-200 dark:hover:bg-gray-700'}`}
                       aria-label="Like"
                     >
-                      👍
+                      <i className={`fa-${message.feedback === 'like' ? 'solid' : 'regular'} fa-thumbs-up`}></i>
                     </button>
                     <button
                       onClick={() => handleFeedback(index, 'dislike')}
-                      className={`p-1 rounded ${message.feedback === 'dislike' ? 'bg-red-500' : 'hover:bg-gray-200 dark:hover:bg-gray-700'}`}
+                      className={`p-1 rounded ${message.feedback === 'dislike' ? 'bg-red-500 text-white' : 'hover:bg-gray-200 dark:hover:bg-gray-700'}`}
                       aria-label="Dislike"
                     >
-                      👎
+                      <i className={`fa-${message.feedback === 'dislike' ? 'solid' : 'regular'} fa-thumbs-down`}></i>
+                    </button>
+                    <button
+                      onClick={() => handleCopy(message.id!)}
+                      className={`p-1 rounded ${copyStatus[message.id!] ? 'bg-blue-500 text-white' : 'hover:bg-gray-200 dark:hover:bg-gray-700'}`}
+                      aria-label="Copy"
+                    >
+                      <i className={`fa-regular fa-${copyStatus[message.id!] ? 'check' : 'copy'}`}></i>
                     </button>
                   </div>
                 )}
-
               </div>
             </div>
           ))}
           <div ref={messagesEndRef} />
 
-          {isLoading && (
+          {isProcessing && (
             <div className="flex justify-start">
               <div className="bg-white dark:bg-gray-800 text-gray-900 dark:text-white rounded-lg p-3 shadow-sm border border-gray-200 dark:border-gray-700">
                 <div className="flex items-center space-x-2">
@@ -443,12 +493,12 @@ export default function Home() {
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && handleSubmit()}
-              disabled={isLoading}
+              disabled={isProcessing}
             />
             <button
               onClick={handleSubmit}
-              disabled={isLoading || !input.trim()}
-              className={`p-4 transition ${isLoading || !input.trim()
+              disabled={isProcessing || !input.trim()}
+              className={`p-4 transition ${isProcessing || !input.trim()
                 ? 'text-gray-400 cursor-not-allowed'
                 : 'hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300'
                 }`}

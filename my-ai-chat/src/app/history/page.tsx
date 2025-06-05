@@ -296,8 +296,8 @@ export default function History() {
                     {currentMessages.map((message) => (
                       <tr key={message.id} className="border-b border-gray-200 dark:border-gray-800 hover:bg-gray-100 dark:hover:bg-gray-800">
                         <td className="px-4 py-2">{message.id}</td>
-                        <td className="px-4 py-2">{message.userMessage}</td>
                         <td className="px-4 py-2">{message.agentMessage}</td>
+                        <td className="px-4 py-2">{message.userMessage}</td>
                         <td className="px-4 py-2">{message.agentName}</td>
                         <td className="px-4 py-2">{message.timestamp}</td>
                         <td className="px-4 py-2">

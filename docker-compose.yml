@@ -3,13 +3,23 @@ services:
     build:
       context: ./my-ai-chat
       dockerfile: Dockerfile
-    ports:
-      - "80:3000"
+    # ports:
+    #   - "80:3000"
+    expose:
+      - 80
+      - 443  # Expose HTTPS port
     environment:
       - NODE_ENV=production
       # - NEXT_PUBLIC_API_URL=http://localhost:80
+      - PORT=80
+      # SSL_related environment variables will be handled by Nginx Proxy Manager
     networks:
       - app_network
+      - public_network
+    volumes:
+      - ./letsencrypt:/app/ssl:ro  # Mount SSL certificates as read-only
+    restart: unless-stopped
+
 
   ai_server:
     build: ./ai_server
@@ -17,7 +27,7 @@ services:
       - "8000:8000"
     networks:
       - app_network
-      
+    
     depends_on:
       - ollama
     environment:
@@ -26,17 +36,34 @@ services:
       - ./ai_server:/app  # Mount source code for live updates
       - ai_server_data:/app/data  # Volume for persistent data
 
-  ngrok:
-    image: ngrok/ngrok
-    command:
-      - "http"
-      - "http://host.docker.internal:80"
+
+  # ngrok:
+  #   image: ngrok/ngrok
+  #   command:
+  #     - "http"
+  #     - "http://host.docker.internal:80"
+  #   networks:
+  #     - app_network
+  #   environment:
+  #     - NGROK_AUTHTOKEN=2qZIswww1OIlayRaOUMNGW9B6aT_4119Wkrbz1Ut97MMhSo4K
+  #   ports:
+  #     - 4040:4040
+
+
+  nginx_proxy_manager:
+    image: 'jc21/nginx-proxy-manager:latest'
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+      - "81:81"  # Web UI ของ Nginx Proxy Manager
+    volumes:
+      - ./data:/data
+      - ./letsencrypt:/etc/letsencrypt
     networks:
       - app_network
-    environment:
-      - NGROK_AUTHTOKEN=2qZIswww1OIlayRaOUMNGW9B6aT_4119Wkrbz1Ut97MMhSo4K
-    ports:
-      - 4040:4040
+      - public_network
+
 
   qdrant:
     image: qdrant/qdrant
@@ -60,45 +87,47 @@ services:
   #     - LT_API_KEYS= # สามารถปล่อยว่างไว้ (ถ้าไม่ต้องการ API Key)
   #     - LT_DEBUG=true
 
-  # GPU Version
+  # # GPU Version
+  # ollama:
+  #   volumes:
+  #     - ./ollama/ollama:/root/.ollama
+  #   container_name: ollama
+  #   pull_policy: always
+  #   tty: true
+  #   restart: unless-stopped
+  #   image: ollama/ollama:latest
+  #   ports:
+  #     - 11434:11434
+  #   networks:
+  #     - app_network
+  #   deploy:
+  #     resources:
+  #       reservations:
+  #         devices:
+  #           - driver: nvidia
+  #             count: all
+  #             capabilities: [gpu]
+
+
+# cpu version
   ollama:
+    image: ollama/ollama:latest
+    ports:
+      - 11434:11434
     volumes:
+      - .:/code
       - ./ollama/ollama:/root/.ollama
     container_name: ollama
     pull_policy: always
     tty: true
-    restart: unless-stopped
-    image: ollama/ollama:latest
-    ports:
-      - 11434:11434
+    restart: always
     networks:
       - app_network
-    deploy:
-      resources:
-        reservations:
-          devices:
-            - driver: nvidia
-              count: all
-              capabilities: [gpu]
-
-
-# # cpu version
-#   ollama:
-#     image: ollama/ollama:latest
-#     ports:
-#       - 11434:11434
-#     volumes:
-#       - .:/code
-#       - ./ollama/ollama:/root/.ollama
-#     container_name: ollama
-#     pull_policy: always
-#     tty: true
-#     restart: always
-#     networks:
-#       - app_network
 
 networks:
   app_network:
+    driver: bridge
+  public_network:
     driver: bridge
 
   # nextjs_network:

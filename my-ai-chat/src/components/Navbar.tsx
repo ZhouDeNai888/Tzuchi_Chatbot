@@ -87,6 +87,14 @@ export default function Navbar({ isAsideOpen }: NavbarProps) {
             </div>
           </div>
 
+          {/* Center - Logo and System Name */}
+          <div className="absolute left-1/2 transform -translate-x-1/2 flex items-center">
+            <div className="flex items-center gap-2">
+              <img src="/logo.png" alt="TzuChi Logo" className="h-8 w-8" />
+              <span className="text-lg font-semibold text-gray-700 dark:text-gray-200">TzuChi AI System</span>
+            </div>
+          </div>
+
           {/* Right side */}
           <div className="flex items-center gap-4">
             <div className="relative" ref={profileRef}>

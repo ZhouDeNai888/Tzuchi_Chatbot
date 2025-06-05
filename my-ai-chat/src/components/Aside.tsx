@@ -35,10 +35,11 @@ const Aside: React.FC<{ children: React.ReactNode }> = ({ children }) => {
         departments: false
     });
     const t = translations[language].nav;
+    const [permissionsLoaded, setPermissionsLoaded] = useState(false);
 
     useEffect(() => {
         const loadPermissions = async () => {
-            if (user) {
+            if (user && !permissionsLoaded) {
                 const hasKnowledgeAccess = await checkUserPermission('view_knowledge');
                 const hasAgentAccess = await checkUserPermission('use_agent');
                 const hasHistoryAccess = await checkUserPermission('view_conversations');
@@ -47,7 +48,7 @@ const Aside: React.FC<{ children: React.ReactNode }> = ({ children }) => {
                 const hasDepartmentAdmin = await checkUserPermission('admin_department');
                 const hasAllDepartments = await checkUserPermission('view_all_departments');
                 const isFullAdmin = await checkUserPermission('full_admin');
-
+                setPermissionsLoaded(true);
                 setPermissions({
                     knowledge: hasKnowledgeAccess || isFullAdmin,
                     agents: hasAgentAccess || isFullAdmin,
@@ -60,7 +61,7 @@ const Aside: React.FC<{ children: React.ReactNode }> = ({ children }) => {
         };
 
         loadPermissions();
-    }, [user]);
+    }, [user, permissionsLoaded]);
 
     useEffect(() => {
         // Close aside when pathname changes
@@ -94,61 +95,69 @@ const Aside: React.FC<{ children: React.ReactNode }> = ({ children }) => {
                 </button>
                 <h2 className="text-xl font-bold mb-4 text-gray-800 dark:text-white">{t.navigation}</h2>
                 <ul className="space-y-2">
-                    <li><Link href="/" className="flex items-center px-8 py-2 text-sm text-gray-700 dark:text-gray-200 hover:text-blue-600 dark:hover:text-blue-400 transition-colors">{t.home}</Link></li>
-
+                    <li className='flex items-center hover:bg-gray-100 dark:hover:bg-gray-700 p-2 rounded-lg transition-colors'>
+                        <i className="fa-solid fa-house w-5 mr-3 text-blue-500 dark:text-blue-400"></i>
+                        <Link href="/" className="text-gray-800 dark:text-gray-200 hover:text-blue-600 dark:hover:text-blue-400 transition-colors font-medium">{t.home}</Link>
+                    </li>
                     {permissions.knowledge && (
                         <>
-                            <li className='text-gray-500 dark:text-gray-400'>
-                                <i className="fa-solid fa-database w-5 mr-3"></i>
-                                <span>{t.knowledgeBase}</span>
+                            <li className='flex items-center hover:bg-gray-100 dark:hover:bg-gray-700 p-2 rounded-lg transition-colors'>
+                                <i className="fa-solid fa-database w-5 mr-3 text-green-500 dark:text-green-400"></i>
+                                <Link href="/knowledge" className="text-gray-800 dark:text-gray-200 hover:text-blue-600 dark:hover:text-blue-400 transition-colors font-medium">{t.knowledgeSetting}</Link>
+                                {/* <span>{t.knowledgeBase}</span> */}
                             </li>
-                            <li><Link href="/knowledge" className="flex items-center px-8 py-2 text-sm text-gray-700 dark:text-gray-200 hover:text-blue-600 dark:hover:text-blue-400 transition-colors">{t.knowledgeSetting}</Link></li>
+                            {/* <li><Link href="/knowledge" className="flex items-center px-8 py-2 text-sm text-gray-700 dark:text-gray-200 hover:text-blue-600 dark:hover:text-blue-400 transition-colors">{t.knowledgeSetting}</Link></li> */}
                         </>
                     )}
 
                     {permissions.agents && (
                         <>
-                            <li className='text-gray-500 dark:text-gray-400'>
-                                <i className="fas fa-robot w-5 mr-3"></i>
-                                <span>{t.agents}</span>
+                            <li className='flex items-center hover:bg-gray-100 dark:hover:bg-gray-700 p-2 rounded-lg transition-colors'>
+                                <i className="fas fa-robot w-5 mr-3 text-purple-500 dark:text-purple-400"></i>
+                                <Link href="/agent" className="text-gray-800 dark:text-gray-200 hover:text-blue-600 dark:hover:text-blue-400 transition-colors font-medium">{t.agentSetting}</Link>
+                                {/* <span>{t.agents}</span> */}
                             </li>
-                            <li><Link href="/agent" className="flex items-center px-8 py-2 text-sm text-gray-700 dark:text-gray-200 hover:text-blue-600 dark:hover:text-blue-400 transition-colors"><span>{t.agentSetting}</span></Link></li>
+                            {/* <li><Link href="/agent" className="flex items-center px-8 py-2 text-sm text-gray-700 dark:text-gray-200 hover:text-blue-600 dark:hover:text-blue-400 transition-colors"><span>{t.agentSetting}</span></Link></li> */}
                         </>
                     )}
 
                     {permissions.history && (
                         <>
-                            <li className='text-gray-500 dark:text-gray-400'>
-                                <i className="fa-solid fa-clock-rotate-left w-5 mr-3"></i>
-                                <span>{t.history}</span>
+                            <li className='flex items-center hover:bg-gray-100 dark:hover:bg-gray-700 p-2 rounded-lg transition-colors'>
+                                <i className="fa-solid fa-clock-rotate-left w-5 mr-3 text-amber-500 dark:text-amber-400"></i>
+                                <Link href="/history" className="text-gray-800 dark:text-gray-200 hover:text-blue-600 dark:hover:text-blue-400 transition-colors font-medium">{t.qaHistory}</Link>
                             </li>
-                            <li><Link href="/history" className="flex items-center px-8 py-2 text-sm text-gray-700 dark:text-gray-200 hover:text-blue-600 dark:hover:text-blue-400 transition-colors"><span>{t.qaHistory}</span></Link></li>
                         </>
                     )}
 
                     {permissions.share && (
                         <>
-                            <li className='text-gray-500 dark:text-gray-400'>
-                                <i className="fa-solid fa-share-nodes w-5 mr-3"></i>
-                                <span>{t.share}</span>
+                            <li className='flex items-center hover:bg-gray-100 dark:hover:bg-gray-700 p-2 rounded-lg transition-colors'>
+                                <i className="fa-solid fa-share-nodes w-5 mr-3 text-indigo-500 dark:text-indigo-400"></i>
+                                <Link href="/share" className="text-gray-800 dark:text-gray-200 hover:text-blue-600 dark:hover:text-blue-400 transition-colors font-medium">{t.shareSetting}</Link>
                             </li>
-                            <li><Link href="/share" className="flex items-center px-8 py-2 text-sm text-gray-700 dark:text-gray-200 hover:text-blue-600 dark:hover:text-blue-400 transition-colors">{t.shareSetting}</Link></li>
                         </>
                     )}
 
                     {(permissions.accounts || permissions.departments) && (
-                        <li className='text-gray-500 dark:text-gray-400'>
-                            <i className="fa-solid fa-user-gear w-5 mr-3"></i>
-                            <span>{t.accounts}</span>
+                        <li className='flex items-center p-2 rounded-lg'>
+                            <i className="fa-solid fa-gears w-5 mr-3 text-teal-500 dark:text-teal-400"></i>
+                            <span className="text-gray-800 dark:text-gray-200 font-semibold">{t.advanceSetting}</span>
                         </li>
                     )}
 
                     {permissions.accounts && (
-                        <li><Link href="/accounts" className="flex items-center px-8 py-2 text-sm text-gray-700 dark:text-gray-200 hover:text-blue-600 dark:hover:text-blue-400 transition-colors">{t.accountSetting}</Link></li>
+                        <li className='flex items-center hover:bg-gray-100 dark:hover:bg-gray-700 p-2 pl-8 rounded-lg transition-colors'>
+                            <i className="fa-solid fa-users-gear w-5 mr-3 text-cyan-500 dark:text-cyan-400"></i>
+                            <Link href="/accounts" className="text-gray-800 dark:text-gray-200 hover:text-blue-600 dark:hover:text-blue-400 transition-colors font-medium">{t.accountSetting}</Link>
+                        </li>
                     )}
 
                     {permissions.departments && (
-                        <li><Link href="/departments" className="flex items-center px-8 py-2 text-sm text-gray-700 dark:text-gray-200 hover:text-blue-600 dark:hover:text-blue-400 transition-colors">{t.departmentSetting}</Link></li>
+                        <li className='flex items-center hover:bg-gray-100 dark:hover:bg-gray-700 p-2 pl-8 rounded-lg transition-colors'>
+                            <i className="fa-solid fa-building w-5 mr-3 text-rose-500 dark:text-rose-400"></i>
+                            <Link href="/departments" className="text-gray-800 dark:text-gray-200 hover:text-blue-600 dark:hover:text-blue-400 transition-colors font-medium">{t.departmentSetting}</Link>
+                        </li>
                     )}
                 </ul>
             </aside>

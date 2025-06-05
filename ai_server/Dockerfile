@@ -13,17 +13,37 @@ RUN apt-get update && apt-get install -y \
     unixodbc-dev \
     odbcinst \
     libodbc1 \
+    # Playwright dependencies
+    libnss3 \
+    libnspr4 \
+    libdbus-1-3 \
+    libatk1.0-0 \
+    libatk-bridge2.0-0 \
+    libatspi2.0-0 \
+    libxcomposite1 \
+    libxdamage1 \
+    libxfixes3 \
+    libxrandr2 \
+    libgbm1 \
+    libxkbcommon0 \
+    libasound2 \
     && curl https://packages.microsoft.com/keys/microsoft.asc | apt-key add - \
     && curl https://packages.microsoft.com/config/ubuntu/20.04/prod.list > /etc/apt/sources.list.d/mssql-release.list \
     && apt-get update && ACCEPT_EULA=Y apt-get install -y msodbcsql17 \
     && rm -rf /var/lib/apt/lists/*
 
-# คัดลอกเฉพาะ requirements.txt มาก่อนเพื่อลดการติดตั้งใหม่ทุกครั้ง
-COPY requirements.txt /app/
+# Copy requirements.txt เป็นลำดับแรก
+COPY requirements.txt /tmp/requirements.txt
 
-# อัปเกรด pip และติดตั้ง dependencies
+# ติดตั้ง dependencies ก่อนเพื่อใช้ layer cache ได้
 RUN pip install --upgrade pip setuptools wheel \
-    && pip install --no-cache-dir -r requirements.txt
+    && pip install --no-cache-dir -r /tmp/requirements.txt
+
+# ติดตั้ง Playwright browsers
+RUN playwright install
+
+# ค่อย copy โค้ดอื่นๆ หลังจากติดตั้งเสร็จ
+COPY . /app/
 
 # สร้างโฟลเดอร์ที่จำเป็น
 RUN mkdir -p /app/bm25_data /app/pdf /app/uploaded_files /app/qdrant_and_hash_gpt40_mini

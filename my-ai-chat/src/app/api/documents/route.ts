@@ -5,7 +5,7 @@ const API_BASE_URL = 'http://ai_server:8000';
 export async function GET(request: NextRequest) {
   try {
     const token = request.cookies.get('access_token')?.value;
-    
+
     if (!token) {
       return NextResponse.json({ error: 'No authentication token' }, { status: 401 });
     }
@@ -47,19 +47,22 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const token = request.cookies.get('access_token')?.value;
-    
+
     if (!token) {
       return NextResponse.json({ error: 'No authentication token' }, { status: 401 });
     }
-
+    const body = await request.formData()
+    console.log('body', body)
     // Forward the request as-is to maintain FormData for file uploads
     const response = await fetch(`${API_BASE_URL}/api/documents`, {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${token}`,
       },
-      body: request.body,
-    });
+      body: body,
+      duplex: "half" as any
+
+    } as any);
 
     const data = await response.json();
 

@@ -1,10 +1,6 @@
-'use client';
-
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
-import ClientLayout from '@/components/ClientLayout';
-import { AuthProvider } from '@/context/AuthContext';
-import { LanguageProvider } from '@/context/LanguageContext';
+import ClientProviders from '@/components/ClientProviders';
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -15,6 +11,11 @@ const geistMono = Geist_Mono({
   variable: "--font-geist-mono",
   subsets: ["latin"],
 });
+
+export const metadata = {
+  title: "AI Chat",
+  description: "AI Chat application",
+};
 
 export default function RootLayout({
   children,
@@ -30,13 +31,9 @@ export default function RootLayout({
         />
       </head>
       <body className={`${geistSans.variable} ${geistMono.variable} antialiased bg-white dark:bg-black`}>
-        <LanguageProvider>
-          <AuthProvider>
-            <ClientLayout>
-              {children}
-            </ClientLayout>
-          </AuthProvider>
-        </LanguageProvider>
+        <ClientProviders>
+          {children}
+        </ClientProviders>
       </body>
     </html>
   );

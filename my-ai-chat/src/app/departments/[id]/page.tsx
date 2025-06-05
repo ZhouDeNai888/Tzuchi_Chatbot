@@ -6,6 +6,7 @@ import { useLanguage } from '@/context/LanguageContext';
 import { translations } from '@/utils/translations';
 import { getDepartment, getDepartmentUsers, addUserToDepartment, removeUserFromDepartment, getKnowledgeBases } from '@/utils/apiService';
 import { toast } from 'react-hot-toast';
+import ConfirmDeleteModal from '@/components/ConfirmDeleteModal';
 
 interface User {
   id?: string;
@@ -49,6 +50,10 @@ export default function DepartmentDetail() {
 
   const [showAddUserForm, setShowAddUserForm] = useState<boolean>(false);
   const [newUserId, setNewUserId] = useState<string>('');
+
+  // Modal state for user removal confirmation
+  const [showDeleteModal, setShowDeleteModal] = useState<boolean>(false);
+  const [userToRemove, setUserToRemove] = useState<string | undefined>(undefined);
 
   const handleBack = () => {
     window.history.back();
@@ -114,28 +119,36 @@ export default function DepartmentDetail() {
     }
 
     console.log('Attempting to remove user with ID:', userId);
+    setUserToRemove(userId);
+    setShowDeleteModal(true);
+  };
 
-    if (window.confirm(t.confirmRemoveUser || 'Are you sure you want to remove this user?')) {
-      try {
-        setUserLoading(true);
-        setUserError(null);
+  const confirmRemoveUser = async () => {
+    if (!departmentId || !userToRemove) {
+      return;
+    }
 
-        const success = await removeUserFromDepartment(departmentId, userId);
+    try {
+      setUserLoading(true);
+      setUserError(null);
 
-        if (success) {
-          setUsers(users.filter(user => user.id !== userId));
-          toast.success(t.userRemoved || 'User removed successfully');
-        } else {
-          setUserError('Failed to remove user from department');
-          toast.error(t.removeUserError || 'Failed to remove user from department');
-        }
-      } catch (err) {
-        console.error('Error removing user from department:', err);
-        setUserError('Error removing user from department');
-        toast.error(t.removeUserError || 'Error removing user from department');
-      } finally {
-        setUserLoading(false);
+      const success = await removeUserFromDepartment(departmentId, userToRemove);
+
+      if (success) {
+        setUsers(users.filter(user => user.id !== userToRemove));
+        toast.success(t.userRemoved || 'User removed successfully');
+      } else {
+        setUserError('Failed to remove user from department');
+        toast.error(t.removeUserError || 'Failed to remove user from department');
       }
+    } catch (err) {
+      console.error('Error removing user from department:', err);
+      setUserError('Error removing user from department');
+      toast.error(t.removeUserError || 'Error removing user from department');
+    } finally {
+      setUserLoading(false);
+      setShowDeleteModal(false);
+      setUserToRemove(undefined);
     }
   };
 
@@ -246,7 +259,7 @@ export default function DepartmentDetail() {
         <h1 className="text-2xl font-semibold">{t.notFound || 'Department Not Found'}</h1>
         <button
           onClick={handleBack}
-          className="px-4 py-1 bg-gray-100 dark:bg-gray-700 rounded-md text-sm font-medium cursor-pointer"
+          className="bg-gray-200 dark:bg-gray-600 text-gray-800 dark:text-white px-4 py-2 rounded hover:bg-gray-300 dark:hover:bg-gray-700 transition-colors"
         >
           {t.back || 'Back'}
         </button>
@@ -256,12 +269,12 @@ export default function DepartmentDetail() {
   );
 
   return (
-    <div className="p-6">
+    <div className="p-6 mt-16">
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-2xl font-semibold">{department?.name}</h1>
         <button
           onClick={handleBack}
-          className="px-4 py-1 bg-gray-100 dark:bg-gray-700 rounded-md text-sm font-medium cursor-pointer"
+          className="bg-gray-200 dark:bg-gray-600 text-gray-800 dark:text-white px-4 py-2 rounded hover:bg-gray-300 dark:hover:bg-gray-700 transition-colors"
         >
           {t.backToDepartments || 'Back'}
         </button>
@@ -273,7 +286,7 @@ export default function DepartmentDetail() {
         {/* Users Section */}
         <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow">
           <div className="flex justify-between items-center mb-4">
-            <h2 className="text-xl font-medium">{t.members || 'Members'}</h2>
+            <h2 className="text-xl font-medium text-black dark:text-white">{t.members || 'Members'}</h2>
             <button
               onClick={() => setShowAddUserForm(!showAddUserForm)}
               className="px-3 py-1 bg-blue-600 text-white rounded-md text-sm cursor-pointer"
@@ -311,7 +324,7 @@ export default function DepartmentDetail() {
               {users.map((user, index) => (
                 <div key={`user-${user.id || index}`} className="flex justify-between items-center p-2 hover:bg-gray-50 dark:hover:bg-gray-700 rounded">
                   <div>
-                    <span className="font-medium">{user.name}</span>
+                    <span className="font-medium text-black dark:text-white">{user.name}</span>
                     <p className="text-sm text-gray-500 dark:text-gray-400">{user.role}</p>
                   </div>
                   <button
@@ -329,7 +342,7 @@ export default function DepartmentDetail() {
 
         {/* Knowledge Base Section */}
         <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow">
-          <h2 className="text-xl font-medium mb-4">{t.knowledgeBase || 'Knowledge Base'}</h2>
+          <h2 className="text-xl font-medium mb-4 text-black dark:text-white">{t.knowledgeBase || 'Knowledge Base'}</h2>
 
           {knowledgeBases.length === 0 ? (
             <p className="text-gray-500 dark:text-gray-400">{t.noKnowledgeBases || 'No knowledge bases for this department'}</p>
@@ -338,7 +351,7 @@ export default function DepartmentDetail() {
               {knowledgeBases.map(kb => (
                 <div key={kb.id} className="p-2 hover:bg-gray-50 dark:hover:bg-gray-700 rounded">
                   <div className="flex justify-between">
-                    <span className="font-medium">{kb.title}</span>
+                    <span className="font-medium text-black dark:text-white">{kb.title}</span>
                     <span className="text-xs text-gray-500 dark:text-gray-400">
                       {new Date(kb.lastUpdated).toLocaleDateString()}
                     </span>
@@ -349,6 +362,15 @@ export default function DepartmentDetail() {
           )}
         </div>
       </div>
+
+      {/* Delete confirmation modal */}
+      <ConfirmDeleteModal
+        isOpen={showDeleteModal}
+        onClose={() => setShowDeleteModal(false)}
+        onConfirm={confirmRemoveUser}
+        title={t.confirmRemoveUser ? 'Confirm Remove User' : undefined}
+        message={t.confirmRemoveUser || 'Are you sure you want to remove this user from the department?'}
+      />
     </div>
   );
 }

@@ -58,11 +58,27 @@ export const translations = {
       share: 'Share',
       shareSetting: 'Share Setting',
       accounts: 'Accounts',
+      advanceSetting: 'Advance Setting',
       accountSetting: 'Account Setting',
       departmentSetting: 'Department Setting',
       profile: 'Profile',
       settings: 'Settings',
       signOut: 'Sign Out'
+    },
+    login: {
+      title: 'Sign in',
+      username: 'Username',
+      password: 'Password',
+      rememberMe: 'Remember me',
+      forgotPassword: 'Forgot password?',
+      signIn: 'Sign in',
+      signingIn: 'Signing in...',
+      errors: {
+        required: 'Username and password are required',
+        invalid: 'Invalid username or password',
+        tooManyAttempts: 'Too many login attempts. Please try again later.',
+        server: 'Server error. Please try again later.'
+      }
     },
     agents: {
       general: {
@@ -119,6 +135,8 @@ export const translations = {
       submit: 'Submit',
       table: {
         fileName: 'File Name',
+        title: 'Title',
+        pathUrl: 'Path/URL',
         type: 'Type',
         uploadTime: 'Upload Time',
         status: 'Status',
@@ -133,14 +151,26 @@ export const translations = {
         view: 'View',
         delete: 'Delete'
       },
+      notification: {
+        title: 'Processing Status',
+        noTasks: 'No tasks in progress'
+      },
       processing: {
         single: 'Processing 1 item...',
-        multiple: 'Processing {count} items...'
+        multiple: 'Processing {count} items...',
+        completed: 'Recently completed:'
+      },
+      creating: {
+        single: 'Creating document:',
+        multiple: 'Creating {count} documents...'
       },
       errors: {
         duplicateFile: 'A file with name "{name}" already exists.',
         duplicateUrl: 'This URL has already been added.'
-      }
+      },
+      confirmDelete: 'Are you sure you want to delete this item?',
+      confirmDeleteTitle: 'Confirm Delete',
+      confirmDeleteMessage: 'Are you sure you want to delete this document? This action cannot be undone.'
     },
     agent: {
       title: 'Agent Settings',
@@ -158,10 +188,21 @@ export const translations = {
       apiKey: 'API Key',
       embedCode: 'Embed Code',
       copyEmbed: 'Copy Embed Code',
+      qrCode: 'QR Code',
+      previewEmbed: 'Preview',
       shareButton: 'Share Agent',
+      shareAnother: 'Share Another Agent',
       agentCreated: 'Agent created successfully',
       agentUpdated: 'Agent updated successfully',
       agentDeleted: 'Agent deleted successfully',
+      confirmDeleteTitle: 'Confirm Delete',
+      confirmDeleteMessage: 'Are you sure you want to delete this agent? This action cannot be undone.',
+      cancel: 'Cancel',
+      confirm: 'Delete',
+      themeOptions: {
+        light: 'Light',
+        dark: 'Dark'
+      },
       form: {
         name: 'Agent Name',
         namePlaceholder: 'My AI Assistant',
@@ -175,11 +216,15 @@ export const translations = {
         department: 'Department',
         systemPrompt: 'System Prompt',
         systemPromptPlaceholder: "Enter the system prompt that defines your agent's behavior...",
+        fallbackMessage: 'Fallback Message',
+        fallbackMessagePlaceholder: 'Message to display when no relevant information is found',
+        fallbackMessageHelp: 'This message will be shown when the system cannot find an answer in the knowledge base.',
+        description: 'Description',
+        descriptionPlaceholder: 'Enter agent description...',
+        descriptionHelp: 'Describe what this agent is used for.',
         createAgent: 'Create Agent',
         saveChanges: 'Save Changes',
         savingLoading: 'Saving...',
-        createButton: 'Create Agent',
-        updateButton: 'Update Agent',
         shareName: 'Share Name',
         shareDescription: 'Description',
         allowedOrigins: 'Allowed Origins',
@@ -237,37 +282,68 @@ export const translations = {
       revokeError: 'Failed to revoke agent access',
       loading: 'Loading agents...',
       copyApiKey: 'Copy API Key',
-      copied: 'Copied!'
+      copied: 'Copied!',
+      details: 'Details',
+      hideDetails: 'Hide Details',
+      viewAgent: 'View Agent',
+      embedCode: 'Embed Code',
+      copyEmbed: 'Copy Embed Code',
+      qrCode: 'QR Code',
+      previewEmbed: 'Preview',
+      configureAndShare: 'Configure & Share',
+      search: 'Search',
+      searchPlaceholder: 'Search agents...',
+      pagination: {
+        showing: 'Showing',
+        of: 'of',
+        itemsPerPage: 'items per page',
+        prev: 'Previous',
+        next: 'Next'
+      },
+      noSearchResults: 'No agents found matching your search'
     },
     accounts: {
-      title: 'Account Management',
+      title: 'Accounts Management',
       addNew: 'Add New Account',
-      form: {
-        username: 'Username',
-        password: 'Password',
-        selectDepartment: 'Select Department',
-        permissions: 'Permissions',
-        addAccount: 'Add Account',
-        deleteAccount: 'Delete'
-      },
-      errors: {
-        required: 'Username and password are required',
-        duplicate: 'An account with this username already exists'
+      confirmDelete: 'Are you sure you want to delete this account?',
+      status: {
+        active: 'Active',
+        inactive: 'Inactive'
       },
       roles: {
         user: 'User',
         administrator: 'Administrator'
       },
       permissions: {
-        chat: 'Chat Access',
-        accounts: 'Account Management',
-        reports: 'View Reports',
-        settings: 'System Settings'
+        chat: 'Access to chat with agents',
+        accounts: 'Manage user accounts',
+        reports: 'View and export reports',
+        settings: 'Change system settings',
+        department_admin: 'Manage department',
+        full_admin: 'Full administrator access'
       },
-      confirmDelete: 'Are you sure you want to delete this account?',
-      status: {
-        active: 'Active',
-        inactive: 'Inactive'
+      form: {
+        username: 'Username',
+        password: 'Password',
+        addAccount: 'Add Account',
+        deleteAccount: 'Delete',
+        selectDepartment: 'Select Department',
+        permissions: 'Permissions'
+      },
+      search: {
+        placeholder: 'Search accounts...',
+        results: 'Found {count} results'
+      },
+      errors: {
+        required: 'Username, password, and email are required',
+        duplicate: 'Username already exists'
+      },
+      pagination: {
+        showing: 'Showing',
+        of: 'of',
+        prev: 'Previous',
+        next: 'Next',
+        go: 'Go'
       }
     },
     accountEdit: {
@@ -305,6 +381,10 @@ export const translations = {
         required: 'Department name is required',
         duplicate: 'A department with this name already exists'
       },
+      search: {
+        placeholder: 'Search departments...',
+        results: 'Found {count} results'
+      },
       stats: {
         users: 'Users',
         knowledgeBase: 'Knowledge Base'
@@ -314,7 +394,17 @@ export const translations = {
         confirmDelete: 'Are you sure you want to delete this department?',
         cancel: 'Cancel',
         save: 'Save',
-        edit: 'Edit'
+        edit: 'Edit',
+        prev: 'Previous',
+        next: 'Next'
+      },
+      pagination: {
+        showing: 'Showing',
+        of: 'of',
+        page: 'Page',
+        itemsPerPage: 'items per page',
+        prev: 'Previous',
+        next: 'Next'
       },
       loading: 'Loading...',
       noDepartments: 'No departments created yet'
@@ -342,6 +432,16 @@ export const translations = {
       notFound: 'Department Not Found',
       notFoundMessage: 'The requested department could not be found.',
       back: 'Back'
+    },
+    preview: {
+      title: 'Chat Widget Preview',
+      embedCode: 'Embed Code',
+      previewSection: 'Preview',
+      previewDescription: 'The chat widget should appear in the bottom-right corner of this page. Try sending a message to test it.',
+      theme: 'Theme',
+      apiKey: 'API Key',
+      noApiKey: 'No API key provided. Add',
+      toUrl: 'to the URL.'
     },
     breadcrumbs: {
       home: 'Home',
@@ -374,11 +474,27 @@ export const translations = {
       share: '分享',
       shareSetting: '分享設定',
       accounts: '帳戶',
+      advanceSetting: '進階設定',
       accountSetting: '帳戶設定',
       departmentSetting: '部門設定',
       profile: '個人資料',
       settings: '設定',
       signOut: '登出'
+    },
+    login: {
+      title: '登入',
+      username: '使用者名稱',
+      password: '密碼',
+      rememberMe: '記住我',
+      forgotPassword: '忘記密碼？',
+      signIn: '登入',
+      signingIn: '登入中...',
+      errors: {
+        required: '使用者名稱和密碼為必填項目',
+        invalid: '無效的使用者名稱或密碼',
+        tooManyAttempts: '登入嘗試次數過多。請稍後再試。',
+        server: '伺服器錯誤。請稍後再試。'
+      }
     },
     agents: {
       general: {
@@ -435,6 +551,8 @@ export const translations = {
       submit: '提交',
       table: {
         fileName: '檔案名稱',
+        title: '標題',
+        pathUrl: '路徑/網址',
         type: '類型',
         uploadTime: '上傳時間',
         status: '狀態',
@@ -449,14 +567,26 @@ export const translations = {
         view: '檢視',
         delete: '刪除'
       },
+      notification: {
+        title: '處理狀態',
+        noTasks: '目前沒有進行中的任務'
+      },
       processing: {
         single: '正在處理 1 個項目...',
-        multiple: '正在處理 {count} 個項目...'
+        multiple: '正在處理 {count} 個項目...',
+        completed: '最近完成：'
+      },
+      creating: {
+        single: '正在建立文件：',
+        multiple: '正在建立 {count} 個文件...'
       },
       errors: {
         duplicateFile: '已存在名為 "{name}" 的檔案。',
         duplicateUrl: '此 URL 已被新增。'
-      }
+      },
+      confirmDelete: '您確定要刪除此項目嗎？',
+      confirmDeleteTitle: '確認刪除',
+      confirmDeleteMessage: '您確定要刪除此文件嗎？此操作無法撤銷。'
     },
     agent: {
       title: '助理設定',
@@ -474,10 +604,21 @@ export const translations = {
       apiKey: 'API 金鑰',
       embedCode: '嵌入代碼',
       copyEmbed: '複製嵌入代碼',
+      qrCode: 'QR 碼',
+      previewEmbed: '預覽',
       shareButton: '分享助理',
+      shareAnother: '分享另一個助理',
       agentCreated: '助理建立成功',
       agentUpdated: '助理更新成功',
       agentDeleted: '助理刪除成功',
+      confirmDeleteTitle: '確認刪除',
+      confirmDeleteMessage: '您確定要刪除此助理嗎？此操作無法撤銷。',
+      cancel: '取消',
+      confirm: '刪除',
+      themeOptions: {
+        light: '亮色',
+        dark: '暗色'
+      },
       form: {
         name: '助理名稱',
         namePlaceholder: '我的AI助理',
@@ -491,6 +632,12 @@ export const translations = {
         department: '部門',
         systemPrompt: '系統提示詞',
         systemPromptPlaceholder: '輸入定義助理行為的系統提示詞...',
+        fallbackMessage: '找不到答案時的回覆',
+        fallbackMessagePlaceholder: '當找不到相關資訊時顯示的訊息',
+        fallbackMessageHelp: '當系統在知識庫中找不到答案時會顯示此訊息',
+        description: '描述',
+        descriptionPlaceholder: '輸入助理描述...',
+        descriptionHelp: '描述此助理的用途。',
         createAgent: '建立助理',
         saveChanges: '儲存變更',
         savingLoading: '儲存中...',
@@ -528,12 +675,12 @@ export const translations = {
       noData: '沒有聊天記錄'
     },
     share: {
-      title: 'Agent Sharing Management',
-      unsharedTitle: 'Available Agents',
-      sharedTitle: 'Shared Agents',
-      description: 'Manage the agents you have shared with external websites and users.',
-      noSharedAgents: 'You have not shared any agents yet.',
-      noUnsharedAgents: 'No available agents to share.',
+      title: '助理分享管理',
+      unsharedTitle: '可用的助理',
+      sharedTitle: '已分享的助理',
+      description: '管理已分享給外部網站和用戶的助理。',
+      noSharedAgents: '您尚未分享任何助理。',
+      noUnsharedAgents: '沒有可分享的助理。',
       columns: {
         name: '名稱',
         apiKey: 'API 金鑰',
@@ -551,22 +698,33 @@ export const translations = {
       revokeError: '撤銷助理訪問權限失敗',
       loading: '載入助理中...',
       copyApiKey: '複製 API 金鑰',
-      copied: '已複製！'
+      copied: '已複製！',
+      details: '詳細信息',
+      hideDetails: '隱藏詳細信息',
+      viewAgent: '查看助理',
+      embedCode: '嵌入代碼',
+      copyEmbed: '複製嵌入代碼',
+      qrCode: 'QR 碼',
+      previewEmbed: '預覽',
+      configureAndShare: '配置並分享',
+      search: '搜尋',
+      searchPlaceholder: '搜尋助理...',
+      pagination: {
+        showing: '顯示',
+        of: '共',
+        itemsPerPage: '項每頁',
+        prev: '上一頁',
+        next: '下一頁'
+      },
+      noSearchResults: '沒有找到符合您搜尋的助理'
     },
     accounts: {
       title: '帳戶管理',
       addNew: '新增帳戶',
-      form: {
-        username: '使用者名稱',
-        password: '密碼',
-        selectDepartment: '選擇部門',
-        permissions: '權限',
-        addAccount: '新增帳戶',
-        deleteAccount: '刪除'
-      },
-      errors: {
-        required: '使用者名稱和密碼為必填項目',
-        duplicate: '此使用者名稱已存在'
+      confirmDelete: '確定要刪除此帳戶嗎？',
+      status: {
+        active: '啟用',
+        inactive: '停用'
       },
       roles: {
         user: '使用者',
@@ -578,10 +736,28 @@ export const translations = {
         reports: '檢視報表',
         settings: '系統設定'
       },
-      confirmDelete: '確定要刪除此帳戶嗎？',
-      status: {
-        active: '啟用',
-        inactive: '停用'
+      form: {
+        username: '使用者名稱',
+        password: '密碼',
+        addAccount: '新增帳戶',
+        deleteAccount: '刪除',
+        selectDepartment: '選擇部門',
+        permissions: '權限'
+      },
+      search: {
+        placeholder: '搜尋帳戶...',
+        results: '找到 {count} 個結果'
+      },
+      errors: {
+        required: '使用者名稱和密碼為必填項目',
+        duplicate: '此使用者名稱已存在'
+      },
+      pagination: {
+        showing: '顯示中',
+        of: '的',
+        prev: '上一頁',
+        next: '下一頁',
+        go: '前往'
       }
     },
     accountEdit: {
@@ -619,6 +795,10 @@ export const translations = {
         required: '部門名稱為必填項目',
         duplicate: '已存在相同名稱的部門'
       },
+      search: {
+        placeholder: '搜尋部門...',
+        results: '找到 {count} 個結果'
+      },
       stats: {
         users: '使用者',
         knowledgeBase: '知識庫'
@@ -628,7 +808,17 @@ export const translations = {
         confirmDelete: '確定要刪除此部門嗎？',
         cancel: '取消',
         save: '儲存',
-        edit: '編輯'
+        edit: '編輯',
+        prev: '上一頁',
+        next: '下一頁'
+      },
+      pagination: {
+        showing: '顯示中',
+        of: '的',
+        page: '頁',
+        itemsPerPage: '每頁項目數',
+        prev: '上一頁',
+        next: '下一頁'
       },
       loading: '載入中...',
       noDepartments: '尚未建立任何部門'
@@ -656,6 +846,16 @@ export const translations = {
       notFound: '找不到部門',
       notFoundMessage: '找不到請求的部門。',
       back: '返回'
+    },
+    preview: {
+      title: '聊天小工具預覽',
+      embedCode: '嵌入代碼',
+      previewSection: '預覽',
+      previewDescription: '聊天小工具應該會出現在頁面的右下角。嘗試發送一條訊息來測試它。',
+      theme: '主題',
+      apiKey: 'API 金鑰',
+      noApiKey: '未提供 API 金鑰。添加',
+      toUrl: '到網址。'
     },
     breadcrumbs: {
       home: '首頁',

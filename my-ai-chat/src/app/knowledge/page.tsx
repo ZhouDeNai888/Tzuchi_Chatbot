@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import CreateKnowledgeModal from '../../components/CreateKnowledgeModal';
+import ConfirmDeleteModal from '../../components/ConfirmDeleteModal';
 import { useLanguage } from '@/context/LanguageContext';
 import { translations } from '@/utils/translations';
 import { useAuth } from '@/context/AuthContext';
@@ -29,14 +30,24 @@ export default function Knowledge() {
   const [error, setError] = useState<string | null>(null);
   const { language } = useLanguage();
   const { isAuthenticated, user } = useAuth();
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [knowledgeToDelete, setKnowledgeToDelete] = useState<number | null>(null);
+  // Pagination states
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 9; // 9 items per page as requested
   const defaultTranslations = {
     title: 'Knowledge',
     createNew: 'Create New',
     confirmDelete: 'Are you sure you want to delete this knowledge base?',
+    confirmDeleteTitle: 'Confirm Delete',
     searchPlaceholder: 'Search...',
     noKnowledgeBases: 'No knowledge bases found',
     newlyCreated: 'Newly Created',
-    duplicateError: 'A knowledge base with this title already exists'
+    duplicateError: 'A knowledge base with this title already exists',
+    previous: 'Previous',
+    next: 'Next',
+    page: 'Page',
+    of: 'of'
   };
   const t = { ...defaultTranslations, ...translations[language].knowledge };
 
@@ -44,7 +55,10 @@ export default function Knowledge() {
   const getUserDepartmentId = (): number => {
     console.log('User:', user); // Debugging line to check user object
     if (user && user.departments && user.departments.length > 0) {
-      return user.departments[0].id;
+      // Access either property using a type-safe approach
+      const department = user.departments[0];
+      // DepartmentID is the correct property name as confirmed by the user
+      return (department as any).DepartmentID || department.id || 1;
     }
 
     return 1; // Default department ID if user has no departments
@@ -108,49 +122,44 @@ export default function Knowledge() {
         is_global: false
       });
 
-      // Add is_new flag for UI highlighting
-      const knowledgeBaseWithFlag = {
-        ...newKnowledgeBase,
-        is_new: true
-      };
+      // Generate URL to navigate to the new knowledge base
+      const url = getKnowledgeUrl(newKnowledgeBase);
 
-      setKnowledgeBases(prev => [...prev, knowledgeBaseWithFlag]);
-
-      // Remove the is_new flag after 5 seconds
-      setTimeout(() => {
-        setKnowledgeBases(items =>
-          items.map(item =>
-            item.id === newKnowledgeBase.id ? { ...item, is_new: false } : item
-          )
-        );
-      }, 5000);
+      // Navigate to the new knowledge base page
+      window.location.href = url;
     } catch (err: any) {
       console.error('Error creating knowledge base:', err);
       setError(err.message || 'Failed to create knowledge base');
-    } finally {
       setIsLoading(false);
     }
   };
 
   const handleDeleteKnowledge = async (id: number) => {
-    if (!confirm(t.confirmDelete)) {
-      return;
-    }
+    setKnowledgeToDelete(id);
+    setIsDeleteModalOpen(true);
+  };
+
+  const confirmDelete = async () => {
+    if (!knowledgeToDelete) return;
+
+    // Close the modal immediately
+    setIsDeleteModalOpen(false);
 
     setIsLoading(true);
     setError(null);
 
     try {
       // Call API to delete knowledge base
-      await deleteKnowledgeBase(id);
+      await deleteKnowledgeBase(knowledgeToDelete);
 
       // Update state
-      setKnowledgeBases(prev => prev.filter(kb => kb.id !== id));
+      setKnowledgeBases(prev => prev.filter(kb => kb.id !== knowledgeToDelete));
     } catch (err: any) {
       console.error('Error deleting knowledge base:', err);
       setError(err.message || 'Failed to delete knowledge base');
     } finally {
       setIsLoading(false);
+      setKnowledgeToDelete(null);
     }
   };
 
@@ -170,6 +179,28 @@ export default function Knowledge() {
     if (!kb.title) return `/knowledge/view?id=${kb.id}`;
     const slug = kb.title.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
     return `/knowledge/${slug}?id=${kb.id}`;
+  };
+
+  // Calculate pagination data
+  const totalPages = Math.ceil(existingItems.length / itemsPerPage);
+  const paginatedItems = existingItems.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
+
+  // Define rainbow gradient classes for cards
+  const rainbowGradients = [
+    'bg-gradient-to-r from-pink-500 to-purple-500',
+    'bg-gradient-to-r from-purple-500 to-indigo-500',
+    'bg-gradient-to-r from-indigo-500 to-blue-500',
+    'bg-gradient-to-r from-blue-500 to-teal-500',
+    'bg-gradient-to-r from-teal-500 to-green-500',
+    'bg-gradient-to-r from-green-500 to-yellow-500',
+    'bg-gradient-to-r from-yellow-500 to-orange-500',
+    'bg-gradient-to-r from-orange-500 to-red-500',
+    'bg-gradient-to-r from-red-500 to-pink-500',
+  ];
+
+  // Function to get a gradient based on the knowledge base ID
+  const getGradientClass = (id: number) => {
+    return rainbowGradients[id % rainbowGradients.length];
   };
 
   return (
@@ -225,7 +256,7 @@ export default function Knowledge() {
                   <Link
                     key={kb.id}
                     href={getKnowledgeUrl(kb)}
-                    className="bg-blue-100 dark:bg-blue-900 rounded-lg p-6 hover:bg-blue-200 dark:hover:bg-blue-800 transition-colors cursor-pointer block border-2 border-blue-500 relative group"
+                    className={`rounded-lg p-6 hover:bg-opacity-90 transition-all duration-300 transform hover:-translate-y-1 hover:shadow-xl cursor-pointer block relative group ${getGradientClass(kb.id)}`}
                   >
                     <div className="absolute top-2 right-2 flex space-x-2">
                       <button
@@ -234,7 +265,7 @@ export default function Knowledge() {
                           e.stopPropagation();
                           handleDeleteKnowledge(kb.id);
                         }}
-                        className="text-red-500 dark:text-red-400 opacity-0 group-hover:opacity-100 hover:text-red-600 dark:hover:text-red-300 transition-colors"
+                        className="text-white opacity-0 group-hover:opacity-100 hover:text-gray-200 transition-all duration-200"
                         disabled={isLoading}
                         aria-label="Delete knowledge base"
                         title="Delete knowledge base"
@@ -245,21 +276,21 @@ export default function Knowledge() {
                       </button>
                     </div>
                     <div className="flex items-start space-x-3">
-                      <div className="bg-blue-200 dark:bg-blue-700 p-2 rounded-lg">
-                        <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-blue-600 dark:text-blue-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <div className="bg-white/30 backdrop-blur-sm p-2 rounded-lg">
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                         </svg>
                       </div>
                       <div>
-                        <h2 className="text-gray-900 dark:text-white text-xl font-semibold mb-2">{kb.title}</h2>
-                        <p className="text-gray-600 dark:text-gray-300">{kb.description}</p>
-                        <p className="text-xs text-gray-500 dark:text-gray-400 mt-4">
+                        <h2 className="text-white text-xl font-semibold mb-2">{kb.title}</h2>
+                        <p className="text-white/80">{kb.description}</p>
+                        <p className="text-xs text-white/70 mt-4">
                           Created: {new Date(kb.created_at).toLocaleDateString()}
                         </p>
                       </div>
                     </div>
                     <div className="mt-4 flex justify-end">
-                      <span className="text-blue-600 dark:text-blue-400 text-sm font-medium">
+                      <span className="text-white text-sm font-medium">
                         View &rarr;
                       </span>
                     </div>
@@ -270,11 +301,11 @@ export default function Knowledge() {
           )}
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {existingItems.map((kb) => (
+            {paginatedItems.map((kb) => (
               <Link
                 key={kb.id}
                 href={getKnowledgeUrl(kb)}
-                className="bg-gray-100 dark:bg-gray-800 rounded-lg p-6 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors cursor-pointer block relative group"
+                className={`rounded-lg p-6 hover:bg-opacity-90 transition-all duration-300 transform hover:-translate-y-1 hover:shadow-xl cursor-pointer block relative group ${getGradientClass(kb.id)}`}
               >
                 <div className="absolute top-2 right-2 flex space-x-2">
                   <button
@@ -283,7 +314,7 @@ export default function Knowledge() {
                       e.stopPropagation();
                       handleDeleteKnowledge(kb.id);
                     }}
-                    className="text-red-500 dark:text-red-400 opacity-0 group-hover:opacity-100 hover:text-red-600 dark:hover:text-red-300 transition-colors"
+                    className="text-white opacity-0 group-hover:opacity-100 hover:text-gray-200 transition-all duration-200"
                     disabled={isLoading}
                     aria-label="Delete knowledge base"
                     title="Delete knowledge base"
@@ -294,27 +325,50 @@ export default function Knowledge() {
                   </button>
                 </div>
                 <div className="flex items-start space-x-3">
-                  <div className="bg-gray-200 dark:bg-gray-700 p-2 rounded-lg">
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-gray-600 dark:text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <div className="bg-white/30 backdrop-blur-sm p-2 rounded-lg">
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                     </svg>
                   </div>
                   <div>
-                    <h2 className="text-gray-900 dark:text-white text-xl font-semibold mb-2">{kb.title}</h2>
-                    <p className="text-gray-600 dark:text-gray-400">{kb.description}</p>
-                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-4">
+                    <h2 className="text-white text-xl font-semibold mb-2">{kb.title}</h2>
+                    <p className="text-white/80">{kb.description}</p>
+                    <p className="text-xs text-white/70 mt-4">
                       Created: {new Date(kb.created_at).toLocaleDateString()}
                     </p>
                   </div>
                 </div>
                 <div className="mt-4 flex justify-end">
-                  <span className="text-gray-600 dark:text-gray-400 text-sm font-medium">
+                  <span className="text-white text-sm font-medium">
                     View &rarr;
                   </span>
                 </div>
               </Link>
             ))}
           </div>
+
+          {/* Pagination controls */}
+          {totalPages > 1 && (
+            <div className="mt-8 flex justify-between items-center">
+              <button
+                onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                className="bg-gray-200 dark:bg-gray-700 text-gray-900 dark:text-white px-4 py-2 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors"
+                disabled={currentPage === 1 || isLoading}
+              >
+                {t.previous}
+              </button>
+              <div className="text-gray-700 dark:text-gray-300">
+                {t.page} {currentPage} {t.of} {totalPages}
+              </div>
+              <button
+                onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                className="bg-gray-200 dark:bg-gray-700 text-gray-900 dark:text-white px-4 py-2 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors"
+                disabled={currentPage === totalPages || isLoading}
+              >
+                {t.next}
+              </button>
+            </div>
+          )}
         </>
       )}
 
@@ -323,6 +377,16 @@ export default function Knowledge() {
         onClose={() => setIsModalOpen(false)}
         onSubmit={handleCreateKnowledge}
       />
+
+      <ConfirmDeleteModal
+        isOpen={isDeleteModalOpen}
+        onClose={() => setIsDeleteModalOpen(false)}
+        onConfirm={confirmDelete}
+        title={t.confirmDeleteTitle}
+        message={t.confirmDelete}
+      />
     </div>
+
   );
 }
+

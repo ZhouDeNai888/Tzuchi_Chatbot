@@ -25,6 +25,8 @@ interface Account {
     username: string;
     email: string;
     password?: string;
+    firstname?: string;  // Added firstname field
+    lastname?: string;   // Added lastname field
     role: string;
     department: string;
     departments?: DepartmentData[];
@@ -47,7 +49,9 @@ const PermissionDisplay = ({
     const [availablePermissions, setAvailablePermissions] = useState<Permission[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
+    const [refreshKey, setRefreshKey] = useState(0); // Add a refresh key to force re-render
 
+    // Fetch permissions when component mounts or refresh key changes
     useEffect(() => {
         const fetchPermissions = async () => {
             try {
@@ -64,10 +68,12 @@ const PermissionDisplay = ({
         };
 
         fetchPermissions();
-    }, []);
+    }, [refreshKey]); // Add refreshKey as dependency
 
     const handleTogglePermission = async (permissionName: string, checked: boolean) => {
         try {
+            setLoading(true); // Show loading state while updating
+
             if (checked) {
                 await addPermissionToUser(permissionName, parseInt(userId));
                 toast.success(`Added permission: ${permissionName}`);
@@ -82,9 +88,14 @@ const PermissionDisplay = ({
                 : userPermissions.filter(p => p !== permissionName);
 
             onPermissionChange(newPermissions);
+
+            // Force refresh permissions list to ensure UI is in sync with backend
+            setRefreshKey(prev => prev + 1);
         } catch (err) {
             console.error(`Failed to ${checked ? 'add' : 'remove'} permission:`, err);
             toast.error(`Failed to ${checked ? 'add' : 'remove'} permission: ${permissionName}`);
+        } finally {
+            setLoading(false);
         }
     };
 
@@ -161,6 +172,8 @@ export default function EditUserPage() {
                     id: String(userData.UserID),
                     username: userData.Username,
                     email: userData.Email,
+                    firstname: userData.FirstName || '',
+                    lastname: userData.LastName || '',
                     role: userData.UserRole || 'User',
                     department: userData.departments && userData.departments.length > 0
                         ? (userData.departments[0] as any).Name || userData.departments[0].name || ''
@@ -197,6 +210,8 @@ export default function EditUserPage() {
             const updateData: UserUpdateRequest = {
                 username: user.username,
                 email: user.email,
+                first_name: user.firstname,
+                last_name: user.lastname,
                 user_role: user.role,
                 is_active: user.status === 'active',
                 permissions: user.permissions,
@@ -288,6 +303,27 @@ export default function EditUserPage() {
                             onChange={(e) => setUser({ ...user, email: e.target.value })}
                             className="bg-white dark:bg-gray-700 text-gray-900 dark:text-white p-2 rounded w-full border border-gray-300 dark:border-gray-600 focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 transition-colors"
                         />
+                    </div>
+
+                    <div className="flex gap-4">
+                        <div className="flex-1">
+                            <label className="text-gray-700 dark:text-gray-300 block mb-1">First Name</label>
+                            <input
+                                type="text"
+                                value={user.firstname || ''}
+                                onChange={(e) => setUser({ ...user, firstname: e.target.value })}
+                                className="bg-white dark:bg-gray-700 text-gray-900 dark:text-white p-2 rounded w-full border border-gray-300 dark:border-gray-600 focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 transition-colors"
+                            />
+                        </div>
+                        <div className="flex-1">
+                            <label className="text-gray-700 dark:text-gray-300 block mb-1">Last Name</label>
+                            <input
+                                type="text"
+                                value={user.lastname || ''}
+                                onChange={(e) => setUser({ ...user, lastname: e.target.value })}
+                                className="bg-white dark:bg-gray-700 text-gray-900 dark:text-white p-2 rounded w-full border border-gray-300 dark:border-gray-600 focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 transition-colors"
+                            />
+                        </div>
                     </div>
 
                     <div>
