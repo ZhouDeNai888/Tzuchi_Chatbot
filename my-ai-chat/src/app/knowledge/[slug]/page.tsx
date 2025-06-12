@@ -25,6 +25,26 @@ import {
   Document
 } from '@/utils/apiService';
 
+// Helper functions for local storage
+const STORAGE_KEY_PREFIX = 'knowledge_processing_';
+
+const getProcessingStorageKey = (knowledgeBaseId: number) =>
+  `${STORAGE_KEY_PREFIX}${knowledgeBaseId}`;
+
+const saveProcessingItemsToStorage = (knowledgeBaseId: number, items: string[]) => {
+  if (typeof window !== 'undefined') {
+    localStorage.setItem(getProcessingStorageKey(knowledgeBaseId), JSON.stringify(items));
+  }
+};
+
+const getProcessingItemsFromStorage = (knowledgeBaseId: number): string[] => {
+  if (typeof window !== 'undefined') {
+    const stored = localStorage.getItem(getProcessingStorageKey(knowledgeBaseId));
+    return stored ? JSON.parse(stored) : [];
+  }
+  return [];
+};
+
 export default function KnowledgePage() {
   const searchParams = useSearchParams();
   const knowledgeBaseId = Number(searchParams.get('id'));
@@ -600,6 +620,23 @@ export default function KnowledgePage() {
     }
   };
 
+  // Restore processing items from local storage on mount
+  useEffect(() => {
+    if (knowledgeBaseId) {
+      const storedProcessingItems = getProcessingItemsFromStorage(knowledgeBaseId);
+      if (storedProcessingItems.length > 0) {
+        setProcessingItems(storedProcessingItems);
+      }
+    }
+  }, [knowledgeBaseId]);
+
+  // Save processing items to local storage on change
+  useEffect(() => {
+    if (knowledgeBaseId) {
+      saveProcessingItemsToStorage(knowledgeBaseId, processingItems);
+    }
+  }, [processingItems, knowledgeBaseId]);
+
   if (isLoading) {
     return (
       <div className="pt-16 px-4 bg-white dark:bg-black min-h-screen">
@@ -643,21 +680,59 @@ export default function KnowledgePage() {
   return (
     <div className="pt-16 px-4 bg-white dark:bg-black min-h-screen">
       <div className="max-w-6xl mx-auto">
-        <div className="flex justify-between items-center mb-6">
-          {/* <div>
-            <h1 className="text-2xl font-bold text-gray-900 dark:text-white">{knowledge?.title || t.notFound}</h1>
-            {knowledge?.description && (
-              <p className="text-sm text-gray-600 dark:text-gray-400 mt-1 max-w-2xl line-clamp-1">
-                {knowledge.description}
-              </p>
-            )}
-          </div> */}
-          <button
-            onClick={() => router.push('/knowledge')}
-            className="bg-gray-200 dark:bg-gray-600 text-gray-800 dark:text-white px-4 py-2 rounded hover:bg-gray-300 dark:hover:bg-gray-700 transition-colors"
-          >
-            {t.backToKnowledge}
-          </button>
+        {/* Improved header with breadcrumb navigation */}
+        <div className="flex flex-col mb-6">
+          <nav className="flex items-center text-sm mb-4" aria-label="Breadcrumb">
+            <ol className="inline-flex items-center space-x-1 md:space-x-3">
+              <li className="inline-flex items-center">
+                <Link href="/" className="inline-flex items-center text-gray-600 hover:text-blue-600 dark:text-gray-400 dark:hover:text-blue-400">
+                  <svg className="w-4 h-4 mr-2" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M10.707 2.293a1 1 0 00-1.414 0l-7 7a1 1 0 001.414 1.414L4 10.414V17a1 1 0 001 1h2a1 1 0 001-1v-2a1 1 0 011-1h2a1 1 0 011 1v2a1 1 0 001 1h2a1 1 0 001-1v-6.586l.293.293a1 1 0 001.414-1.414l-7-7z"></path>
+                  </svg>
+                  {translations[language].nav.home}
+                </Link>
+              </li>
+              <li>
+                <div className="flex items-center">
+                  <svg className="w-6 h-6 text-gray-400" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
+                    <path fillRule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clipRule="evenodd"></path>
+                  </svg>
+                  <Link href="/knowledge" className="ml-1 text-gray-600 hover:text-blue-600 dark:text-gray-400 dark:hover:text-blue-400 md:ml-2">
+                    {translations[language].nav.knowledgeBase}
+                  </Link>
+                </div>
+              </li>
+              <li aria-current="page">
+                <div className="flex items-center">
+                  <svg className="w-6 h-6 text-gray-400" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
+                    <path fillRule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clipRule="evenodd"></path>
+                  </svg>
+                  <span className="ml-1 text-gray-500 md:ml-2 font-medium dark:text-gray-300">
+                    {knowledge?.title || t.notFound}
+                  </span>
+                </div>
+              </li>
+            </ol>
+          </nav>
+
+          <div className="flex justify-between items-center">
+            <button
+              onClick={() => router.push('/knowledge')}
+              className="flex items-center text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 font-medium transition-colors"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
+                <path fillRule="evenodd" d="M9.707 16.707a1 1 0 01-1.414 0l-6-6a1 1 0 010-1.414l6-6a1 1 0 011.414 1.414L5.414 9H17a1 1 0 110 2H5.414l4.293 4.293a1 1 0 010 1.414z" clipRule="evenodd" />
+              </svg>
+              {t.backToKnowledge}
+            </button>
+
+            <div className="text-sm text-gray-500 dark:text-gray-400 flex items-center">
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+              </svg>
+              <span>{knowledge?.created_at ? formatDate(knowledge.created_at) : '-'}</span>
+            </div>
+          </div>
         </div>
 
         <article className="bg-gradient-to-r from-blue-50 to-gray-50 dark:from-gray-800 dark:to-gray-900 rounded-xl p-6 mb-8 shadow-lg border border-gray-100 dark:border-gray-700">
@@ -806,7 +881,7 @@ export default function KnowledgePage() {
             <div className="bg-blue-600 dark:bg-blue-700 text-white px-4 py-3 flex justify-between items-center">
               <h3 className="font-medium text-sm flex items-center">
                 <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-2" viewBox="0 0 20 20" fill="currentColor">
-                  <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
+                  <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zm-4 4a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
                 </svg>
                 {t.notification?.title || "Processing Status"}
               </h3>
@@ -857,7 +932,7 @@ export default function KnowledgePage() {
                 {processingItems.length === 0 && (
                   <div className="flex items-center justify-center text-gray-500 dark:text-gray-400 py-2">
                     <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
-                      <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                      <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
                     </svg>
                     {t.notification?.noTasks || "No tasks in progress"}
                   </div>

@@ -56,7 +56,8 @@ sys.stdout.reconfigure(encoding='utf-8')
 load_dotenv()
 origin_whitelist = os.getenv("ORIGIN_WHITELIST", "").split(",")
 print(f"origin_whitelist: {origin_whitelist}")
-models = os.getenv("MODEL_NAME", "").split(",")
+# models = os.getenv("MODEL_NAME", "").split(",")
+
 jwt_secret = os.getenv("JWT_SECRET_KEY", secrets.token_hex(32))
 jwt_algorithm = os.getenv("JWT_ALGORITHM", "HS256")
 jwt_expiration = int(os.getenv("JWT_EXPIRATION_MINUTES", "1440"))  # 24 hours by default
@@ -70,9 +71,15 @@ thread_pool = ThreadPoolExecutor(max_workers=4)
 model_cache = {}  # Structure: {model_name: {dept_id: {knowledge_base: {agent_key: {"model": instance, "retrieval": chain}}}}}
 embedding_lock = asyncio.Lock()  # Lock for embedding operations
 
+# Database connection
+db = Database()
+models = db.get_all_ai_models_name()
+
+
 async def get_cached_model(model_name: str, dept_id: int, knowledge_base: str, agent_key: str) -> Optional[Any]:
     """Get a model and its retrieval chain from the cache"""
     try:
+        
         cache_data = model_cache.get(model_name, {}).get(str(dept_id), {}).get(str(knowledge_base), {}).get(agent_key)
         if cache_data:
             return cache_data.get("model"), cache_data.get("retrieval")
@@ -84,6 +91,15 @@ async def get_cached_model(model_name: str, dept_id: int, knowledge_base: str, a
 async def cache_model(model_name: str, dept_id: int, knowledge_base: str, agent_key: str, model_instance: Any, retrieval_chain: Any = None):
     """Add a model and its retrieval chain to the cache"""
     try:
+        # Clear any previous cache entries for this agent_key to prevent using outdated retrieval chains
+        for model in model_cache.values():
+            for dept in model.values():
+                for kb in list(dept.keys()):
+                    if agent_key in dept[kb]:
+                        logger.info(f"Clearing previous cache entry for agent_key: {agent_key} in kb: {kb}")
+                        del dept[kb][agent_key]
+        
+        # Set up cache structure
         if model_name not in model_cache:
             model_cache[model_name] = {}
         if str(dept_id) not in model_cache[model_name]:
@@ -107,8 +123,7 @@ async def cache_model(model_name: str, dept_id: int, knowledge_base: str, agent_
     except Exception as e:
         logger.error(f"Error caching model: {str(e)}")
 
-# Database connection
-db = Database()
+
 
 # Lifespan context manager for startup/shutdown events
 @asynccontextmanager
@@ -424,6 +439,10 @@ class PermissionRequest(BaseModel):
 
 class MessageFeedback(BaseModel):
     feedback: str
+
+class FixPermission(BaseModel):
+    permission_name: str
+    description: str
 
 # --- JWT Functions ---
 
@@ -970,11 +989,92 @@ async def refresh_access_token(user = Depends(get_current_user)):
 async def get_available_models(user = Depends(get_current_user)):
     """Get list of available models from environment configuration"""
     try:
-        available_models = [model.strip() for model in models if model.strip()]
+        models = db.get_all_ai_models_name()
+        if not models:
+            raise HTTPException(status_code=404, detail="No AI models available")
+        available_models = models
         return {"models": available_models}
     except Exception as e:
         logger.error(f"Error getting available models: {str(e)}")
         raise HTTPException(status_code=500, detail="Failed to get available models")
+
+
+@app.get("/api/all_models")
+async def get_all_models(user = Depends(get_current_user)):
+    models = db.get_all_ai_models()
+    """Get all AI models from the database"""
+    if not models:
+        raise HTTPException(status_code=404, detail="No AI models found")
+    return models
+
+
+@app.post("/api/models", response_model=dict)
+async def create_model(
+    platform: str = Body(..., embed=True),
+    model_name: str = Body(..., embed=True),
+    created_by: int = Body(..., embed=True),
+    user = Depends(get_current_user),
+    background_tasks: BackgroundTasks = None
+):
+    """Create a new AI model"""
+    if user["role"] != "admin":
+        raise HTTPException(status_code=403, detail="Permission denied")
+    
+    print(f'Creating model: {model_name} on platform: {platform} by user: {created_by}')
+    try:
+        # Create the model record in the database first
+        model_id = db.create_ai_model(
+            platform=platform,
+            model_name=model_name,
+            created_by=created_by
+        )
+        if not model_id:
+            raise HTTPException(status_code=400, detail="Failed to create model. Model name may already exist.")
+        
+        # Pull model from Ollama in the background if it's not a GPT model
+        if "gpt" not in model_name:
+            # Define the background task for pulling the model
+            async def pull_model_in_background(model_name):
+                try:
+                    import httpx
+                    async with httpx.AsyncClient() as client:
+                        response = await client.post("http://ollama:11434/api/pull", json={"name": model_name})
+                        
+                        if response.status_code == 200:
+                            print(f"✅ Model {model_name} pulled successfully in background")
+                        else:
+                            print(f"❌ Background pull failed for model {model_name}: {response.text}")
+                except Exception as e:
+                    logger.error(f"Error in background model pull: {str(e)}")
+            
+            # Add the task to run in the background
+            if background_tasks:
+                background_tasks.add_task(pull_model_in_background, model_name)
+            else:
+                # Fall back to a thread if background_tasks is not available
+                import threading
+                threading.Thread(target=lambda: asyncio.run(pull_model_in_background(model_name)), daemon=True).start()
+        
+        return {"status": "success", "message": f"Model '{model_name}' created successfully. If this is an Ollama model, it will be pulled in the background.", "model_id": model_id}
+    except Exception as e:
+        logger.error(f"Error creating model: {str(e)}")
+        raise HTTPException(status_code=500, detail="Failed to create model")
+
+
+@app.delete("/api/models", response_model=dict)
+async def delete_model(model_id: int = Body(..., embed=True), user = Depends(get_current_user)):
+    """Delete an AI model"""
+    if user["role"] != "admin":
+        raise HTTPException(status_code=403, detail="Permission denied")
+    
+    try:
+        success = db.delete_ai_model(model_id=model_id)
+        if not success:
+            raise HTTPException(status_code=404, detail="Model not found")
+        return {"status": "success", "message": f"Model with ID {model_id} deleted successfully"}
+    except Exception as e:
+        logger.error(f"Error deleting model: {str(e)}")
+        raise HTTPException(status_code=500, detail="Failed to delete model")
 
 @app.post("/api/agents", response_model=Agent)
 async def create_agent(
@@ -1000,7 +1100,7 @@ async def create_agent(
                 
                 model_name = config.get("model")
                 knowledge_base_id = config.get("knowledge_base_ids")
-                
+                models = db.get_all_ai_models_name()
                 # Check if model is supported
                 if not model_name or model_name not in models:
                     raise HTTPException(
@@ -1136,7 +1236,7 @@ async def chat_endpoint(request: ChatRequest, user = Depends(get_current_user)):
         except Exception as e:
             logger.error(f"Error parsing agent configuration: {str(e)}")
             raise HTTPException(status_code=500, detail="Invalid agent configuration")
-    
+    models = db.get_all_ai_models_name()
     # Verify model is supported
     if not model_name or model_name not in models:
         raise HTTPException(
@@ -1637,6 +1737,7 @@ async def update_agent(
             )
             
             if retrieval_chain != "notfound":
+                print('chace model')
                 await cache_model(
                     model_name=model_name,
                     dept_id=dept_id,
@@ -3453,3 +3554,129 @@ async def get_agent_config_by_api_key(api_key: str):
         raise HTTPException(status_code=500, detail="Failed to retrieve agent configuration")
 
 
+@app.post("/api/permissions", response_model=dict)
+async def add_permissions(data: FixPermission, user = Depends(get_current_user)):
+    """
+    Add permissions.
+    
+    Args:
+        data: Contains permission_name
+        
+    Returns:
+        Success message
+    """
+    print(f"Adding permission: {data}")
+    # Check if user has permission to manage permissions
+    if user["role"] != "admin":
+        has_permission = db.check_user_has_permission(
+            user_id=user["user_id"],
+            permission_name="manage_permissions"
+        )
+        if not has_permission:
+            raise HTTPException(status_code=403, detail="Permission denied")
+    
+    # check permission exists
+    permission_exists = db.check_permission(data.permission_name)
+    if permission_exists:
+        raise HTTPException(status_code=404, detail=f"Permission '{data.permission_name}' does not exist")
+
+    # Add permission
+    permission_id = db.add_permission(
+        permission_name=data.permission_name,
+        description=data.description,
+    )
+    
+    if not permission_id:
+        raise HTTPException(
+            status_code=404,
+            detail="Failed to add permission"
+        )
+    
+    return {'permission_id':permission_id}
+
+@app.put('/api/permissions/{permission_id}')
+async def update_permission(
+    permission_id: int,
+    data: Permission,
+    user = Depends(get_current_user)
+):
+    """
+    Update an existing permission.
+    
+    Args:
+        permission_id: ID of the permission to update
+        data: Contains updated permission_name and optional description
+        
+    Returns:
+        Updated permission details
+    """
+    # Check if user has permission to manage permissions
+    if user["role"] != "admin":
+        has_permission = db.check_user_has_permission(
+            user_id=user["user_id"],
+            permission_name="manage_permissions"
+        )
+        if not has_permission:
+            raise HTTPException(status_code=403, detail="Permission denied")
+    
+    # Validate input
+    if not data.permission_name:
+        raise HTTPException(status_code=400, detail="permission_name is required")
+    
+    # Update the permission
+    success = db.update_permission(
+        permission_id=permission_id,
+        permission_name=data.permission_name,
+        description=data.description
+    )
+    
+    if not success:
+        raise HTTPException(
+            status_code=404,
+            detail="Failed to update permission"
+        )
+    
+    # Get the updated permission details
+    updated_permission = db.get_permission(permission_id)
+    
+    return updated_permission
+
+
+@app.delete("/api/permissions/{permission_id}", response_model=dict)
+async def delete_permission(
+    permission_id: int,
+    user = Depends(get_current_user)
+):
+    """
+    Delete a permission.
+    
+    Args:
+        permission_id: ID of the permission to delete
+        
+    Returns:
+        Success message
+    """
+    # Check if user has permission to manage permissions
+    if user["role"] != "admin":
+        has_permission = db.check_user_has_permission(
+            user_id=user["user_id"],
+            permission_name="manage_permissions"
+        )
+        if not has_permission:
+            raise HTTPException(status_code=403, detail="Permission denied")
+    
+    # Check if permission exists
+    existing_permission = db.get_permission(permission_id)
+    if not existing_permission:
+        raise HTTPException(status_code=404, detail="Permission not found")
+    
+    # Delete the permission
+    success = db.delete_permission(permission_id)
+    
+    if not success:
+        raise HTTPException(
+            status_code=400,
+            detail="Failed to delete permission"
+        )
+    
+    return {"status": "success", "message": f"Permission with ID {permission_id} deleted successfully"}

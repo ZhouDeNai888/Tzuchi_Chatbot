@@ -1,0 +1,1 @@
+2025/06/12 02:50:32 [error] 181#181: *179 open() "/var/www/html/nice ports,/Trinity.txt.bak" failed (2: No such file or directory), client: 172.18.0.1, server: localhost-nginx-proxy-manager, request: "GET /nice%20ports%2C/Tri%6Eity.txt%2ebak HTTP/1.0"

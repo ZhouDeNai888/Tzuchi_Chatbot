@@ -19,6 +19,7 @@ class MultiCollectionQdrant(VectorStore):
             Qdrant(client=client, collection_name=name, embeddings=embedding_model)
             for name in collection_names
         ]
+        print(f"Initialized MultiCollectionQdrant with collections: {self.collection_names}")
 
     def similarity_search(self, query: str, k: int = 4, **kwargs) -> List[Document]:
         all_results = []

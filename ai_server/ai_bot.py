@@ -3,6 +3,7 @@ import os
 import hashlib
 from uuid import uuid4
 from langchain_openai import ChatOpenAI
+from langchain_ollama import OllamaLLM
 from langchain.chains.combine_documents import create_stuff_documents_chain
 from langchain.chains import create_retrieval_chain
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
@@ -23,6 +24,7 @@ from langchain.retrievers import BM25Retriever
 from langchain.retrievers import EnsembleRetriever
 import pickle
 import asyncio  # Add asyncio for async operations
+from MultiQdrant import MultiCollectionQdrant
 sys.stdout.reconfigure(encoding='utf-8')
 
 # ตั้งค่า logging
@@ -266,14 +268,19 @@ class RAG(BaseAIChat):
 
             if "gpt" in model_name:
                 llm = ChatOpenAI(model=model_name, api_key=api_key, streaming=True, callbacks=[AsyncIteratorCallbackHandler()], max_tokens=max_tokens,temperature=temperature)
+            else:
             
+                base_url="http://ollama:11434"
+                llm = OllamaLLM(base_url=base_url,model=model_name,
+                                callbacks=[AsyncIteratorCallbackHandler()], streaming=True)
+
             # Handle multiple collections
             dept_ids = dept_id if isinstance(dept_id, list) else [dept_id]
             kb_ids = knowledge_base_id if isinstance(knowledge_base_id, list) else [knowledge_base_id]
             print(f"dept_ids: {dept_ids}, kb_ids: {kb_ids}")
             # If multiple collections needed
             if len(dept_ids) > 0 or len(kb_ids) > 0:
-                from MultiQdrant import MultiCollectionQdrant
+
                 # model_name = "sentence-transformers/all-MiniLM-L6-v2"
                 model_name = "sentence-transformers/all-mpnet-base-v2"
                 model_kwargs = {'device': 'cpu'}
@@ -317,7 +324,7 @@ class RAG(BaseAIChat):
                     bm25_retriever.k = 5
                     ensemble_retriever = EnsembleRetriever(
                         retrievers=[qdrant_retriever, bm25_retriever],
-                        weights=[0.3, 0.7],
+                        weights=[0.2, 0.8],
                         c=20
                     )
                 else:
@@ -354,7 +361,7 @@ class RAG(BaseAIChat):
                         # Create ensemble retriever with reweighted combination
                         ensemble_retriever = EnsembleRetriever(
                             retrievers=[qdrant_retriever, bm25_retriever],
-                            weights=[0.3, 0.7],
+                            weights=[0.2, 0.8],
                             c=20  # Slightly favor semantic search but keep strong keyword presence
                         )
                     else:
@@ -374,7 +381,7 @@ class RAG(BaseAIChat):
                         bm25_retriever.k = 5
                         ensemble_retriever = EnsembleRetriever(
                             retrievers=[qdrant_retriever, bm25_retriever],
-                            weights=[0.3, 0.7],
+                            weights=[0.2, 0.8],
                             c=20
 
                         )

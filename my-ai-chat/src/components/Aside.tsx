@@ -18,6 +18,7 @@ interface MenuPermissions {
     share: boolean;
     accounts: boolean;
     departments: boolean;
+    permissions: boolean;
 }
 
 const Aside: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -32,7 +33,8 @@ const Aside: React.FC<{ children: React.ReactNode }> = ({ children }) => {
         history: false,
         share: false,
         accounts: false,
-        departments: false
+        departments: false,
+        permissions: false
     });
     const t = translations[language].nav;
     const [permissionsLoaded, setPermissionsLoaded] = useState(false);
@@ -47,6 +49,7 @@ const Aside: React.FC<{ children: React.ReactNode }> = ({ children }) => {
                 const hasManageUsers = await checkUserPermission('manage_users');
                 const hasDepartmentAdmin = await checkUserPermission('admin_department');
                 const hasAllDepartments = await checkUserPermission('view_all_departments');
+                const hasPermissionAdmin = await checkUserPermission('manage_permissions');
                 const isFullAdmin = await checkUserPermission('full_admin');
                 setPermissionsLoaded(true);
                 setPermissions({
@@ -55,7 +58,8 @@ const Aside: React.FC<{ children: React.ReactNode }> = ({ children }) => {
                     history: hasHistoryAccess || isFullAdmin,
                     share: hasShareAccess || isFullAdmin,
                     accounts: hasManageUsers || isFullAdmin,
-                    departments: (hasDepartmentAdmin || hasAllDepartments || isFullAdmin)
+                    departments: (hasDepartmentAdmin || hasAllDepartments || isFullAdmin),
+                    permissions: hasPermissionAdmin || isFullAdmin
                 });
             }
         };
@@ -157,6 +161,20 @@ const Aside: React.FC<{ children: React.ReactNode }> = ({ children }) => {
                         <li className='flex items-center hover:bg-gray-100 dark:hover:bg-gray-700 p-2 pl-8 rounded-lg transition-colors'>
                             <i className="fa-solid fa-building w-5 mr-3 text-rose-500 dark:text-rose-400"></i>
                             <Link href="/departments" className="text-gray-800 dark:text-gray-200 hover:text-blue-600 dark:hover:text-blue-400 transition-colors font-medium">{t.departmentSetting}</Link>
+                        </li>
+                    )}
+
+                    {permissions.accounts && (
+                        <li className='flex items-center hover:bg-gray-100 dark:hover:bg-gray-700 p-2 pl-8 rounded-lg transition-colors'>
+                            <i className="fa-solid fa-microchip w-5 mr-3 text-purple-500 dark:text-purple-400"></i>
+                            <Link href="/model_setting" className="text-gray-800 dark:text-gray-200 hover:text-blue-600 dark:hover:text-blue-400 transition-colors font-medium">{t.modelSetting}</Link>
+                        </li>
+                    )}
+
+                    {permissions.permissions && (
+                        <li className='flex items-center hover:bg-gray-100 dark:hover:bg-gray-700 p-2 pl-8 rounded-lg transition-colors'>
+                            <i className="fa-solid fa-lock w-5 mr-3 text-red-500 dark:text-red-400"></i>
+                            <Link href="/permission" className="text-gray-800 dark:text-gray-200 hover:text-blue-600 dark:hover:text-blue-400 transition-colors font-medium">{t.permissionSetting}</Link>
                         </li>
                     )}
                 </ul>

@@ -2088,6 +2088,82 @@ export const getAvailableModels = async (): Promise<string[]> => {
   }
 };
 
+/**
+ * Create a new AI model
+ */
+export const addModel = async (
+  platform: string,
+  modelName: string,
+  createdBy: number
+): Promise<{ success: boolean; message: string }> => {
+  try {
+    const response = await fetchWithAuth(`/api/models`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ platform, model_name: modelName, created_by: createdBy }),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.detail || 'Failed to create model');
+    }
+
+    return await response.json();
+  } catch (error) {
+    console.error('Error creating model:', error);
+    throw error;
+  }
+};
+
+
+/**
+ * Delete an AI model by ID
+ */
+export const deleteModel = async (modelId: number): Promise<{ success: boolean; message: string }> => {
+  try {
+    const response = await fetchWithAuth(`/api/models/`, {
+      method: 'DELETE',
+      body: JSON.stringify({ model_id: modelId })
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.detail || 'Failed to delete model');
+    }
+
+    return await response.json();
+  } catch (error) {
+    console.error(`Error deleting model with ID ${modelId}:`, error);
+    throw error;
+  }
+};
+
+/**
+ * Get all AI models including details from the database
+ */
+export const getAllModels = async (): Promise<any[]> => {
+  try {
+    const response = await fetchWithAuth(`/api/all_models`);
+
+    if (!response.ok) {
+      throw new Error('Failed to get all models');
+    }
+
+    const data = await response.json();
+    return data || [];
+  } catch (error) {
+    console.error('Error fetching all models:', error);
+    return [];
+  }
+};
+
+
+
+
+
+
 export default {
   fetchWithAuth,
   getUserProfile,
@@ -2145,5 +2221,8 @@ export default {
   submitMessageFeedback,
   addMessageRating,
   getAllMessages,
-  getDepartmentMessages
+  getDepartmentMessages,
+  addModel,
+  deleteModel,
+  getAllModels
 };

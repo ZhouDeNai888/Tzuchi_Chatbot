@@ -61,6 +61,8 @@ export const translations = {
       advanceSetting: 'Advance Setting',
       accountSetting: 'Account Setting',
       departmentSetting: 'Department Setting',
+      modelSetting: 'Model Setting',
+      permissionSetting: 'Permission Setting',
       profile: 'Profile',
       settings: 'Settings',
       signOut: 'Sign Out'
@@ -158,7 +160,7 @@ export const translations = {
       processing: {
         single: 'Processing 1 item...',
         multiple: 'Processing {count} items...',
-        completed: 'Recently completed:'
+        background: 'Processing continued while you were away ({count} items still processing)'
       },
       creating: {
         single: 'Creating document:',
@@ -375,7 +377,8 @@ export const translations = {
       form: {
         name: 'Department Name',
         description: 'Description',
-        addButton: 'Add Department'
+        addButton: 'Add Department',
+        actions: 'Actions'
       },
       errors: {
         required: 'Department name is required',
@@ -387,7 +390,8 @@ export const translations = {
       },
       stats: {
         users: 'Users',
-        knowledgeBase: 'Knowledge Base'
+        knowledgeBase: 'Knowledge Base',
+        title: 'Statistics'
       },
       actions: {
         delete: 'Delete',
@@ -395,8 +399,10 @@ export const translations = {
         cancel: 'Cancel',
         save: 'Save',
         edit: 'Edit',
+        view: 'View',
         prev: 'Previous',
-        next: 'Next'
+        next: 'Next',
+        title: 'Actions'
       },
       pagination: {
         showing: 'Showing',
@@ -420,6 +426,7 @@ export const translations = {
       userRemoved: 'User removed successfully',
       removeUserError: 'Failed to remove user from department',
       confirmRemoveUser: 'Are you sure you want to remove this user?',
+      confirmRemoveUserMessage: 'Are you sure you want to remove this user from the department? This action cannot be undone.',
       members: 'Members',
       addUser: 'Add User',
       cancel: 'Cancel',
@@ -431,7 +438,9 @@ export const translations = {
       noKnowledgeBases: 'No knowledge bases for this department',
       notFound: 'Department Not Found',
       notFoundMessage: 'The requested department could not be found.',
-      back: 'Back'
+      back: 'Back',
+      about: 'About',
+      noDescription: 'No description available.'
     },
     preview: {
       title: 'Chat Widget Preview',
@@ -453,6 +462,31 @@ export const translations = {
       share: 'Share',
       profile: 'Profile',
       settings: 'Settings'
+    },
+    model_setting: {
+      title: 'Model Settings',
+      description: 'Configure AI models for your chatbots and assistants',
+      addModel: 'Add Model',
+      deleteModel: 'Delete Model',
+      platformLabel: 'Platform',
+      modelNameLabel: 'Model Name',
+      modelNamePlaceholder: 'Enter model name',
+      saveButton: 'Save Model',
+      cancelButton: 'Cancel',
+      deletingModel: 'Deleting model...',
+      availableModels: 'Available Models',
+      noModelsFound: 'No models configured yet',
+      addModelSuccess: 'Model added successfully',
+      deleteModelSuccess: 'Model deleted successfully',
+      addModelError: 'Failed to add model',
+      deleteModelError: 'Failed to delete model',
+      confirmDelete: 'Are you sure you want to delete this model?',
+      confirmDeleteTitle: 'Confirm Delete',
+      platforms: {
+        gpt: 'OpenAI GPT',
+        ollama: 'Ollama',
+        custom: 'Custom'
+      }
     }
   },
   'zh-TW': {
@@ -477,6 +511,8 @@ export const translations = {
       advanceSetting: '進階設定',
       accountSetting: '帳戶設定',
       departmentSetting: '部門設定',
+      modelSetting: '模型設定',
+      permissionSetting: '權限設定',
       profile: '個人資料',
       settings: '設定',
       signOut: '登出'
@@ -574,7 +610,7 @@ export const translations = {
       processing: {
         single: '正在處理 1 個項目...',
         multiple: '正在處理 {count} 個項目...',
-        completed: '最近完成：'
+        background: '處理在您離開時繼續進行（仍在處理 {count} 個項目）'
       },
       creating: {
         single: '正在建立文件：',
@@ -789,7 +825,8 @@ export const translations = {
       form: {
         name: '部門名稱',
         description: '描述',
-        addButton: '新增部門'
+        addButton: '新增部門',
+        actions: '操作'
       },
       errors: {
         required: '部門名稱為必填項目',
@@ -801,7 +838,8 @@ export const translations = {
       },
       stats: {
         users: '使用者',
-        knowledgeBase: '知識庫'
+        knowledgeBase: '知識庫',
+        title: '統計'
       },
       actions: {
         delete: '刪除',
@@ -809,8 +847,10 @@ export const translations = {
         cancel: '取消',
         save: '儲存',
         edit: '編輯',
+        view: '查看',
         prev: '上一頁',
-        next: '下一頁'
+        next: '下一頁',
+        title: '操作'
       },
       pagination: {
         showing: '顯示中',
@@ -834,6 +874,7 @@ export const translations = {
       userRemoved: '已成功移除使用者',
       removeUserError: '移除使用者失敗',
       confirmRemoveUser: '確定要移除此使用者嗎？',
+      confirmRemoveUserMessage: '您確定要從此部門移除此使用者嗎？此操作無法撤銷。',
       members: '成員',
       addUser: '新增使用者',
       cancel: '取消',
@@ -845,7 +886,9 @@ export const translations = {
       noKnowledgeBases: '此部門尚無知識庫',
       notFound: '找不到部門',
       notFoundMessage: '找不到請求的部門。',
-      back: '返回'
+      back: '返回',
+      about: '關於',
+      noDescription: '沒有可用的描述。'
     },
     preview: {
       title: '聊天小工具預覽',
@@ -867,6 +910,31 @@ export const translations = {
       share: '分享',
       profile: '個人資料',
       settings: '設定'
+    },
+    model_setting: {
+      title: '模型設定',
+      description: '為您的聊天機器人和助手配置 AI 模型',
+      addModel: '添加模型',
+      deleteModel: '刪除模型',
+      platformLabel: '平台',
+      modelNameLabel: '模型名稱',
+      modelNamePlaceholder: '輸入模型名稱',
+      saveButton: '保存模型',
+      cancelButton: '取消',
+      deletingModel: '正在刪除模型...',
+      availableModels: '可用模型',
+      noModelsFound: '尚未配置模型',
+      addModelSuccess: '模型添加成功',
+      deleteModelSuccess: '模型刪除成功',
+      addModelError: '添加模型失敗',
+      deleteModelError: '刪除模型失敗',
+      confirmDelete: '您確定要刪除此模型嗎？',
+      confirmDeleteTitle: '確認刪除',
+      platforms: {
+        gpt: 'OpenAI GPT',
+        ollama: 'Ollama',
+        custom: '自定義'
+      }
     }
   }
 };

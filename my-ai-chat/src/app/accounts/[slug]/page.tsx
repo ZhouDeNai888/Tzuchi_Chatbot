@@ -25,8 +25,8 @@ interface Account {
     username: string;
     email: string;
     password?: string;
-    firstname?: string;  // Added firstname field
-    lastname?: string;   // Added lastname field
+    firstname?: string;
+    lastname?: string;
     role: string;
     department: string;
     departments?: DepartmentData[];
@@ -40,16 +40,18 @@ interface Account {
 const PermissionDisplay = ({
     userId,
     userPermissions,
-    onPermissionChange
+    onPermissionChange,
+    userRole
 }: {
     userId: string,
     userPermissions: string[],
-    onPermissionChange: (newPermissions: string[]) => void
+    onPermissionChange: (newPermissions: string[]) => void,
+    userRole: string
 }) => {
     const [availablePermissions, setAvailablePermissions] = useState<Permission[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
-    const [refreshKey, setRefreshKey] = useState(0); // Add a refresh key to force re-render
+    const [refreshKey, setRefreshKey] = useState(0);
 
     // Fetch permissions when component mounts or refresh key changes
     useEffect(() => {
@@ -68,11 +70,11 @@ const PermissionDisplay = ({
         };
 
         fetchPermissions();
-    }, [refreshKey]); // Add refreshKey as dependency
+    }, [refreshKey]);
 
     const handleTogglePermission = async (permissionName: string, checked: boolean) => {
         try {
-            setLoading(true); // Show loading state while updating
+            setLoading(true);
 
             if (checked) {
                 await addPermissionToUser(permissionName, parseInt(userId));
@@ -100,48 +102,96 @@ const PermissionDisplay = ({
     };
 
     if (loading) {
-        return <div className="py-4 text-center">Loading permissions...</div>;
+        return (
+            <div className="py-6 flex justify-center items-center">
+                <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-blue-500"></div>
+            </div>
+        );
     }
 
     if (error) {
         return <div className="py-4 text-center text-red-500">{error}</div>;
     }
 
+    // Group permissions by category if possible
+    const groupedPermissions: Record<string, Permission[]> = {};
+    availablePermissions.forEach(permission => {
+        const category = permission.permission_name.includes('_')
+            ? permission.permission_name.split('_')[0]
+            : 'general';
+
+        if (!groupedPermissions[category]) {
+            groupedPermissions[category] = [];
+        }
+        groupedPermissions[category].push(permission);
+    });
+
+    const isAdmin = userRole === 'admin';
+
     return (
-        <div className="space-y-2 mt-2 max-h-60 overflow-y-auto border border-gray-300 dark:border-gray-600 rounded p-2">
-            {availablePermissions.length > 0 ? (
-                availablePermissions.map((permission) => (
-                    <div key={permission.permission_id} className="flex items-center p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded">
-                        <input
-                            type="checkbox"
-                            id={`perm-${permission.permission_name}`}
-                            checked={userPermissions.includes(permission.permission_name)}
-                            onChange={(e) => handleTogglePermission(permission.permission_name, e.target.checked)}
-                            className="mr-2"
-                        />
-                        <label htmlFor={`perm-${permission.permission_name}`} className="cursor-pointer flex-1">
-                            <div className="font-semibold">{permission.permission_name}</div>
-                            {permission.description && (
-                                <div className="text-xs text-gray-500 dark:text-gray-400">{permission.description}</div>
-                            )}
-                        </label>
-                    </div>
-                ))
-            ) : (
-                <div className="text-center text-gray-500 dark:text-gray-400 py-2">No permissions available</div>
+        <div className="mt-2 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden">
+            {isAdmin && (
+                <div className="bg-blue-50 dark:bg-blue-900/30 p-3 border-b border-gray-200 dark:border-gray-700">
+                    <p className="text-sm text-blue-800 dark:text-blue-200">
+                        <span className="font-medium">Administrator permissions:</span> As an admin, this user has all permissions by default.
+                    </p>
+                </div>
             )}
+
+            <div className="max-h-[350px] overflow-y-auto p-2">
+                {Object.keys(groupedPermissions).length > 0 ? (
+                    Object.entries(groupedPermissions).map(([category, permissions]) => (
+                        <div key={category} className="mb-4">
+                            <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300 capitalize mb-2 px-2">
+                                {category === 'general' ? 'General Permissions' : `${category} Permissions`}
+                            </h3>
+                            <div className="space-y-1">
+                                {permissions.map((permission) => (
+                                    <div key={permission.permission_id}
+                                        className="flex items-start px-3 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md transition-colors">
+                                        <div className="flex h-5 items-center mr-3">
+                                            <input
+                                                type="checkbox"
+                                                id={`perm-${permission.permission_name}`}
+                                                checked={userPermissions.includes(permission.permission_name) || isAdmin}
+                                                onChange={(e) => handleTogglePermission(permission.permission_name, e.target.checked)}
+                                                disabled={isAdmin}
+                                                className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500 disabled:opacity-60"
+                                            />
+                                        </div>
+                                        <div className="flex-1 min-w-0">
+                                            <label htmlFor={`perm-${permission.permission_name}`}
+                                                className={`text-sm font-medium ${isAdmin ? 'text-gray-500 dark:text-gray-400' : 'text-gray-700 dark:text-gray-300'} cursor-pointer`}>
+                                                {permission.permission_name}
+                                            </label>
+                                            {permission.description && (
+                                                <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5 truncate">
+                                                    {permission.description}
+                                                </p>
+                                            )}
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    ))
+                ) : (
+                    <div className="text-center text-gray-500 dark:text-gray-400 py-8">
+                        No permissions available
+                    </div>
+                )}
+            </div>
         </div>
     );
 };
 
 export default function EditUserPage() {
-
     const params = useParams<{ slug: string }>();
-
     const router = useRouter();
     const [user, setUser] = useState<Account | null>(null);
     const [departments, setDepartments] = useState<Department[]>([]);
     const [loading, setLoading] = useState(true);
+    const [saving, setSaving] = useState(false);
     const { language } = useLanguage();
     const t = translations[language].accountEdit;
 
@@ -205,7 +255,7 @@ export default function EditUserPage() {
         if (!user) return;
 
         try {
-            setLoading(true);
+            setSaving(true);
 
             const updateData: UserUpdateRequest = {
                 username: user.username,
@@ -229,7 +279,7 @@ export default function EditUserPage() {
             console.error('Error updating user:', error);
             toast.error(error instanceof Error ? error.message : 'Failed to update user');
         } finally {
-            setLoading(false);
+            setSaving(false);
         }
     };
 
@@ -239,6 +289,7 @@ export default function EditUserPage() {
             setLoading(true);
             await setUserRole(user.id, newRole);
             setUser({ ...user, role: newRole });
+            toast.success(`User role updated to ${newRole}`);
         } catch (error) {
             console.error('Error updating user role:', error);
             toast.error(error instanceof Error ? error.message : 'Failed to update user role');
@@ -249,257 +300,350 @@ export default function EditUserPage() {
 
     if (loading) {
         return (
-            <div className="min-h-screen bg-white dark:bg-black text-gray-900 dark:text-white p-8 pt-16 flex justify-center items-center">
-                <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
+            <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex justify-center items-center p-8">
+                <div className="animate-spin rounded-full h-16 w-16 border-t-4 border-b-4 border-blue-500"></div>
             </div>
         );
     }
 
     if (!user) {
         return (
-            <div className="min-h-screen bg-white dark:bg-black text-gray-900 dark:text-white p-8 pt-16">
-                <div className="max-w-2xl mx-auto">
-                    <h1 className="text-2xl font-bold mb-6">User Not Found</h1>
-                    <button
-                        onClick={() => router.push('/accounts')}
-                        className="bg-blue-600 dark:bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-700 dark:hover:bg-blue-600 transition-colors"
-                    >
-                        {t.back}
-                    </button>
+            <div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-8">
+                <div className="max-w-3xl mx-auto bg-white dark:bg-gray-800 rounded-lg shadow-lg p-8">
+                    <div className="text-center">
+                        <svg className="h-16 w-16 text-gray-400 mx-auto mb-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                        <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-4">User Not Found</h1>
+                        <p className="text-gray-600 dark:text-gray-400 mb-8">The requested account could not be found or you don't have permission to view it.</p>
+                        <button
+                            onClick={() => router.push('/accounts')}
+                            className="bg-blue-600 dark:bg-blue-500 text-white px-6 py-2 rounded-md hover:bg-blue-700 dark:hover:bg-blue-600 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+                        >
+                            {t.back || 'Back to Accounts'}
+                        </button>
+                    </div>
                 </div>
             </div>
         );
     }
 
     return (
-        <div className="min-h-screen bg-white dark:bg-black text-gray-900 dark:text-white p-8 pt-16">
-            <div className="max-w-2xl mx-auto">
-                <div className="flex justify-between items-center mb-6">
-                    <h1 className="text-2xl font-bold">{t.title}: {user.username}</h1>
-                    <button
-                        onClick={() => router.push('/accounts')}
-                        className="bg-gray-200 dark:bg-gray-600 text-gray-800 dark:text-white px-4 py-2 rounded hover:bg-gray-300 dark:hover:bg-gray-700 transition-colors"
-                    >
-                        {t.back}
-                    </button>
+        <div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-6 mt-15">
+            <div className="max-w-4xl mx-auto">
+                <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
+                    <div>
+                        <div className="flex items-center gap-3">
+                            <button
+                                onClick={() => router.push('/accounts')}
+                                className="flex items-center text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors"
+                            >
+                                <svg className="h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+                                </svg>
+                            </button>
+                            <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
+                                {user.firstname && user.lastname
+                                    ? `${user.firstname} ${user.lastname}`
+                                    : user.username}
+                            </h1>
+                        </div>
+                        <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                            {t.title || 'Edit Account'}
+                        </p>
+                    </div>
+
+                    <div className="flex items-center gap-3 self-end md:self-auto">
+                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${user.status === 'active'
+                            ? 'bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200'
+                            : 'bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-200'
+                            }`}>
+                            {user.status === 'active' ? 'Active' : 'Inactive'}
+                        </span>
+                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200">
+                            {user.role === 'admin' ? 'Administrator' : 'User'}
+                        </span>
+                    </div>
                 </div>
 
-                <div className="bg-gray-100 dark:bg-gray-800 p-6 rounded-lg space-y-4 shadow-lg">
-                    <div>
-                        <label className="text-gray-700 dark:text-gray-300 block mb-1">{t.form.username}</label>
-                        <input
-                            type="text"
-                            value={user.username}
-                            onChange={(e) => setUser({ ...user, username: e.target.value })}
-                            className="bg-white dark:bg-gray-700 text-gray-900 dark:text-white p-2 rounded w-full border border-gray-300 dark:border-gray-600 focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 transition-colors"
-                        />
-                    </div>
+                <div className="bg-white dark:bg-gray-800 shadow-lg rounded-lg overflow-hidden">
+                    <div className="p-6 border-b border-gray-200 dark:border-gray-700">
+                        <h2 className="text-lg font-medium text-gray-900 dark:text-white mb-4">
+                            {'Account Details'}
+                        </h2>
 
-                    <div>
-                        <label className="text-gray-700 dark:text-gray-300 block mb-1">Email</label>
-                        <input
-                            type="email"
-                            value={user.email}
-                            onChange={(e) => setUser({ ...user, email: e.target.value })}
-                            className="bg-white dark:bg-gray-700 text-gray-900 dark:text-white p-2 rounded w-full border border-gray-300 dark:border-gray-600 focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 transition-colors"
-                        />
-                    </div>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                                    {t.form.username || 'Username'} *
+                                </label>
+                                <input
+                                    type="text"
+                                    value={user.username}
+                                    onChange={(e) => setUser({ ...user, username: e.target.value })}
+                                    className="bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white p-3 rounded-md border border-gray-300 dark:border-gray-600 focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 w-full"
+                                />
+                            </div>
 
-                    <div className="flex gap-4">
-                        <div className="flex-1">
-                            <label className="text-gray-700 dark:text-gray-300 block mb-1">First Name</label>
-                            <input
-                                type="text"
-                                value={user.firstname || ''}
-                                onChange={(e) => setUser({ ...user, firstname: e.target.value })}
-                                className="bg-white dark:bg-gray-700 text-gray-900 dark:text-white p-2 rounded w-full border border-gray-300 dark:border-gray-600 focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 transition-colors"
-                            />
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                                    {'Email'} *
+                                </label>
+                                <input
+                                    type="email"
+                                    value={user.email}
+                                    onChange={(e) => setUser({ ...user, email: e.target.value })}
+                                    className="bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white p-3 rounded-md border border-gray-300 dark:border-gray-600 focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 w-full"
+                                />
+                            </div>
+
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                                    {'First Name'}
+                                </label>
+                                <input
+                                    type="text"
+                                    value={user.firstname || ''}
+                                    onChange={(e) => setUser({ ...user, firstname: e.target.value })}
+                                    className="bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white p-3 rounded-md border border-gray-300 dark:border-gray-600 focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 w-full"
+                                />
+                            </div>
+
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                                    {'Last Name'}
+                                </label>
+                                <input
+                                    type="text"
+                                    value={user.lastname || ''}
+                                    onChange={(e) => setUser({ ...user, lastname: e.target.value })}
+                                    className="bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white p-3 rounded-md border border-gray-300 dark:border-gray-600 focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 w-full"
+                                />
+                            </div>
+
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                                    {t.form.password || 'Password'}
+                                </label>
+                                <input
+                                    type="password"
+                                    placeholder={t.form.passwordPlaceholder || "Enter to change password"}
+                                    onChange={(e) => setUser({ ...user, password: e.target.value })}
+                                    className="bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white p-3 rounded-md border border-gray-300 dark:border-gray-600 focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 w-full"
+                                />
+                                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                                    {t.form.passwordHint || "Leave blank to keep current password"}
+                                </p>
+                            </div>
+
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                                    {t.form.status || 'Status'}
+                                </label>
+                                <select
+                                    value={user.status}
+                                    onChange={(e) => setUser({ ...user, status: e.target.value as 'active' | 'inactive' })}
+                                    className="bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white p-3 rounded-md border border-gray-300 dark:border-gray-600 focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 w-full"
+                                >
+                                    <option value="active">Active</option>
+                                    <option value="inactive">Inactive</option>
+                                </select>
+                            </div>
+
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                                    {t.form.role || 'Role'}
+                                </label>
+                                <select
+                                    value={user.role}
+                                    onChange={(e) => handleRoleChange(e.target.value as 'admin' | 'user')}
+                                    className="bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white p-3 rounded-md border border-gray-300 dark:border-gray-600 focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 w-full"
+                                >
+                                    <option value="user">User</option>
+                                    <option value="admin">Administrator</option>
+                                </select>
+                            </div>
                         </div>
-                        <div className="flex-1">
-                            <label className="text-gray-700 dark:text-gray-300 block mb-1">Last Name</label>
-                            <input
-                                type="text"
-                                value={user.lastname || ''}
-                                onChange={(e) => setUser({ ...user, lastname: e.target.value })}
-                                className="bg-white dark:bg-gray-700 text-gray-900 dark:text-white p-2 rounded w-full border border-gray-300 dark:border-gray-600 focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 transition-colors"
-                            />
-                        </div>
                     </div>
 
-                    <div>
-                        <label className="text-gray-700 dark:text-gray-300 block mb-1">{t.form.password}</label>
-                        <input
-                            type="password"
-                            placeholder={t.form.passwordPlaceholder}
-                            onChange={(e) => setUser({ ...user, password: e.target.value })}
-                            className="bg-white dark:bg-gray-700 text-gray-900 dark:text-white p-2 rounded w-full border border-gray-300 dark:border-gray-600 focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 transition-colors"
-                        />
-                        <p className="text-gray-500 dark:text-gray-400 text-sm mt-1">{t.form.passwordHint}</p>
-                    </div>
+                    {/* Departments Section */}
+                    <div className="p-6 border-b border-gray-200 dark:border-gray-700">
+                        <h2 className="text-lg font-medium text-gray-900 dark:text-white mb-4">
+                            {t.form.department || 'Department Access'}
+                        </h2>
 
-                    <div>
-                        <label className="text-gray-700 dark:text-gray-300 block mb-1">{t.form.department}</label>
-                        <div className="space-y-2 mt-2 max-h-40 overflow-y-auto border border-gray-300 dark:border-gray-600 rounded p-2">
-                            {departments.map(dept => {
-                                const deptId = dept.id || (dept as any).department_id;
-                                console.log('Department ID:', deptId);
-                                const deptName = dept.name || (dept as any).Name;
-                                const isSelected = user.selectedDepartments.includes(Number(deptId));
+                        {departments.length > 0 ? (
+                            <>
+                                <div className="mb-4">
+                                    <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">
+                                        Select the departments this user can access:
+                                    </p>
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2 max-h-60 overflow-y-auto bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md p-3">
+                                        {departments.map(dept => {
+                                            const deptId = dept.id || (dept as any).department_id;
+                                            const deptName = dept.name || (dept as any).Name;
+                                            const isSelected = user.selectedDepartments.includes(Number(deptId));
 
-                                return (
-                                    <label key={deptId} className="flex items-center space-x-2 cursor-pointer p-1 hover:bg-gray-200 dark:hover:bg-gray-700 rounded">
-                                        <input
-                                            type="checkbox"
-                                            checked={isSelected}
-                                            onChange={() => {
-                                                const departmentId = Number(deptId);
-                                                let newSelectedDepartments;
+                                            return (
+                                                <label key={deptId}
+                                                    className="flex items-center p-2 hover:bg-gray-100 dark:hover:bg-gray-600 rounded-md cursor-pointer">
+                                                    <input
+                                                        type="checkbox"
+                                                        checked={isSelected}
+                                                        onChange={() => {
+                                                            const departmentId = Number(deptId);
+                                                            let newSelectedDepartments;
 
-                                                if (isSelected) {
-                                                    newSelectedDepartments = user.selectedDepartments.filter(
-                                                        id => id !== departmentId
-                                                    );
+                                                            if (isSelected) {
+                                                                newSelectedDepartments = user.selectedDepartments.filter(
+                                                                    id => id !== departmentId
+                                                                );
+                                                            } else {
+                                                                newSelectedDepartments = [...user.selectedDepartments, departmentId];
+                                                            }
 
-                                                } else {
-                                                    newSelectedDepartments = [...user.selectedDepartments, departmentId];
-                                                    console.log('New selected departments:', newSelectedDepartments);
-                                                }
-
-                                                console.log("Setting user with:", {
-                                                    selectedDepartments: newSelectedDepartments,
-                                                    departments: newSelectedDepartments.length > 0
-                                                        ? departments
-                                                            .filter(d => newSelectedDepartments.includes(Number(d.id || (d as any).DepartmentID)))
-                                                            .map(d => ({
-                                                                DepartmentID: Number(d.id || (d as any).DepartmentID),
-                                                                Name: d.name || (d as any).Name
-                                                            }))
-                                                        : []
-                                                });
-
-                                                setUser(prev => {
-                                                    if (!prev) return prev;
-                                                    return {
-                                                        ...prev,
-                                                        selectedDepartments: newSelectedDepartments,
-                                                        departments: newSelectedDepartments.length > 0
-                                                            ? departments
-                                                                .filter(d => newSelectedDepartments.includes(Number(d.id || (d as any).DepartmentID)))
-                                                                .map(d => ({
-                                                                    id: Number(d.id || (d as any).DepartmentID),
-                                                                    name: d.name || (d as any).Name
-                                                                }))
-                                                            : []
-                                                    } as Account;
-                                                });
-
-
-                                            }}
-                                            className="rounded bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600"
-                                        />
-                                        <span className="text-gray-700 dark:text-gray-300">{deptName}</span>
-                                    </label>
-                                );
-                            })}
-                        </div>
-
-                        {user.selectedDepartments.length > 0 && (
-                            <div className="mt-3">
-                                <p className="text-gray-700 dark:text-gray-300 text-sm">Selected departments:</p>
-                                <div className="flex flex-wrap gap-2 mt-1">
-                                    {user.selectedDepartments.map(deptId => {
-                                        const dept = departments.find(d =>
-                                            Number(d.id || (d as any).DepartmentID) === deptId
-                                        );
-                                        if (!dept) return null;
-                                        const deptName = dept.name || (dept as any).Name;
-
-                                        return (
-                                            <div key={deptId} className="group relative">
-                                                <span className="bg-blue-100 dark:bg-blue-800 text-blue-800 dark:text-blue-100 px-2 py-1 rounded text-xs flex items-center">
-                                                    {deptName}
-                                                    <button
-                                                        className="ml-1 text-xs hover:text-red-600 dark:hover:text-red-400"
-                                                        onClick={() => {
-                                                            const newSelectedDepartments = user.selectedDepartments.filter(
-                                                                id => id !== deptId
-                                                            );
-
-                                                            setUser({
-                                                                ...user,
-                                                                selectedDepartments: newSelectedDepartments,
-                                                                departments: newSelectedDepartments.length > 0
-                                                                    ? departments
-                                                                        .filter(d => newSelectedDepartments.includes(Number(d.id || (d as any).DepartmentID)))
-                                                                        .map(d => ({
-                                                                            DepartmentID: Number(d.id || (d as any).DepartmentID),
-                                                                            Name: d.name || (d as any).Name
-                                                                        }))
-                                                                    : []
+                                                            setUser(prev => {
+                                                                if (!prev) return prev;
+                                                                return {
+                                                                    ...prev,
+                                                                    selectedDepartments: newSelectedDepartments,
+                                                                    departments: newSelectedDepartments.length > 0
+                                                                        ? departments
+                                                                            .filter(d => newSelectedDepartments.includes(Number(d.id || (d as any).DepartmentID)))
+                                                                            .map(d => ({
+                                                                                id: Number(d.id || (d as any).DepartmentID),
+                                                                                name: d.name || (d as any).Name
+                                                                            }))
+                                                                        : []
+                                                                } as Account;
                                                             });
-                                                            console.log('Updated selected departments:', user.selectedDepartments);
-
                                                         }}
-                                                    >
-
-                                                    </button>
-                                                </span>
-                                            </div>
-                                        );
-                                    })}
+                                                        className="h-4 w-4 mr-2 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                                                    />
+                                                    <span className="text-gray-800 dark:text-gray-200">{deptName}</span>
+                                                </label>
+                                            );
+                                        })}
+                                    </div>
                                 </div>
+
+                                {user.selectedDepartments.length > 0 && (
+                                    <div className="mt-4">
+                                        <p className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                            Selected Departments:
+                                        </p>
+                                        <div className="flex flex-wrap gap-2">
+                                            {user.selectedDepartments.map(deptId => {
+                                                const dept = departments.find(d =>
+                                                    Number(d.id || (d as any).DepartmentID) === deptId
+                                                );
+                                                if (!dept) return null;
+                                                const deptName = dept.name || (dept as any).Name;
+
+                                                return (
+                                                    <div key={deptId} className="inline-flex items-center bg-blue-50 dark:bg-blue-900/40 text-blue-700 dark:text-blue-200 rounded-full px-3 py-1 text-sm">
+                                                        <span>{deptName}</span>
+                                                        <button
+                                                            type="button"
+                                                            className="ml-1.5 h-4 w-4 rounded-full inline-flex items-center justify-center text-blue-400 hover:bg-blue-200 dark:hover:bg-blue-800 hover:text-blue-600 dark:hover:text-blue-100 focus:outline-none"
+                                                            onClick={() => {
+                                                                const newSelectedDepartments = user.selectedDepartments.filter(
+                                                                    id => id !== deptId
+                                                                );
+
+                                                                setUser({
+                                                                    ...user,
+                                                                    selectedDepartments: newSelectedDepartments,
+                                                                    departments: newSelectedDepartments.length > 0
+                                                                        ? departments
+                                                                            .filter(d => newSelectedDepartments.includes(Number(d.id || (d as any).DepartmentID)))
+                                                                            .map(d => ({
+                                                                                id: Number(d.id || (d as any).DepartmentID),
+                                                                                name: d.name || (d as any).Name
+                                                                            }))
+                                                                        : []
+                                                                });
+                                                            }}
+                                                        >
+                                                            <span className="sr-only">Remove</span>
+                                                            <svg className="h-3 w-3" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                                                                <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
+                                                            </svg>
+                                                        </button>
+                                                    </div>
+                                                );
+                                            })}
+                                        </div>
+                                    </div>
+                                )}
+                            </>
+                        ) : (
+                            <div className="text-center p-4 bg-gray-50 dark:bg-gray-700 rounded-md">
+                                <p className="text-gray-500 dark:text-gray-400">No departments available</p>
                             </div>
                         )}
                     </div>
 
-                    <div>
-                        <label className="text-gray-700 dark:text-gray-300 block mb-1">{t.form.role}</label>
-                        <select
-                            value={user.role}
-                            onChange={(e) => handleRoleChange(e.target.value as 'admin' | 'user')}
-                            className="bg-white dark:bg-gray-700 text-gray-900 dark:text-white p-2 rounded w-full border border-gray-300 dark:border-gray-600 focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 transition-colors"
-                        >
-                            <option value="user">User</option>
-                            <option value="admin">Administrator</option>
-                        </select>
-                    </div>
+                    {/* Permissions Section */}
+                    <div className="p-6">
+                        <h2 className="text-lg font-medium text-gray-900 dark:text-white mb-4">
+                            {t.form.permissions || 'Permissions'}
+                        </h2>
 
-                    <div>
-                        <label className="text-gray-700 dark:text-gray-300 block mb-1">{t.form.status}</label>
-                        <select
-                            value={user.status}
-                            onChange={(e) => setUser({ ...user, status: e.target.value as 'active' | 'inactive' })}
-                            className="bg-white dark:bg-gray-700 text-gray-900 dark:text-white p-2 rounded w-full border border-gray-300 dark:border-gray-600 focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 transition-colors"
-                        >
-                            <option value="active">Active</option>
-                            <option value="inactive">Inactive</option>
-                        </select>
-                    </div>
-
-                    <div>
-                        <label className="text-gray-700 dark:text-gray-300 block mb-1">{t.form.permissions}</label>
                         <PermissionDisplay
                             userId={user.id}
                             userPermissions={user.permissions}
                             onPermissionChange={(newPermissions) => setUser({ ...user, permissions: newPermissions })}
+                            userRole={user.role}
                         />
-                    </div>
 
-                    {user.permissions.includes('full_admin') && (
-                        <div className="bg-yellow-100 dark:bg-yellow-900 border-l-4 border-yellow-500 text-yellow-700 dark:text-yellow-300 p-4 mt-4">
-                            <p className="font-bold">Full Admin Access</p>
-                            <p>This user has full administrator privileges.</p>
-                        </div>
-                    )}
+                        {user.permissions.includes('full_admin') && (
+                            <div className="mt-4 bg-yellow-50 dark:bg-yellow-900/30 border-l-4 border-yellow-400 p-4">
+                                <div className="flex">
+                                    <div className="flex-shrink-0">
+                                        <svg className="h-5 w-5 text-yellow-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                                            <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                                        </svg>
+                                    </div>
+                                    <div className="ml-3">
+                                        <h3 className="text-sm font-medium text-yellow-800 dark:text-yellow-300">Full Administrator Access</h3>
+                                        <div className="mt-1 text-xs text-yellow-700 dark:text-yellow-200">
+                                            <p>This user has full administrator privileges with unrestricted access to all system features.</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+                    </div>
                 </div>
 
-                <button
-                    onClick={handleUpdateUser}
-                    disabled={loading}
-                    className="bg-blue-600 dark:bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-700 dark:hover:bg-blue-600 transition-colors w-full mt-6 disabled:opacity-50"
-                >
-                    {loading ? "Loading..." : t.form.saveChanges}
-                </button>
+                {/* Actions Footer */}
+                <div className="mt-6 flex justify-end space-x-3">
+                    <button
+                        onClick={() => router.push('/accounts')}
+                        className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                    >
+                        {'Cancel'}
+                    </button>
+
+                    <button
+                        onClick={handleUpdateUser}
+                        disabled={saving}
+                        className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50"
+                    >
+                        {saving ? (
+                            <>
+                                <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                </svg>
+                                {'Saving...'}
+                            </>
+                        ) : (
+                            t.form.saveChanges || 'Save Changes'
+                        )}
+                    </button>
+                </div>
             </div>
         </div>
     );

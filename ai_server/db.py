@@ -3579,3 +3579,444 @@ class Database():
 
 
 
+    # AI Model Management Functions
+    def create_ai_model(self, platform, model_name, created_by, is_active=True):
+        """
+        Create a new AI model in the database.
+
+        Args:
+            platform (str): Platform name (e.g., "OpenAI GPT")
+            model_name (str): Model name (e.g., "gpt-4o")
+            created_by (int): UserID of the creator
+            is_active (bool, optional): Whether the model is active (default True)
+
+        Returns:
+            int: The ID of the newly created AI model, or None if failed
+        """
+        try:
+            if not self.conn:
+                self.Conn_Sql()
+
+            cursor = self.conn.cursor()
+
+            # Check if user exists
+            cursor.execute("SELECT 1 FROM Users WHERE UserID = ?", (created_by,))
+            if not cursor.fetchone():
+                logger.warning(f"User ID {created_by} not found")
+                cursor.close()
+                return None
+
+            # Insert AI model
+            cursor.execute(
+                """
+                INSERT INTO AIModels (Platform, ModelName, CreatedBy, IsActive)
+                OUTPUT INSERTED.ModelID
+                VALUES (?, ?, ?, ?)
+                """,
+                (platform, model_name, created_by, 1 if is_active else 0)
+            )
+
+            # Get the ModelID
+            model_id = cursor.fetchval()
+
+            self.conn.commit()
+            cursor.close()
+
+            logger.info(f"AI model '{model_name}' created successfully with ID: {model_id}")
+            return model_id
+
+        except pyodbc.Error as e:
+            logger.error(f"Error creating AI model: {e}")
+            if self.conn:
+                self.conn.rollback()
+            return None
+
+
+    def get_ai_model(self, model_id):
+        """
+        Get AI model details by ID.
+
+        Args:
+            model_id (int): The ID of the AI model to retrieve
+
+        Returns:
+            dict: AI model details, or None if not found
+        """
+        try:
+            if not self.conn:
+                self.Conn_Sql()
+
+            cursor = self.conn.cursor()
+
+            # Get AI model information
+            cursor.execute(
+                """
+                SELECT am.*, u.Username AS CreatedByUsername
+                FROM AIModels am
+                JOIN Users u ON am.CreatedBy = u.UserID
+                WHERE am.ModelID = ?
+                """,
+                (model_id,)
+            )
+
+            row = cursor.fetchone()
+            if not row:
+                logger.warning(f"AI model ID {model_id} not found")
+                cursor.close()
+                return None
+
+            # Convert to dictionary
+            columns = [column[0] for column in cursor.description]
+            ai_model = dict(zip(columns, row))
+
+            cursor.close()
+            logger.info(f"Retrieved details for AI model ID: {model_id}")
+            return ai_model
+
+        except pyodbc.Error as e:
+            logger.error(f"Error getting AI model details: {e}")
+            return None
+
+
+    def delete_ai_model(self, model_id):
+        """
+        Delete an AI model from the database.
+
+        Args:
+            model_id (int): The ID of the AI model to delete
+
+        Returns:
+            bool: True if deletion successful, False otherwise
+        """
+        try:
+            if not self.conn:
+                self.Conn_Sql()
+
+            cursor = self.conn.cursor()
+
+            # Check if AI model exists
+            cursor.execute("SELECT 1 FROM AIModels WHERE ModelID = ?", (model_id,))
+            if not cursor.fetchone():
+                logger.warning(f"AI model ID {model_id} not found")
+                cursor.close()
+                return False
+
+            # Delete the AI model
+            cursor.execute("DELETE FROM AIModels WHERE ModelID = ?", (model_id,))
+
+            self.conn.commit()
+            cursor.close()
+
+            logger.info(f"AI model ID {model_id} deleted successfully")
+            return True
+
+        except pyodbc.Error as e:
+            logger.error(f"Error deleting AI model: {e}")
+            if self.conn:
+                self.conn.rollback()
+            return False
+
+
+    def get_all_ai_models(self, active_only=True):
+        """
+        Get all AI models in the database, optionally filtered by active status.
+
+        Args:
+            active_only (bool, optional): Whether to only include active models (default True)
+
+        Returns:
+            list: List of AI models
+        """
+        try:
+            if not self.conn:
+                self.Conn_Sql()
+
+            cursor = self.conn.cursor()
+
+            # Build query
+            query = """
+                SELECT am.*, u.Username AS CreatedByUsername
+                FROM AIModels am
+                JOIN Users u ON am.CreatedBy = u.UserID
+                WHERE 1=1
+            """
+            params = []
+
+            if active_only:
+                query += " AND am.IsActive = 1"
+
+            query += " ORDER BY am.ModelName"
+
+            cursor.execute(query, params)
+
+            # Format results
+            ai_models = []
+            columns = [column[0] for column in cursor.description]
+
+            for row in cursor.fetchall():
+                ai_model = dict(zip(columns, row))
+                ai_models.append(ai_model)
+
+            cursor.close()
+
+            logger.info(f"Retrieved {len(ai_models)} AI models")
+            return ai_models
+
+        except pyodbc.Error as e:
+            logger.error(f"Error getting AI models: {e}")
+            return []
+
+
+    def get_all_ai_models_name(self, active_only=True):
+        """
+        Get all AI model names in the database, optionally filtered by active status.
+
+        Args:
+            active_only (bool, optional): Whether to only include active models (default True)
+
+        Returns:
+            list: List of AI model names
+        """
+        try:
+            if not self.conn:
+                self.Conn_Sql()
+
+            cursor = self.conn.cursor()
+
+            # Build query
+            query = "SELECT ModelName FROM AIModels WHERE 1=1"
+            params = []
+
+            if active_only:
+                query += " AND IsActive = 1"
+
+            query += " ORDER BY ModelName"
+
+            cursor.execute(query, params)
+
+            # Format results
+            ai_model_names = []
+            for row in cursor.fetchall():
+                ai_model_names.append(row.ModelName)
+
+            cursor.close()
+
+            logger.info(f"Retrieved {len(ai_model_names)} AI model names")
+            return ai_model_names
+
+        except pyodbc.Error as e:
+            logger.error(f"Error getting AI model names: {e}")
+            return []
+            
+
+
+    def add_permission(self, permission_name, description):
+        """
+        Add a new permission to the database.
+
+        Args:
+            permission_name (str): The name of the permission
+            description (str): Description of the permission
+
+        Returns:
+            int: The ID of the newly created permission, or None if failed
+        """
+        try:
+            if not self.conn:
+                self.Conn_Sql()
+
+            cursor = self.conn.cursor()
+
+            # Insert permission
+            cursor.execute(
+                """
+                INSERT INTO Permissions (PermissionName, Description)
+                OUTPUT INSERTED.PermissionID
+                VALUES (?, ?)
+                """,
+                (permission_name, description)
+            )
+
+            # Get the PermissionID
+            permission_id = cursor.fetchval()
+
+            self.conn.commit()
+            cursor.close()
+
+            logger.info(f"Permission '{permission_name}' created successfully with ID: {permission_id}")
+            return permission_id
+
+        except pyodbc.Error as e:
+            logger.error(f"Error creating permission: {e}")
+            if self.conn:
+                self.conn.rollback()
+            return None
+        
+
+    def update_permission(self, permission_id, permission_name=None, description=None):
+        """
+        Update an existing permission.
+
+        Args:
+            permission_id (int): The ID of the permission to update
+            permission_name (str, optional): New name for the permission
+            description (str, optional): New description for the permission
+
+        Returns:
+            bool: True if update successful, False otherwise
+        """
+        try:
+            if not self.conn:
+                self.Conn_Sql()
+
+            cursor = self.conn.cursor()
+
+            # Check if permission exists
+            cursor.execute("SELECT 1 FROM Permissions WHERE PermissionID = ?", (permission_id,))
+            if not cursor.fetchone():
+                logger.warning(f"Permission ID {permission_id} not found")
+                cursor.close()
+                return False
+
+            # Build update query
+            update_parts = []
+            update_values = []
+
+            if permission_name:
+                update_parts.append("PermissionName = ?")
+                update_values.append(permission_name)
+
+            if description:
+                update_parts.append("Description = ?")
+                update_values.append(description)
+
+            if not update_parts:
+                logger.warning("No valid fields provided for permission update")
+                cursor.close()
+                return False
+
+            query = f"UPDATE Permissions SET {', '.join(update_parts)} WHERE PermissionID = ?"
+            update_values.append(permission_id)
+
+            # Execute the update
+            cursor.execute(query, update_values)
+
+            self.conn.commit()
+            cursor.close()
+
+            logger.info(f"Permission ID {permission_id} updated successfully")
+            return True
+
+        except pyodbc.Error as e:
+            logger.error(f"Error updating permission: {e}")
+            if self.conn:
+                self.conn.rollback()
+            return False
+        
+
+    def delete_permission(self, permission_id):
+        """
+        Delete a permission from the database.
+        Args:
+            permission_id (int): The ID of the permission to delete
+        Returns:
+            bool: True if deletion successful, False otherwise
+        """
+        try:
+            if not self.conn:
+                self.Conn_Sql()
+
+            cursor = self.conn.cursor()
+
+            # Check if permission exists
+            cursor.execute("SELECT 1 FROM Permissions WHERE PermissionID = ?", (permission_id,))
+            if not cursor.fetchone():
+                logger.warning(f"Permission ID {permission_id} not found")
+                cursor.close()
+                return False
+
+            # Delete the permission
+            cursor.execute("DELETE FROM Permissions WHERE PermissionID = ?", (permission_id,))
+
+            self.conn.commit()
+            cursor.close()
+
+            logger.info(f"Permission ID {permission_id} deleted successfully")
+            return True
+
+        except pyodbc.Error as e:
+            logger.error(f"Error deleting permission: {e}")
+            if self.conn:
+                self.conn.rollback()
+            return False
+        
+    def check_permission(self,permission_name:str):
+        """
+        Check if a permission exists in the database.
+
+        Args:
+            permission_name (str): The name of the permission to check
+
+        Returns:
+            bool: True if permission exists, False otherwise
+        """
+        try:
+            if not self.conn:
+                self.Conn_Sql()
+
+            cursor = self.conn.cursor()
+
+            # Check if permission exists
+            cursor.execute("SELECT 1 FROM Permissions WHERE PermissionName = ?", (permission_name,))
+            exists = cursor.fetchone() is not None
+
+            cursor.close()
+            return exists
+
+        except pyodbc.Error as e:
+            logger.error(f"Error checking permission: {e}")
+            return False
+
+
+    def get_permission(self, permission_id):
+
+        """
+        Get permission details by ID.
+
+        Args:
+            permission_id (int): The ID of the permission to retrieve
+
+        Returns:
+            dict: Permission details, or None if not found
+        """
+        try:
+            if not self.conn:
+                self.Conn_Sql()
+
+            cursor = self.conn.cursor()
+
+            # Get permission information
+            cursor.execute(
+                """
+                SELECT * FROM Permissions WHERE PermissionID = ?
+                """,
+                (permission_id,)
+            )
+
+            row = cursor.fetchone()
+            if not row:
+                logger.warning(f"Permission ID {permission_id} not found")
+                cursor.close()
+                return None
+
+            # Convert to dictionary
+            columns = [column[0] for column in cursor.description]
+            permission = dict(zip(columns, row))
+
+            cursor.close()
+            logger.info(f"Retrieved details for Permission ID: {permission_id}")
+            return permission
+
+        except pyodbc.Error as e:
+            logger.error(f"Error getting permission details: {e}")
+            return None

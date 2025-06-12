@@ -693,3 +693,14 @@ BEGIN
     SELECT 'Permission granted successfully' AS Result;
 END;
 GO
+
+
+CREATE TABLE AIModels (
+    ModelID INT IDENTITY(1,1) PRIMARY KEY,
+    Platform NVARCHAR(100) NOT NULL,     -- เช่น "OpenAI GPT"
+    ModelName NVARCHAR(100) NOT NULL,    -- เช่น "gpt-4o"
+    CreatedBy INT NOT NULL,              -- UserID ของผู้สร้าง
+    IsActive BIT DEFAULT 1 NOT NULL,     -- เปิดใช้งานหรือไม่
+    CreatedAt DATETIME DEFAULT GETDATE() NOT NULL,
+    FOREIGN KEY (CreatedBy) REFERENCES Users(UserID) ON DELETE CASCADE
+);
