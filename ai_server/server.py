@@ -229,6 +229,7 @@ async def lifespan(app: FastAPI):
                 
                 # Initialize model instance and retrieval chain
                 model_instance = RAG()
+                platform = db.get_platform(model_name)
                 # เรียกเมธอด retrieval แบบ async
                 retrieval_chain = await model_instance.retrieval(
                     model_name=model_name,
@@ -237,7 +238,8 @@ async def lifespan(app: FastAPI):
                     prompt=config.get("system_prompt", ""),
                     nftext=config.get("nftext", "Sorry, no information found"),
                     temperature=config.get("temperature", 0.5),
-                    max_tokens=config.get("max_tokens", 1024)
+                    max_tokens=config.get("max_tokens", 1024),
+                    platform=platform
                 )
                 
                 if retrieval_chain != "notfound":
@@ -429,7 +431,7 @@ class DocumentUpdate(BaseModel):
     is_processed: Optional[bool] = None
 
 class Permission(BaseModel):
-    permission_id: int
+    permission_id: int = None
     permission_name: str
     description: Optional[str] = None
 
@@ -443,6 +445,18 @@ class MessageFeedback(BaseModel):
 class FixPermission(BaseModel):
     permission_name: str
     description: str
+
+class Route(BaseModel):
+    path: str
+    methods: List[str]
+    summary: Optional[str] = None
+    description: Optional[str] = None
+
+class APIPermission(BaseModel):
+    ApiPermissionID: int = None
+    RequiredPermission: str
+    Method: str
+    PathPattern: str
 
 # --- JWT Functions ---
 
@@ -525,7 +539,7 @@ def verify_api_key(api_key: str):
         logger.error(f"Error verifying API key: {str(e)}")
         return False
 
-async def get_current_user(credentials: HTTPAuthorizationCredentials = Security(security), x_api_key: Optional[str] = Header(None)):
+async def get_current_user(request: Request,credentials: HTTPAuthorizationCredentials = Security(security), x_api_key: Optional[str] = Header(None)):
     """Validate token and get user information"""
     logger.debug(f'Authentication credentials: {credentials}')
     logger.debug(f'X-API-Key: {x_api_key}')
@@ -542,8 +556,24 @@ async def get_current_user(credentials: HTTPAuthorizationCredentials = Security(
         token = credentials.credentials
         user = verify_token(token)
         if user is not None:
+            # สมมุติว่าคุณมีตัวแปร request จาก middleware
+            parsed_url = urlparse(str(request.url))
+            path = parsed_url.path  # เช่น "/api/knowledge/1"
+            method = request.method # เช่น "GET"
+            
+            check_permission = db.check_user_permissions_pattern(
+                user_id=user.get("user_id"),
+                path=path,
+                method=method
+            )
             logger.info(f"User authenticated via JWT token: {user.get('username')}")
-            return user
+            if check_permission:
+                logger.info(f"User has permission for this route: {check_permission}")
+                print(f"User has permission for this route: {check_permission}")
+                return user
+        else:
+            logger.warning("Invalid JWT token provided.")
+        
     
     # Authentication failed
     raise HTTPException(
@@ -573,6 +603,7 @@ async def process_chat_non_streaming(
         if not model_instance:
             print("Model not found in cache, creating new instance in non-streaming")
             model_instance = RAG()
+            platform = db.get_platform(model_name)
             # Create retrieval chain with parameters
             retrieval_chain = await model_instance.retrieval(
                 model_name=model_name,
@@ -581,7 +612,8 @@ async def process_chat_non_streaming(
                 prompt=prompt,
                 nftext=nftext,
                 temperature=temperature,
-                max_tokens=max_tokens
+                max_tokens=max_tokens,
+                platform=platform
             )
             if retrieval_chain == "notfound":
                 return "ยังไม่มีข้อมูลในระบบ กรุณาเพิ่มข้อมูลก่อนใช้งาน"
@@ -654,6 +686,7 @@ async def process_chat_streaming(
             print("Model not found in cache, creating new instance in stream")
             # If not found in cache, create new model instance
             model_instance = RAG()
+            platform = db.get_platform(model_name)
             # Create retrieval chain with parameters
             retrieval_chain = await model_instance.retrieval(
                 model_name=model_name,
@@ -662,7 +695,8 @@ async def process_chat_streaming(
                 prompt=prompt,
                 nftext=nftext,
                 temperature=temperature,
-                max_tokens=max_tokens
+                max_tokens=max_tokens,
+                platform=platform
             )
  
             print(f"Retrieval chain: {retrieval_chain}")
@@ -693,8 +727,9 @@ async def process_chat_streaming(
             "chat_history": chat_history
         })
         
-        full_context = ""
         full_answer = ""
+        full_context = ""
+        unique_sources = []  # Use a list to store unique source URLs
         
         # Process the async stream
         async for chunk in async_stream:
@@ -703,9 +738,74 @@ async def process_chat_streaming(
                 print(f"Answer chunk: {answer_chunk}")
                 yield json.dumps({'answer_chunk': answer_chunk}) + "\n"
                 await asyncio.sleep(0.1)
+            
             if context_chunk := chunk.get("context"):
                 full_context = context_chunk
+                
+                # Extract source URLs and titles from context documents
+                if isinstance(context_chunk, list) and len(context_chunk) > 0:
+                    # Handle case where context is a list of Document objects
+                    for doc in context_chunk:
+                        if hasattr(doc, 'metadata') and doc.metadata:
+                            source_url = doc.metadata.get('source')
+                            source_title = doc.metadata.get('title', 'Untitled')
+                            if source_url:
+                                # Encode both title and source to UTF-8 if they're strings
+                                if isinstance(source_title, str):
+                                    source_title = source_title.encode('utf-8', errors='replace').decode('utf-8')
+                                if isinstance(source_url, str):
+                                    source_url = source_url.encode('utf-8', errors='replace').decode('utf-8')
+                                unique_sources.append({"unique_title": source_title, "unique_source": source_url})
+                
+                # Also check if there's a source field directly in the chunk
+                if source := chunk.get("source"):
+                    # Handle different source formats
+                    if isinstance(source, list):
+                        for src in source:
+                            if isinstance(src, dict):
+                                title = src.get('title', 'Untitled')
+                                url = src.get('source')
+                                # Encode to UTF-8
+                                if isinstance(title, str):
+                                    title = title.encode('utf-8', errors='replace').decode('utf-8')
+                                if isinstance(url, str):
+                                    url = url.encode('utf-8', errors='replace').decode('utf-8')
+                                unique_sources.append({"unique_title": title, "unique_source": url})
+                            elif isinstance(src, str):
+                                # Encode to UTF-8
+                                if isinstance(src, str):
+                                    src = src.encode('utf-8', errors='replace').decode('utf-8')
+                                unique_sources.append({"unique_title": "Untitled", "unique_source": src})
+                    elif isinstance(source, dict):
+                        title = source.get('title', 'Untitled')
+                        url = source.get('source')
+                        # Encode to UTF-8
+                        if isinstance(title, str):
+                            title = title.encode('utf-8', errors='replace').decode('utf-8')
+                        if isinstance(url, str):
+                            url = url.encode('utf-8', errors='replace').decode('utf-8')
+                        unique_sources.append({"unique_title": title, "unique_source": url})
+                    elif isinstance(source, str):
+                        # Encode to UTF-8
+                        if isinstance(source, str):
+                            source = source.encode('utf-8', errors='replace').decode('utf-8')
+                        unique_sources.append({"unique_title": "Untitled", "unique_source": source})
+
                 print(f"Context: {full_context}")
+                print(f"Unique sources so far: {unique_sources}")
+         
+        # At the end of streaming, send a list of unique source URLs
+        if unique_sources:
+            # Remove duplicates by converting to dict using source URL as key
+            source_dict = {}
+            for source in unique_sources:
+                key = source["unique_source"]
+                if key not in source_dict:
+                    source_dict[key] = source
+            
+            # Convert back to list with no duplicates
+            source_list = list(source_dict.values())
+            yield json.dumps({"sources": source_list}, ensure_ascii=False) + "\n"
     
     except Exception as e:
         logger.error(f"Error in streaming chat: {str(e)}")
@@ -1012,6 +1112,8 @@ async def get_all_models(user = Depends(get_current_user)):
 async def create_model(
     platform: str = Body(..., embed=True),
     model_name: str = Body(..., embed=True),
+    api_key: Optional[str] = Body(None, embed=True),
+    api_version: Optional[str] = Body(None, embed=True),
     created_by: int = Body(..., embed=True),
     user = Depends(get_current_user),
     background_tasks: BackgroundTasks = None
@@ -1026,7 +1128,9 @@ async def create_model(
         model_id = db.create_ai_model(
             platform=platform,
             model_name=model_name,
-            created_by=created_by
+            created_by=created_by,
+            apiKey=api_key,
+            apiVersion=api_version
         )
         if not model_id:
             raise HTTPException(status_code=400, detail="Failed to create model. Model name may already exist.")
@@ -1083,14 +1187,14 @@ async def create_agent(
 ):
     """Create a new AI agent."""
     try:
-        # Check permissions
-        if user["role"] != "admin":
-            has_permission = db.check_user_has_permission(
-                user_id=user["user_id"],
-                permission_name="use_agent"  # Adjust this to your permission name
-            )
-            if not has_permission:
-                raise HTTPException(status_code=403, detail="Permission denied")
+        # # Check permissions
+        # if user["role"] != "admin":
+        #     has_permission = db.check_user_has_permission(
+        #         user_id=user["user_id"],
+        #         permission_name="use_agent"  # Adjust this to your permission name
+        #     )
+        #     if not has_permission:
+        #         raise HTTPException(status_code=403, detail="Permission denied")
         
         # Validate and parse configuration
         if agent.configuration:
@@ -1113,6 +1217,7 @@ async def create_agent(
                 # Initialize and cache model
                 dept_id = agent.department_id or 1
                 model_instance = RAG()
+                platform = db.get_platform(model_name)
                 retrieval_chain = model_instance.retrieval(
                     model_name=model_name,
                     dept_id=str(dept_id),
@@ -1121,6 +1226,7 @@ async def create_agent(
                     nftext=config.get("nftext", "Sorry, no information found"),
                     temperature=config.get("temperature", 0.5),
                     max_tokens=config.get("max_tokens", 1024)
+                    , platform=platform
                 )
                 
                 if retrieval_chain == "notfound":
@@ -1168,7 +1274,7 @@ async def create_agent(
         return Agent(
             agent_id=agent_data.get("AgentID"),
             agent_key=agent_data.get("AgentKey"),
-            name=agent_data.get("Name"),
+            name= agent_data.get("Name"),
             description=agent_data.get("Description"),
             configuration=agent_data.get("Configuration"),
             is_active=bool(agent_data.get("IsActive")),
@@ -1528,14 +1634,14 @@ async def create_shared_agent(
     Generates an API key that can be used by external websites.
     """
     try:
-        # Check if user has permission to share agents
-        if user["role"] != "admin":
-            has_permission = db.check_user_has_permission(
-                user_id=user["user_id"],
-                permission_name="share_agent"
-            )
-            if not has_permission:
-                raise HTTPException(status_code=403, detail="Permission denied. User does not have 'share_agent' permission.")
+        # # Check if user has permission to share agents
+        # if user["role"] != "admin":
+        #     has_permission = db.check_user_has_permission(
+        #         user_id=user["user_id"],
+        #         permission_name="share_agent"
+        #     )
+        #     if not has_permission:
+        #         raise HTTPException(status_code=403, detail="Permission denied. User does not have 'share_agent' permission.")
         
         # Parse request body
         data = await request.json()
@@ -1691,14 +1797,14 @@ async def update_agent(
     Returns:
         Updated agent details
     """
-    # Check if user has permission to update agents
-    if user["role"] != "admin":
-        has_permission = db.check_user_has_permission(
-            user_id=user["user_id"],
-            permission_name="edit_knowledge"  # Assuming this permission allows updating agents
-        )
-        if not has_permission:
-            raise HTTPException(status_code=403, detail="Permission denied")
+    # # Check if user has permission to update agents
+    # if user["role"] != "admin":
+    #     has_permission = db.check_user_has_permission(
+    #         user_id=user["user_id"],
+    #         permission_name="edit_knowledge"  # Assuming this permission allows updating agents
+    #     )
+    #     if not has_permission:
+    #         raise HTTPException(status_code=403, detail="Permission denied")
     
     # Check if agent exists
     existing_agent = db.get_agent(agent_id=agent_id)
@@ -1726,6 +1832,7 @@ async def update_agent(
             print(config.get("nftext"))
             # Initialize and cache model if configuration changed
             model_instance = RAG()
+            platform = db.get_platform(model_name)
             retrieval_chain = model_instance.retrieval(
                 model_name=model_name,
                 dept_id=str(dept_id),
@@ -1733,7 +1840,8 @@ async def update_agent(
                 prompt=config.get("prompt", ""),
                 nftext=config.get("nftext", "Sorry, no information found"),
                 temperature=config.get("temperature", 0.5),
-                max_tokens=config.get("max_tokens", 1024)
+                max_tokens=config.get("max_tokens", 1024),
+                platform=platform
             )
             
             if retrieval_chain != "notfound":
@@ -1808,14 +1916,14 @@ async def delete_agent(
     Returns:
         Success message
     """
-    # Check if user has permission to delete agents
-    if user["role"] != "admin":
-        has_permission = db.check_user_has_permission(
-            user_id=user["user_id"],
-            permission_name="use_agent"  # Assuming this permission allows deleting agents
-        )
-        if not has_permission:
-            raise HTTPException(status_code=403, detail="Permission denied")
+    # # Check if user has permission to delete agents
+    # if user["role"] != "admin":
+    #     has_permission = db.check_user_has_permission(
+    #         user_id=user["user_id"],
+    #         permission_name="use_agent"  # Assuming this permission allows deleting agents
+    #     )
+    #     if not has_permission:
+    #         raise HTTPException(status_code=403, detail="Permission denied")
     
     # Check if agent exists
     existing_agent = db.get_agent(agent_id=agent_id)
@@ -1950,14 +2058,14 @@ async def create_knowledge_base(
 
 
     print(kb)
-    # Check if user has permission to create knowledge bases
-    if user["role"] != "admin":
-        has_permission = db.check_user_has_permission(
-            user_id=user["user_id"],
-            permission_name="edit_knowledge"  # Permission required to create knowledge bases
-        )
-        if not has_permission:
-            raise HTTPException(status_code=403, detail="Permission denied")
+    # # Check if user has permission to create knowledge bases
+    # if user["role"] != "admin":
+    #     has_permission = db.check_user_has_permission(
+    #         user_id=user["user_id"],
+    #         permission_name="edit_knowledge"  # Permission required to create knowledge bases
+    #     )
+    #     if not has_permission:
+    #         raise HTTPException(status_code=403, detail="Permission denied")
     
     # Create the knowledge base
     kb_id = db.create_knowledge_base(
@@ -2015,14 +2123,14 @@ async def update_knowledge_base(
     if not existing_kb:
         raise HTTPException(status_code=404, detail="Knowledge base not found")
     
-    # Check if user has permission to update this knowledge base
-    if user["role"] != "admin" and existing_kb.get("OwnerID") != user["user_id"]:
-        has_permission = db.check_user_has_permission(
-            user_id=user["user_id"],
-            permission_name="edit_knowledge"  # Permission required to update knowledge bases
-        )
-        if not has_permission:
-            raise HTTPException(status_code=403, detail="Permission denied")
+    # # Check if user has permission to update this knowledge base
+    # if user["role"] != "admin" and existing_kb.get("OwnerID") != user["user_id"]:
+    #     has_permission = db.check_user_has_permission(
+    #         user_id=user["user_id"],
+    #         permission_name="edit_knowledge"  # Permission required to update knowledge bases
+    #     )
+       #     if not has_permission:
+    #         raise HTTPException(status_code=403, detail="Permission denied")
     
     # Prepare update data
     update_data = {}
@@ -2084,14 +2192,14 @@ async def delete_knowledge_base(
     if not existing_kb:
         raise HTTPException(status_code=404, detail="Knowledge base not found")
     
-    # Check if user has permission to delete this knowledge base
-    if user["role"] != "admin" and existing_kb.get("OwnerID") != user["user_id"]:
-        has_permission = db.check_user_has_permission(
-            user_id=user["user_id"],
-            permission_name="edit_knowledge"
-        )
-        if not has_permission:
-            raise HTTPException(status_code=403, detail="Permission denied")
+    # # Check if user has permission to delete this knowledge base
+    # if user["role"] != "admin" and existing_kb.get("OwnerID") != user["user_id"]:
+    #     has_permission = db.check_user_has_permission(
+    #         user_id=user["user_id"],
+    #         permission_name="edit_knowledge"
+    #     )
+    #     if not has_permission:
+    #         raise HTTPException(status_code=403, detail="Permission denied")
     
     # Delete the knowledge base from database
     success = db.delete_knowledge_base(knowledge_base_id)
@@ -2117,6 +2225,59 @@ async def delete_knowledge_base(
     except Exception as e:
         logger.error(f"Error deleting embeddings collection: {str(e)}")
         # Continue since database record is already deleted
+
+    # Update cache for all agents that use this knowledge base
+    try:
+        # Check for any agents using this knowledge base
+        agents = db.get_all_agents(active_only=True)
+        kb_str = str(knowledge_base_id)
+        
+        for agent in agents:
+            try:
+                config = json.loads(agent.get("Configuration", "{}"))
+                model_name = config.get("model")
+                kb_ids = config.get("knowledge_base_ids")
+                
+                # Skip if agent doesn't use the deleted knowledge base
+                if not kb_ids or kb_str not in str(kb_ids):
+                    continue
+                    
+                agent_dept_id = agent.get("DepartmentID", 1)
+                agent_key = agent.get("AgentKey")
+                
+                # Create new model and retrieval chain
+                logger.info(f"Updating cache for agent {agent_key} after knowledge base deletion")
+                model_instance = RAG()
+                platform = db.get_platform(model_name)
+                retrieval_chain = model_instance.retrieval(
+                    model_name=model_name,
+                    dept_id=str(agent_dept_id),
+                    knowledge_base_id=[kb_id for kb_id in kb_ids if kb_id != kb_str],
+                    prompt=config.get("prompt", ""),
+                    nftext=config.get("nftext", "Sorry, no information found"),
+                    temperature=config.get("temperature", 0.5),
+                    max_tokens=config.get("max_tokens", 1024),
+                    platform=platform
+                )
+                
+                if retrieval_chain != "notfound":
+                    # Update cache
+                    await cache_model(
+                        model_name=model_name,
+                        dept_id=agent_dept_id,
+                        knowledge_base=[kb_id for kb_id in kb_ids if kb_id != kb_str],
+                        agent_key=agent_key,
+                        model_instance=model_instance,
+                        retrieval_chain=retrieval_chain
+                    )
+                    logger.info(f"Successfully updated cache for agent {agent_key}")
+                else:
+                    logger.warning(f"Could not update retrieval chain for agent {agent_key}")
+            except Exception as e:
+                logger.error(f"Error updating cache for agent {agent.get('AgentKey')}: {str(e)}")
+    except Exception as e:
+        logger.error(f"Error updating model cache after knowledge base deletion: {str(e)}")
+        # Continue since the knowledge base was already deleted successfully
         
     return {"status": "success", "message": f"Knowledge base with ID {knowledge_base_id} deleted successfully"}
 
@@ -2258,14 +2419,14 @@ async def create_document(
         if not kb_data:
             raise HTTPException(status_code=404, detail="Knowledge base not found")
 
-        # Check permissions
-        if user["role"] != "admin" and kb_data.get("OwnerID") != user["user_id"]:
-            has_permission = db.check_user_has_permission(
-                user_id=user["user_id"],
-                permission_name="edit_knowledge"
-            )
-            if not has_permission:
-                raise HTTPException(status_code=403, detail="Permission denied")
+        # # Check permissions
+        # if user["role"] != "admin" and kb_data.get("OwnerID") != user["user_id"]:
+        #     has_permission = db.check_user_has_permission(
+        #         user_id=user["user_id"],
+        #         permission_name="edit_knowledge"
+        #     )
+        #     if not has_permission:
+        #         raise HTTPException(status_code=403, detail="Permission denied")
 
         docs = []
         file_path = None
@@ -2455,6 +2616,7 @@ async def create_document(
                     # Create new model and retrieval chain
                     logger.info(f"Updating cache for agent {agent_key} after document creation")
                     model_instance = RAG()
+                    platform = db.get_platform(model_name)
                     retrieval_chain = model_instance.retrieval(
                         model_name=model_name,
                         dept_id=str(agent_dept_id),
@@ -2462,7 +2624,8 @@ async def create_document(
                         prompt=config.get("prompt", ""),
                         nftext=config.get("nftext", "Sorry, no information found"),
                         temperature=config.get("temperature", 0.5),
-                        max_tokens=config.get("max_tokens", 1024)
+                        max_tokens=config.get("max_tokens", 1024),
+                        platform=platform
                     )
                     
                     if retrieval_chain != "notfound":
@@ -2506,14 +2669,14 @@ async def update_document(
 
         kb_data = db.get_knowledge_base(knowledge_base_id=existing_doc["KnowledgeBaseID"])
         
-        # Check permissions
-        if user["role"] != "admin" and kb_data.get("OwnerID") != user["user_id"]:
-            has_permission = db.check_user_has_permission(
-                user_id=user["user_id"],
-                permission_name="edit_knowledge"
-            )
-            if not has_permission:
-                raise HTTPException(status_code=403, detail="Permission denied")
+        # # Check permissions
+        # if user["role"] != "admin" and kb_data.get("OwnerID") != user["user_id"]:
+        #     has_permission = db.check_user_has_permission(
+        #         user_id=user["user_id"],
+        #         permission_name="edit_knowledge"
+        #     )
+        #     if not has_permission:
+        #         raise HTTPException(status_code=403, detail="Permission denied")
 
         # Initialize RAG model for embedding operations
         model = RAG()
@@ -2638,14 +2801,14 @@ async def delete_document(
     if not kb_data:
         raise HTTPException(status_code=404, detail="Knowledge base not found")
     
-    # Check if user has permission to delete documents in this knowledge base
-    if user["role"] != "admin" and kb_data.get("OwnerID") != user["user_id"]:
-        has_permission = db.check_user_has_permission(
-            user_id=user["user_id"],
-            permission_name="edit_knowledge"  # Permission required to delete documents
-        )
-        if not has_permission:
-            raise HTTPException(status_code=403, detail="Permission denied")
+    # # Check if user has permission to delete documents in this knowledge base
+    # if user["role"] != "admin" and kb_data.get("OwnerID") != user["user_id"]:
+    #     has_permission = db.check_user_has_permission(
+    #         user_id=user["user_id"],
+    #         permission_name="edit_knowledge"  # Permission required to delete documents
+    #     )
+    #     if not has_permission:
+    #         raise HTTPException(status_code=403, detail="Permission denied")
     
     # Delete from database first
     success = db.delete_document(document_id)
@@ -2705,6 +2868,7 @@ async def delete_document(
                 # Create new model and retrieval chain
                 logger.info(f"Updating cache for agent {agent_key} after document deletion")
                 model_instance = RAG()
+                platform = db.get_platform(model_name)
                 retrieval_chain = model_instance.retrieval(
                     model_name=model_name,
                     dept_id=str(agent_dept_id),
@@ -2712,7 +2876,8 @@ async def delete_document(
                     prompt=config.get("prompt", ""),
                     nftext=config.get("nftext", "Sorry, no information found"),
                     temperature=config.get("temperature", 0.5),
-                    max_tokens=config.get("max_tokens", 1024)
+                    max_tokens=config.get("max_tokens", 1024),
+                    platform=platform
                 )
                 
                 if retrieval_chain != "notfound":
@@ -2812,14 +2977,14 @@ async def create_department(
     Returns:
         Newly created department details
     """
-    # Check if user has permission to create departments
-    if user["role"] != "admin":
-        has_permission = db.check_user_has_permission(
-            user_id=user["user_id"],
-            permission_name="manage_departments"
-        )
-        if not has_permission:
-            raise HTTPException(status_code=403, detail="Permission denied")
+    # # Check if user has permission to create departments
+    # if user["role"] != "admin":
+    #     has_permission = db.check_user_has_permission(
+    #         user_id=user["user_id"],
+    #         permission_name="manage_departments"
+    #     )
+    #     if not has_permission:
+    #         raise HTTPException(status_code=403, detail="Permission denied")
     
     # Create the department
     department_id = db.create_department(
@@ -2862,14 +3027,14 @@ async def update_department(
     Returns:
         Updated department details
     """
-    # Check if user has permission to update departments
-    if user["role"] != "admin":
-        has_permission = db.check_user_has_permission(
-            user_id=user["user_id"],
-            permission_name="manage_departments"
-        )
-        if not has_permission:
-            raise HTTPException(status_code=403, detail="Permission denied")
+    # # Check if user has permission to update departments
+    # if user["role"] != "admin":
+    #     has_permission = db.check_user_has_permission(
+    #         user_id=user["user_id"],
+    #         permission_name="manage_departments"
+    #     )
+    #     if not has_permission:
+    #         raise HTTPException(status_code=403, detail="Permission denied")
     
     # Check if department exists
     existing_department = db.get_department(department_id=department_id)
@@ -2919,14 +3084,14 @@ async def delete_department(
     Returns:
         Success message
     """
-    # Check if user has permission to delete departments
-    if user["role"] != "admin":
-        has_permission = db.check_user_has_permission(
-            user_id=user["user_id"],
-            permission_name="manage_departments"
-        )
-        if not has_permission:
-            raise HTTPException(status_code=403, detail="Permission denied")
+    # # Check if user has permission to delete departments
+    # if user["role"] != "admin":
+    #     has_permission = db.check_user_has_permission(
+    #         user_id=user["user_id"],
+    #         permission_name="manage_departments"
+    #     )
+    #     if not has_permission:
+    #         raise HTTPException(status_code=403, detail="Permission denied")
     
     # Check if department exists
     existing_department = db.get_department(department_id=department_id)
@@ -2963,17 +3128,17 @@ async def get_department_users(
     if not existing_department:
         raise HTTPException(status_code=404, detail="Department not found")
     
-    # Check if user has permission to view department users
-    if user["role"] != "admin":
-        user_details = db.get_user_details(user["user_id"])
-        user_depts = [dept.get("DepartmentID") for dept in user_details.get("departments", [])]
-        if department_id not in user_depts:
-            has_permission = db.check_user_has_permission(
-                user_id=user["user_id"],
-                permission_name="view_department_users"
-            )
-            if not has_permission:
-                raise HTTPException(status_code=403, detail="Permission denied")
+    # # Check if user has permission to view department users
+    # if user["role"] != "admin":
+    #     user_details = db.get_user_details(user["user_id"])
+    #     user_depts = [dept.get("DepartmentID") for dept in user_details.get("departments", [])]
+    #     if department_id not in user_depts:
+    #         has_permission = db.check_user_has_permission(
+    #             user_id=user["user_id"],
+    #             permission_name="view_department_users"
+    #         )
+    #         if not has_permission:
+    #             raise HTTPException(status_code=403, detail="Permission denied")
     
     # Get users in the department
     users_data = db.get_department_users(department_id)
@@ -3005,14 +3170,14 @@ async def add_user_to_department(
     Returns:
         Success message
     """
-    # Check if user has permission to manage department users
-    if current_user["role"] != "admin":
-        has_permission = db.check_user_has_permission(
-            user_id=current_user["user_id"],
-            permission_name="manage_department_users"
-        )
-        if not has_permission:
-            raise HTTPException(status_code=403, detail="Permission denied")
+    # # Check if user has permission to manage department users
+    # if current_user["role"] != "admin":
+    #     has_permission = db.check_user_has_permission(
+    #         user_id=current_user["user_id"],
+    #         permission_name="manage_department_users"
+    #     )
+    #     if not has_permission:
+    #         raise HTTPException(status_code=403, detail="Permission denied")
     
     # Check if department exists
     existing_department = db.get_department(department_id=department_id)
@@ -3054,14 +3219,14 @@ async def remove_user_from_department(
     Returns:
         Success message
     """
-    # Check if user has permission to manage department users
-    if current_user["role"] != "admin":
-        has_permission = db.check_user_has_permission(
-            user_id=current_user["user_id"],
-            permission_name="manage_department_users"
-        )
-        if not has_permission:
-            raise HTTPException(status_code=403, detail="Permission denied")
+    # # Check if user has permission to manage department users
+    # if current_user["role"] != "admin":
+    #     has_permission = db.check_user_has_permission(
+    #         user_id=current_user["user_id"],
+    #         permission_name="manage_department_users"
+    #     )
+    #     if not has_permission:
+    #         raise HTTPException(status_code=403, detail="Permission denied")
     
     # Check if department exists
     existing_department = db.get_department(department_id=department_id)
@@ -3131,14 +3296,14 @@ async def add_permission_to_user(
     # Determine the target user ID
     target_user_id = request.user_id if request.user_id else user["user_id"]
     
-    # Check if current user has permission to modify permissions
-    if user["role"] != "admin" and target_user_id != user["user_id"]:
-        has_permission = db.check_user_has_permission(
-            user_id=user["user_id"],
-            permission_name="manage_permissions"
-        )
-        if not has_permission:
-            raise HTTPException(status_code=403, detail="Permission denied")
+    # # Check if current user has permission to modify permissions
+    # if user["role"] != "admin" and target_user_id != user["user_id"]:
+    #     has_permission = db.check_user_has_permission(
+    #         user_id=user["user_id"],
+    #         permission_name="manage_permissions"
+    #     )
+    #     if not has_permission:
+    #         raise HTTPException(status_code=403, detail="Permission denied")
     
     # Check if target user exists
     target_user = db.get_user_details(target_user_id)
@@ -3180,14 +3345,14 @@ async def remove_permission_from_user(
     # Determine the target user ID
     target_user_id = request.user_id if request.user_id else user["user_id"]
     
-    # Check if current user has permission to modify permissions
-    if user["role"] != "admin" and target_user_id != user["user_id"]:
-        has_permission = db.check_user_has_permission(
-            user_id=user["user_id"],
-            permission_name="manage_permissions"
-        )
-        if not has_permission:
-            raise HTTPException(status_code=403, detail="Permission denied")
+    # # Check if current user has permission to modify permissions
+    # if user["role"] != "admin" and target_user_id != user["user_id"]:
+    #     has_permission = db.check_user_has_permission(
+    #         user_id=user["user_id"],
+    #         permission_name="manage_permissions"
+    #     )
+    #     if not has_permission:
+    #         raise HTTPException(status_code=403, detail="Permission denied")
     
     # Admin users can't have permissions removed
     target_user = db.get_user_details(target_user_id)
@@ -3505,7 +3670,6 @@ async def get_all_messages(
 
 
 
-
 @app.get("/api/agents/config/{api_key}")
 async def get_agent_config_by_api_key(api_key: str):
     """
@@ -3566,14 +3730,14 @@ async def add_permissions(data: FixPermission, user = Depends(get_current_user))
         Success message
     """
     print(f"Adding permission: {data}")
-    # Check if user has permission to manage permissions
-    if user["role"] != "admin":
-        has_permission = db.check_user_has_permission(
-            user_id=user["user_id"],
-            permission_name="manage_permissions"
-        )
-        if not has_permission:
-            raise HTTPException(status_code=403, detail="Permission denied")
+    # # Check if user has permission to manage permissions
+    # if user["role"] != "admin":
+    #     has_permission = db.check_user_has_permission(
+    #         user_id=user["user_id"],
+    #         permission_name="manage_permissions"
+    #     )
+    #     if not has_permission:
+    #         raise HTTPException(status_code=403, detail="Permission denied")
     
     # check permission exists
     permission_exists = db.check_permission(data.permission_name)
@@ -3610,14 +3774,14 @@ async def update_permission(
     Returns:
         Updated permission details
     """
-    # Check if user has permission to manage permissions
-    if user["role"] != "admin":
-        has_permission = db.check_user_has_permission(
-            user_id=user["user_id"],
-            permission_name="manage_permissions"
-        )
-        if not has_permission:
-            raise HTTPException(status_code=403, detail="Permission denied")
+    # # Check if user has permission to manage permissions
+    # if user["role"] != "admin":
+    #     has_permission = db.check_user_has_permission(
+    #         user_id=user["user_id"],
+    #         permission_name="manage_permissions"
+    #     )
+    #     if not has_permission:
+    #         raise HTTPException(status_code=403, detail="Permission denied")
     
     # Validate input
     if not data.permission_name:
@@ -3656,14 +3820,14 @@ async def delete_permission(
     Returns:
         Success message
     """
-    # Check if user has permission to manage permissions
-    if user["role"] != "admin":
-        has_permission = db.check_user_has_permission(
-            user_id=user["user_id"],
-            permission_name="manage_permissions"
-        )
-        if not has_permission:
-            raise HTTPException(status_code=403, detail="Permission denied")
+    # # Check if user has permission to manage permissions
+    # if user["role"] != "admin":
+    #     has_permission = db.check_user_has_permission(
+    #         user_id=user["user_id"],
+    #         permission_name="manage_permissions"
+    #     )
+    #     if not has_permission:
+    #         raise HTTPException(status_code=403, detail="Permission denied")
     
     # Check if permission exists
     existing_permission = db.get_permission(permission_id)
@@ -3680,3 +3844,224 @@ async def delete_permission(
         )
     
     return {"status": "success", "message": f"Permission with ID {permission_id} deleted successfully"}
+
+@app.get("/api/all-api", response_model=List[Route])
+async def get_all_routes(user = Depends(get_current_user)):
+    """
+    Get all available routes in the system.
+    
+    Returns:
+        List of all routes with their details
+    """
+    # Only admin users can access this information
+    if user["role"] != "admin" and user["role"] != "full-admin":
+        raise HTTPException(status_code=403, detail="Only admin users can access all routes")
+    
+    # Get all routes from the app
+    routes = []
+    for route in app.routes:
+        # Extract the path, methods, and other properties
+        if hasattr(route, "path"):
+            # Get methods - handle different route types
+            methods = []
+            if hasattr(route, "methods"):
+                methods = list(route.methods)
+            
+            # Get summary and description from the endpoint function if available
+            summary = None
+            description = None
+            if hasattr(route, "endpoint") and hasattr(route.endpoint, "__doc__") and route.endpoint.__doc__:
+                doc_lines = route.endpoint.__doc__.strip().split("\n")
+                if doc_lines:
+                    summary = doc_lines[0].strip()
+                    if len(doc_lines) > 1:
+                        description = "\n".join(line.strip() for line in doc_lines[1:]).strip()
+            
+            # Create route info object
+            route_info = Route(
+                path=route.path,
+                methods=methods,
+                summary=summary,
+                description=description
+            )
+            
+            # Only include API routes (filter out docs, OpenAPI, etc.)
+            if route.path.startswith("/api/"):
+                routes.append(route_info)
+    
+    # Sort routes by path for easier reading
+    routes.sort(key=lambda x: x.path)
+    
+    logger.info(f"Retrieved {len(routes)} API routes")
+    return routes
+
+
+@app.get("/api/api-permissions", response_model=List[APIPermission])
+async def get_api_permissions(user = Depends(get_current_user)):
+    """
+    Get all API permissions available in the system.
+    
+    Returns:
+        List of API permissions with their details
+    """
+    # Only admin users can access this information
+    if user["role"] != "admin" and user["role"] != "full-admin":
+        raise HTTPException(status_code=403, detail="Only admin users can access API permissions")
+    
+    # Get all API permissions from the database
+    api_permissions_data = db.get_all_api_permissions()
+    
+    if not api_permissions_data:
+        return []
+    
+    # Convert DB dict to Pydantic model format
+    api_permissions = []
+    for perm in api_permissions_data:
+        api_permissions.append(APIPermission(
+            ApiPermissionID=perm.get("ApiPermissionID"),
+            RequiredPermission=perm.get("RequiredPermission"),
+            Method=perm.get("Method"),
+            PathPattern=perm.get("PathPattern"),
+        ))
+    
+    return api_permissions
+
+@app.post("/api/api-permissions", response_model=APIPermission)
+async def add_api_permission(
+    api_permission: APIPermission,
+    user = Depends(get_current_user)
+):
+    """
+    Add a new API permission.
+    
+    Args:
+        api_permission: Contains RequiredPermission, Method, and PathPattern
+        
+    Returns:
+        Newly created API permission details
+    """
+    # # Check if user has permission to manage API permissions
+    # if user["role"] != "admin":
+    #     has_permission = db.check_user_has_permission(
+    #         user_id=user["user_id"],
+    #         permission_name="manage_api_permissions"
+    #     )
+    #     if not has_permission:
+    #         raise HTTPException(status_code=403, detail="Permission denied")
+    
+    # Add the API permission
+    api_permission_id = db.add_api_permission(
+        permission_name=api_permission.RequiredPermission,
+        method=api_permission.Method,
+        api_path=api_permission.PathPattern
+    )
+    
+    if not api_permission_id:
+        raise HTTPException(
+            status_code=400, 
+            detail="Failed to add API permission"
+        )
+    
+    # Get the created API permission details
+    created_api_permission = db.get_api_permission(api_permission_id)
+    
+    return APIPermission(
+        ApiPermissionID=created_api_permission.get("ApiPermissionID"),
+        RequiredPermission=created_api_permission.get("RequiredPermission"),
+        Method=created_api_permission.get("Method"),
+        PathPattern=created_api_permission.get("PathPattern"),
+    )
+
+
+@app.put("/api/api-permissions/{api_permission_id}", response_model=APIPermission)
+async def update_api_permission(
+    api_permission_id: int,
+    api_permission: APIPermission,
+    user = Depends(get_current_user)
+):
+    """
+    Update an existing API permission.
+    
+    Args:
+        api_permission_id: ID of the API permission to update
+        api_permission: Contains updated RequiredPermission, Method, and PathPattern
+        
+    Returns:
+        Updated API permission details
+    """
+    # # Check if user has permission to manage API permissions
+    # if user["role"] != "admin":
+    #     has_permission = db.check_user_has_permission(
+    #         user_id=user["user_id"],
+    #         permission_name="manage_api_permissions"
+    #     )
+    #     if not has_permission:
+    #         raise HTTPException(status_code=403, detail="Permission denied")
+    
+    # Validate input
+    if not api_permission.RequiredPermission or not api_permission.Method or not api_permission.PathPattern:
+        raise HTTPException(status_code=400, detail="RequiredPermission, Method, and PathPattern are required")
+    
+    # Update the API permission
+    success = db.update_api_permission(
+        api_permission_id=api_permission_id,
+        required_permission=api_permission.RequiredPermission,
+        method=api_permission.Method,
+        path_pattern=api_permission.PathPattern
+    )
+    
+    if not success:
+        raise HTTPException(
+            status_code=404,
+            detail="Failed to update API permission"
+        )
+    
+    # Get the updated API permission details
+    updated_api_permission = db.get_api_permission(api_permission_id)
+    
+    return APIPermission(
+        ApiPermissionID=updated_api_permission.get("ApiPermissionID"),
+        RequiredPermission=updated_api_permission.get("RequiredPermission"),
+        Method=updated_api_permission.get("Method"),
+        PathPattern=updated_api_permission.get("PathPattern"),
+    )
+
+
+@app.delete("/api/api-permissions/{api_permission_id}", response_model=dict)
+async def delete_api_permission(
+    api_permission_id: int,
+    user = Depends(get_current_user)
+):
+    """
+    Delete an API permission.
+    
+    Args:
+        api_permission_id: ID of the API permission to delete
+        
+    Returns:
+        Success message
+    """
+    # # Check if user has permission to manage API permissions
+    # if user["role"] != "admin":
+    #     has_permission = db.check_user_has_permission(
+    #         user_id=user["user_id"],
+    #         permission_name="manage_api_permissions"
+    #     )
+    #     if not has_permission:
+    #         raise HTTPException(status_code=403, detail="Permission denied")
+    
+    # Check if API permission exists
+    existing_api_permission = db.get_api_permission(api_permission_id)
+    if not existing_api_permission:
+        raise HTTPException(status_code=404, detail="API permission not found")
+    
+    # Delete the API permission
+    success = db.delete_api_permission(api_permission_id)
+    
+    if not success:
+        raise HTTPException(
+            status_code=400,
+            detail="Failed to delete API permission"
+        )
+    
+    return {"status": "success", "message": f"API permission with ID {api_permission_id} deleted successfully"}

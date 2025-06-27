@@ -29,149 +29,128 @@
       z-index: 9999;
       display: flex;
       flex-direction: column;
-      font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      font-family: 'SF Pro Display', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
     }
     
     #ai-chat-widget-button {
-      width: 60px;
-      height: 60px;
-      border-radius: 20px;
-      background-color: #6366f1;
+      width: 50px;
+      height: 50px;
+      border-radius: 50%;
+      background: ${theme === 'dark' ? '#333333' : '#000000'};
       color: white;
       display: flex;
       justify-content: center;
       align-items: center;
       cursor: pointer;
-      box-shadow: 0 4px 20px rgba(99, 102, 241, 0.3);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, ${theme === 'dark' ? '0.25' : '0.15'});
       align-self: flex-end;
-      transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+      transition: all 0.2s ease;
       border: none;
-      font-size: 24px;
-      transform-origin: bottom right;
+      transform-origin: center;
+      position: relative;
     }
     
     #ai-chat-widget-button:hover {
-      transform: scale(1.1);
-      background-color: #4f46e5;
-      box-shadow: 0 6px 24px rgba(99, 102, 241, 0.4);
+      transform: scale(1.05);
+      box-shadow: 0 6px 16px rgba(0, 0, 0, ${theme === 'dark' ? '0.3' : '0.2'});
+      background: ${theme === 'dark' ? '#444444' : '#333333'};
     }
     
     #ai-chat-widget-popup {
       position: absolute;
-      bottom: 80px;
+      bottom: 70px;
       right: 0;
-      width: 450px; /* Increased from 380px to 450px */
-      height: 600px;
-      background-color: ${theme === 'dark' ? '#1e1e2e' : '#ffffff'};
-      border-radius: 24px;
-      box-shadow: 0 10px 40px rgba(0, 0, 0, ${theme === 'dark' ? '0.5' : '0.2'});
+      width: 360px;
+      height: 580px;
+      background-color: ${theme === 'dark' ? '#171717' : '#ffffff'};
+      border-radius: 16px;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, ${theme === 'dark' ? '0.4' : '0.1'});
       display: none;
       flex-direction: column;
       overflow: hidden;
-      border: 1px solid ${theme === 'dark' ? '#2d2d3f' : 'rgba(230, 230, 250, 0.7)'};
-      transition: all 0.3s cubic-bezier(0.19, 1, 0.22, 1);
-      backdrop-filter: blur(10px);
+      border: 1px solid ${theme === 'dark' ? '#333333' : '#eeeeee'};
+      transition: all 0.3s ease;
     }
     
     #ai-chat-widget-popup.open {
       display: flex;
-      animation: ai-chat-widget-popup-open 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
-      transform-origin: bottom right;
+      animation: ai-chat-widget-popup-open 0.3s ease-out forwards;
     }
     
     @keyframes ai-chat-widget-popup-open {
-      0% { opacity: 0; transform: scale(0.9) translateY(20px); }
-      100% { opacity: 1; transform: scale(1) translateY(0); }
+      0% { opacity: 0; transform: translateY(10px); }
+      100% { opacity: 1; transform: translateY(0); }
     }
     
     #ai-chat-widget-header {
-      padding: 20px 24px;
-      background: ${theme === 'dark'
-      ? 'linear-gradient(135deg, #4f46e5 0%, #7e22ce 100%)'
-      : 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)'};
-      color: white;
+      padding: 16px;
+      background: ${theme === 'dark' ? '#1f1f1f' : '#f8f8f8'};
+      color: ${theme === 'dark' ? '#ffffff' : '#000000'};
       display: flex;
       justify-content: space-between;
       align-items: center;
-      border-top-left-radius: 24px;
-      border-top-right-radius: 24px;
-      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+      border-bottom: 1px solid ${theme === 'dark' ? '#333333' : '#eeeeee'};
     }
     
     #ai-chat-widget-title {
       margin: 0;
-      font-size: 18px;
-      font-weight: 600;
-      color: white;
+      font-size: 15px;
+      font-weight: 500;
+      color: ${theme === 'dark' ? '#ffffff' : '#000000'};
       display: flex;
       align-items: center;
-      gap: 10px;
-      letter-spacing: 0.3px;
-    }
-    
-    #ai-chat-widget-title i {
-      font-size: 20px;
-      background: rgba(255, 255, 255, 0.2);
-      padding: 8px;
-      border-radius: 12px;
-      backdrop-filter: blur(5px);
+      gap: 8px;
     }
     
     #ai-chat-widget-close {
-      background: rgba(255, 255, 255, 0.15);
+      background: transparent;
       border: none;
       cursor: pointer;
-      color: white;
+      color: ${theme === 'dark' ? '#999999' : '#666666'};
       font-size: 16px;
-      padding: 8px;
-      border-radius: 12px;
+      padding: 4px;
       display: flex;
       align-items: center;
       justify-content: center;
       transition: all 0.2s;
-      width: 32px;
-      height: 32px;
-      backdrop-filter: blur(5px);
+      width: 24px;
+      height: 24px;
     }
     
     #ai-chat-widget-close:hover {
-      background-color: rgba(255, 255, 255, 0.25);
-      transform: scale(1.05);
+      color: ${theme === 'dark' ? '#ffffff' : '#000000'};
     }
     
     #ai-chat-widget-messages {
       flex: 1;
       overflow-y: auto;
-      padding: 24px;
+      padding: 16px;
       display: flex;
       flex-direction: column;
-      gap: 24px;
-      background-color: ${theme === 'dark' ? '#1e1e2e' : '#f9fafb'};
+      gap: 14px;
+      background-color: ${theme === 'dark' ? '#171717' : '#ffffff'};
       scrollbar-width: thin;
-      scrollbar-color: ${theme === 'dark' ? '#383850 #1e1e2e' : '#d1d5db #f9fafb'};
-      background-image: ${theme === 'dark'
-      ? 'radial-gradient(circle at 25% 10%, rgba(79, 70, 229, 0.05) 0%, transparent 30%), radial-gradient(circle at 75% 90%, rgba(126, 34, 206, 0.05) 0%, transparent 30%)'
-      : 'radial-gradient(circle at 25% 10%, rgba(99, 102, 241, 0.03) 0%, transparent 30%), radial-gradient(circle at 75% 90%, rgba(139, 92, 246, 0.03) 0%, transparent 30%)'};
+      scrollbar-color: ${theme === 'dark' ? '#444444 #171717' : '#dddddd #ffffff'};
     }
     
     #ai-chat-widget-messages::-webkit-scrollbar {
-      width: 6px;
+      width: 4px;
     }
     
     #ai-chat-widget-messages::-webkit-scrollbar-track {
-      background: ${theme === 'dark' ? '#1e1e2e' : '#f9fafb'};
+      background: ${theme === 'dark' ? '#171717' : '#ffffff'};
     }
     
     #ai-chat-widget-messages::-webkit-scrollbar-thumb {
-      background-color: ${theme === 'dark' ? '#383850' : '#d1d5db'};
-      border-radius: 6px;
+      background-color: ${theme === 'dark' ? '#444444' : '#dddddd'};
+      border-radius: 4px;
     }
     
     .ai-chat-widget-message-container {
       display: flex;
       max-width: 100%;
       position: relative;
-      transition: transform 0.2s;
+      transition: all 0.2s;
     }
     
     .ai-chat-widget-message-container.user {
@@ -185,77 +164,55 @@
     }
     
     @keyframes ai-chat-widget-message-in-right {
-      0% { opacity: 0; transform: translateX(10px); }
+      0% { opacity: 0; transform: translateX(8px); }
       100% { opacity: 1; transform: translateX(0); }
     }
     
     @keyframes ai-chat-widget-message-in-left {
-      0% { opacity: 0; transform: translateX(-10px); }
+      0% { opacity: 0; transform: translateX(-8px); }
       100% { opacity: 1; transform: translateX(0); }
     }
     
     .ai-chat-widget-message {
       max-width: 85%;
-      padding: 14px 18px;
-      border-radius: 18px;
+      padding: 10px 14px;
+      border-radius: 16px;
       font-size: 14px;
-      line-height: 1.6;
+      line-height: 1.5;
       overflow-wrap: break-word;
-      box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
-      transition: all 0.2s;
-    }
-    
-    /* Add responsive table styling to prevent overflow */
-    .ai-chat-widget-message table {
-      display: block;
-      width: 100%;
-      max-width: 100%;
-      overflow-x: auto;
-      margin-bottom: 10px;
-      border-collapse: collapse;
-    }
-    
-    .ai-chat-widget-message th,
-    .ai-chat-widget-message td {
-      min-width: 80px; /* Ensure cells don't get too narrow */
-      white-space: normal; /* Allow text to wrap in cells */
-      word-break: break-word; /* Break long words if needed */
     }
     
     .ai-chat-widget-message-container.user .ai-chat-widget-message {
-      background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);
+      background: #000000;
       color: white;
-      border-bottom-right-radius: 6px;
-      border-top-right-radius: 20px;
-      border-top-left-radius: 20px;
-      border-bottom-left-radius: 20px;
-      box-shadow: 0 2px 8px rgba(99, 102, 241, 0.25);
+      border-bottom-right-radius: 4px;
+      margin-left: auto;
     }
     
     .ai-chat-widget-message-container.bot .ai-chat-widget-message {
-      background-color: ${theme === 'dark' ? '#2d2d3f' : 'white'};
-      color: ${theme === 'dark' ? '#e5e7eb' : '#1f2937'};
-      border-bottom-left-radius: 6px;
-      border-top-right-radius: 20px;
-      border-top-left-radius: 20px;
-      border-bottom-right-radius: 20px;
-      border: 1px solid ${theme === 'dark' ? '#383850' : 'rgba(230, 230, 250, 0.7)'};
-      box-shadow: ${theme === 'dark' ? '0 2px 8px rgba(0, 0, 0, 0.1)' : '0 2px 8px rgba(0, 0, 0, 0.05)'};
+      background-color: ${theme === 'dark' ? '#2a2a2a' : '#f5f5f5'};
+      color: ${theme === 'dark' ? '#ffffff' : '#000000'};
+      border-bottom-left-radius: 4px;
+      margin-right: auto;
     }
     
     .ai-chat-widget-avatar {
-      width: 36px;
-      height: 36px;
-      min-width: 36px; /* Prevent shrinking */
-      border-radius: 12px;
+      width: 32px;
+      height: 32px;
+      min-width: 32px;
+      border-radius: 50%;
       display: flex;
       align-items: center;
       justify-content: center;
-      font-size: 16px;
-      margin-right: 12px;
-      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
-      transition: transform 0.2s;
-      flex-shrink: 0; /* Prevent the avatar from shrinking */
+      font-size: 14px;
+      margin-right: 8px;
+      background: #000000;
+      flex-shrink: 0;
+    }
+    
+    .ai-chat-widget-avatar img {
+      width: 18px;
+      height: 18px;
     }
     
     .ai-chat-widget-message-container.bot {
@@ -266,221 +223,195 @@
     .ai-chat-widget-message-content {
       display: flex;
       flex-direction: column;
-      max-width: calc(100% - 48px); /* Account for avatar width + margin */
+      max-width: calc(100% - 40px);
       width: 100%;
     }
-    
-    .ai-chat-widget-message p {
-      margin: 0 0 10px 0;
-    }
-    
-    .ai-chat-widget-message p:last-child {
-      margin-bottom: 0;
-    }
-    
-    .ai-chat-widget-message a {
-      color: ${theme === 'dark' ? '#a5b4fc' : '#4f46e5'};
-      text-decoration: none;
-      font-weight: 500;
-      transition: all 0.2s;
-      border-bottom: 1px dotted ${theme === 'dark' ? '#a5b4fc' : '#4f46e5'};
-    }
-    
-    .ai-chat-widget-message a:hover {
-      color: ${theme === 'dark' ? '#c7d2fe' : '#6366f1'};
-      border-bottom: 1px solid;
-    }
-    
-    .ai-chat-widget-message ul, .ai-chat-widget-message ol {
-      margin: 8px 0;
-      padding-left: 20px;
-    }
-    
-    .ai-chat-widget-message code {
-      background-color: ${theme === 'dark' ? 'rgba(255,255,255,0.1)' : 'rgba(99, 102, 241, 0.1)'};
-      padding: 2px 6px;
-      border-radius: 4px;
-      font-family: 'Fira Code', 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
-      font-size: 0.9em;
-    }
-    
-    .ai-chat-widget-message pre {
-      background-color: ${theme === 'dark' ? '#1a1a27' : 'rgba(99, 102, 241, 0.05)'};
-      padding: 12px 16px;
-      border-radius: 12px;
+
+    /* Table styling improvements */
+    .ai-chat-widget-message table {
+      display: block;
+      width: 100%;
+      max-width: 100%;
       overflow-x: auto;
-      margin: 12px 0;
-      border: 1px solid ${theme === 'dark' ? '#2d2d3f' : 'rgba(99, 102, 241, 0.2)'};
+      margin: 10px 0;
+      border-collapse: collapse;
+      border-radius: 6px;
+      overflow: hidden;
+      border: 1px solid ${theme === 'dark' ? '#333333' : '#eeeeee'};
     }
     
-    .ai-chat-widget-message pre code {
-      background-color: transparent;
-      padding: 0;
-      color: ${theme === 'dark' ? '#e5e7eb' : 'inherit'};
+    .ai-chat-widget-message th {
+      background: ${theme === 'dark' ? '#2a2a2a' : '#f5f5f5'};
+      padding: 8px 12px;
+      text-align: left;
+      font-weight: 500;
+      border-bottom: 1px solid ${theme === 'dark' ? '#333333' : '#eeeeee'};
     }
     
+    .ai-chat-widget-message td {
+      padding: 8px 12px;
+      border-bottom: 1px solid ${theme === 'dark' ? '#333333' : '#eeeeee'};
+    }
+    
+    .ai-chat-widget-message tr:last-child td {
+      border-bottom: none;
+    }
+    
+    /* Improved feedback button styling */
     .ai-chat-widget-feedback {
       display: flex;
       justify-content: flex-end;
-      margin-top: 8px;
-      gap: 8px;
-      flex-wrap: wrap; /* Allow buttons to wrap on narrow screens */
-      width: 100%; /* Ensure the container uses the full width available */
-      max-width: 100%; /* Prevent overflow */
+      margin-top: 6px;
+      gap: 6px;
+      flex-wrap: wrap;
+      width: 100%;
+      max-width: 100%;
     }
     
     .ai-chat-widget-feedback-button {
       border: none;
-      background: transparent;
+      background: ${theme === 'dark' ? 'rgba(42, 42, 42, 0.7)' : 'rgba(245, 245, 245, 0.7)'};
       cursor: pointer;
-      padding: 5px;
-      border-radius: 8px;
+      padding: 4px;
+      border-radius: 50%;
       transition: all 0.2s;
       display: flex;
       align-items: center;
       justify-content: center;
-      width: 28px;
-      height: 28px;
-      color: ${theme === 'dark' ? '#9ca3af' : '#6b7280'};
-      flex-shrink: 0; /* Prevent the buttons from shrinking */
+      width: 24px;
+      height: 24px;
+      color: ${theme === 'dark' ? '#999999' : '#666666'};
+      flex-shrink: 0;
     }
     
     .ai-chat-widget-feedback-button:hover {
-      background-color: ${theme === 'dark' ? 'rgba(255,255,255,0.1)' : 'rgba(99, 102, 241, 0.1)'};
-      transform: scale(1.1);
+      background-color: ${theme === 'dark' ? 'rgba(42, 42, 42, 1)' : 'rgba(245, 245, 245, 1)'};
+      transform: translateY(-1px);
     }
     
     .ai-chat-widget-feedback-button.active {
-      background-color: ${theme === 'dark' ? 'rgba(255,255,255,0.15)' : 'rgba(99, 102, 241, 0.15)'};
-    }
-    
-    .ai-chat-widget-feedback-button.like.active {
-      color: #10b981;
-    }
-    
-    .ai-chat-widget-feedback-button.dislike.active {
-      color: #ef4444;
+      background-color: ${theme === 'dark' ? '#000000' : '#000000'};
+      color: white;
+      transform: translateY(-1px);
     }
     
     .ai-chat-widget-copy-button {
       border: none;
-      background: transparent;
+      background: ${theme === 'dark' ? 'rgba(42, 42, 42, 0.7)' : 'rgba(245, 245, 245, 0.7)'};
       cursor: pointer;
-      padding: 5px 8px;
-      border-radius: 8px;
+      padding: 4px 8px;
+      border-radius: 12px;
       transition: all 0.2s;
       display: flex;
       align-items: center;
       justify-content: center;
+      gap: 4px;
       font-size: 12px;
-      color: ${theme === 'dark' ? '#9ca3af' : '#6b7280'};
-      white-space: nowrap; /* Keep text on one line */
+      color: ${theme === 'dark' ? '#999999' : '#666666'};
+      white-space: nowrap;
     }
     
     .ai-chat-widget-copy-button:hover {
-      background-color: ${theme === 'dark' ? 'rgba(255,255,255,0.1)' : 'rgba(99, 102, 241, 0.1)'};
+      background-color: ${theme === 'dark' ? 'rgba(42, 42, 42, 1)' : 'rgba(245, 245, 245, 1)'};
+      transform: translateY(-1px);
     }
     
     .ai-chat-widget-copy-button.copied {
-      color: #10b981;
-      background-color: ${theme === 'dark' ? 'rgba(16, 185, 129, 0.15)' : 'rgba(16, 185, 129, 0.1)'};
+      color: white;
+      background-color: #000000;
     }
     
+    /* Input area styling improvements */
     #ai-chat-widget-input-container {
-      padding: 16px 24px;
-      border-top: 1px solid ${theme === 'dark' ? '#2d2d3f' : 'rgba(230, 230, 250, 0.7)'};
+      padding: 12px 16px;
+      border-top: 1px solid ${theme === 'dark' ? '#333333' : '#eeeeee'};
       display: flex;
-      gap: 12px;
-      background-color: ${theme === 'dark' ? '#1e1e2e' : '#ffffff'};
+      gap: 10px;
+      background-color: ${theme === 'dark' ? '#1f1f1f' : '#f8f8f8'};
       align-items: center;
-      border-bottom-left-radius: 24px;
-      border-bottom-right-radius: 24px;
     }
     
     #ai-chat-widget-input {
       flex: 1;
-      padding: 14px 18px;
-      border-radius: 18px;
-      border: 1px solid ${theme === 'dark' ? '#383850' : 'rgba(230, 230, 250, 0.7)'};
-      background-color: ${theme === 'dark' ? '#2d2d3f' : '#f9fafb'};
-      color: ${theme === 'dark' ? '#e5e7eb' : '#1f2937'};
+      padding: 10px 14px;
+      border-radius: 20px;
+      border: 1px solid ${theme === 'dark' ? '#333333' : '#dddddd'};
+      background-color: ${theme === 'dark' ? '#2a2a2a' : '#ffffff'};
+      color: ${theme === 'dark' ? '#ffffff' : '#000000'};
       outline: none;
       font-size: 14px;
       transition: all 0.2s;
-      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
     }
     
     #ai-chat-widget-input:focus {
-      border-color: #6366f1;
-      box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.2);
+      border-color: ${theme === 'dark' ? '#555555' : '#bbbbbb'};
+      box-shadow: 0 0 0 1px ${theme === 'dark' ? 'rgba(85, 85, 85, 0.4)' : 'rgba(187, 187, 187, 0.4)'};
+    }
+    
+    #ai-chat-widget-input::placeholder {
+      color: ${theme === 'dark' ? '#999999' : '#999999'};
     }
     
     #ai-chat-widget-send {
-      background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);
+      background: #000000;
       color: white;
       border: none;
-      border-radius: 14px;
-      width: 42px;
-      height: 42px;
+      border-radius: 50%;
+      width: 36px;
+      height: 36px;
       display: flex;
       justify-content: center;
       align-items: center;
       cursor: pointer;
       transition: all 0.2s;
-      font-size: 16px;
-      box-shadow: 0 2px 5px rgba(99, 102, 241, 0.25);
+      font-size: 14px;
     }
     
     #ai-chat-widget-send:hover {
-      transform: scale(1.05) rotate(45deg);
-    }
-    
-    #ai-chat-widget-send:active {
-      transform: scale(0.95) rotate(45deg);
+      transform: scale(1.05);
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
     }
     
     #ai-chat-widget-send:disabled {
-      background: ${theme === 'dark' ? '#383850' : '#d1d5db'};
-      box-shadow: none;
+      background: ${theme === 'dark' ? '#444444' : '#dddddd'};
       cursor: not-allowed;
       transform: scale(1);
     }
     
+    /* Loading indicator styling */
     #ai-chat-widget-loading {
       display: none;
       align-items: center;
-      gap: 4px;
-      padding: 16px;
-      border-radius: 18px;
-      background-color: ${theme === 'dark' ? '#2d2d3f' : 'white'};
-      color: ${theme === 'dark' ? '#e5e7eb' : '#1f2937'};
+      gap: 6px;
+      padding: 12px;
+      border-radius: 16px;
+      background-color: ${theme === 'dark' ? '#2a2a2a' : '#f5f5f5'};
+      color: ${theme === 'dark' ? '#ffffff' : '#000000'};
       align-self: flex-start;
       max-width: 80%;
-      margin-bottom: 8px;
-      box-shadow: ${theme === 'dark' ? '0 2px 8px rgba(0, 0, 0, 0.1)' : '0 2px 8px rgba(0, 0, 0, 0.05)'};
-      border: 1px solid ${theme === 'dark' ? '#383850' : 'rgba(230, 230, 250, 0.7)'};
+      margin-bottom: 10px;
     }
     
     .ai-chat-widget-dot {
-      width: 8px;
-      height: 8px;
+      width: 6px;
+      height: 6px;
       border-radius: 50%;
-      background-color: ${theme === 'dark' ? '#9ca3af' : '#6b7280'};
-      animation: ai-chat-widget-pulse 1.5s infinite cubic-bezier(0.4, 0, 0.6, 1);
+      background-color: ${theme === 'dark' ? '#999999' : '#666666'};
+      animation: ai-chat-widget-dot-pulse 1.5s infinite;
     }
     
     .ai-chat-widget-dot:nth-child(2) {
-      animation-delay: 0.3s;
+      animation-delay: 0.2s;
     }
     
     .ai-chat-widget-dot:nth-child(3) {
-      animation-delay: 0.6s;
+      animation-delay: 0.4s;
     }
     
-    @keyframes ai-chat-widget-pulse {
+    @keyframes ai-chat-widget-dot-pulse {
       0%, 100% {
         opacity: 0.4;
-        transform: scale(0.75);
+        transform: scale(0.8);
       }
       50% {
         opacity: 1;
@@ -488,14 +419,14 @@
       }
     }
     
-    /* Streaming styles */
+    /* Cursor for streaming messages */
     .cursor-blink {
       display: inline-block;
-      width: 0.5em;
-      height: 1em;
+      width: 4px;
+      height: 14px;
       background-color: currentColor;
-      margin-left: 0.1em;
-      animation: blink 1s infinite cubic-bezier(0.4, 0, 0.6, 1);
+      margin-left: 2px;
+      animation: blink 1s infinite;
       vertical-align: text-bottom;
       opacity: 0.7;
       border-radius: 1px;
@@ -506,11 +437,76 @@
       50% { opacity: 0.2; }
     }
     
+    /* Sources section styling */
+    .ai-chat-widget-sources {
+      margin-top: 10px;
+      padding-top: 10px;
+      border-top: 1px solid ${theme === 'dark' ? '#333333' : '#eeeeee'};
+      font-size: 12px;
+      padding: 10px;
+      margin-bottom: 4px;
+      background-color: ${theme === 'dark' ? 'rgba(42, 42, 42, 0.5)' : 'rgba(245, 245, 245, 0.5)'};
+      border-radius: 12px;
+    }
+    
+    .ai-chat-widget-sources > div:first-child {
+      font-weight: 600;
+      margin-bottom: 8px;
+      font-size: 12px;
+      color: ${theme === 'dark' ? '#cccccc' : '#555555'};
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+    
+    .ai-chat-widget-sources > div:first-child:before {
+      content: '\\f02d';
+      font-family: 'Font Awesome 6 Free';
+      font-weight: 900;
+      font-size: 10px;
+    }
+    
+    .ai-chat-widget-sources a {
+      display: block;
+      padding: 8px 10px;
+      margin-bottom: 5px;
+      border-radius: 8px;
+      background-color: ${theme === 'dark' ? 'rgba(42, 42, 42, 0.7)' : 'rgba(255, 255, 255, 0.7)'};
+      transition: all 0.2s;
+      border: 1px solid ${theme === 'dark' ? '#333333' : '#eeeeee'};
+      text-decoration: none;
+      color: ${theme === 'dark' ? '#ffffff' : '#000000'};
+      font-size: 11px;
+    }
+    
+    .ai-chat-widget-sources a:hover {
+      background-color: ${theme === 'dark' ? 'rgba(42, 42, 42, 1)' : 'rgba(255, 255, 255, 1)'};
+      transform: translateY(-1px);
+    }
+    
     @media (max-width: 480px) {
       #ai-chat-widget-popup {
         width: calc(100vw - 40px);
         height: calc(100vh - 120px);
-        bottom: 80px;
+        bottom: 70px;
+      }
+      
+      .ai-chat-widget-message {
+        max-width: 90%;
+        font-size: 14px;
+      }
+      
+      #ai-chat-widget-button {
+        width: 45px;
+        height: 45px;
+      }
+      
+      #ai-chat-widget-messages {
+        padding: 12px;
+      }
+      
+      #ai-chat-widget-input-container {
+        padding: 12px;
       }
     }
   `;
@@ -1001,6 +997,151 @@
     }
   }
 
+  // Function to display sources below the bot message
+  function displaySources(messageElementOrContainer, sources) {
+    console.log('Attempting to display sources:', sources);
+
+    // Find the message container - either it's passed directly or we need to get its parent
+    let messageContainer = messageElementOrContainer;
+    // Check if this is a message element instead of a container
+    if (messageElementOrContainer.classList.contains('ai-chat-widget-message')) {
+      // Get the parent container
+      messageContainer = messageElementOrContainer.closest('.ai-chat-widget-message-container');
+      if (!messageContainer) {
+        console.error('Could not find message container');
+        return;
+      }
+    }
+
+    // Check if sources container already exists
+    if (messageContainer.querySelector('.ai-chat-widget-sources')) {
+      console.log('Sources container already exists, not adding again');
+      return;
+    }
+
+    // Find the message element within the container
+    const messageElement = messageContainer.querySelector('.ai-chat-widget-message');
+    if (!messageElement) {
+      console.error('Could not find message element to attach sources to');
+      return;
+    }
+
+    // Ensure sources is an array, even if a single object is passed
+    let sourcesArray = [];
+
+    if (sources) {
+      if (Array.isArray(sources)) {
+        // If sources is already an array, use it
+        sourcesArray = sources;
+      } else if (typeof sources === 'object' && sources !== null) {
+        // If it's a single object with sources array property
+        if (Array.isArray(sources.sources)) {
+          sourcesArray = sources.sources;
+        } else {
+          // Otherwise treat it as a single source object
+          sourcesArray = [sources];
+        }
+      }
+    }
+
+    // If sourcesArray is empty after all the conversions, don't add anything
+    if (sourcesArray.length === 0) {
+      console.log('No valid sources to display after processing');
+      return;
+    }
+
+    console.log('Processing sources array:', sourcesArray);
+
+    // Create a container for sources
+    const sourcesContainer = document.createElement('div');
+    sourcesContainer.classList.add('ai-chat-widget-sources');
+
+    // Add sources title
+    const sourcesTitle = document.createElement('div');
+    sourcesTitle.textContent = 'References';
+    sourcesContainer.appendChild(sourcesTitle);
+
+    // Process each source
+    sourcesArray.forEach(source => {
+      // Skip empty sources
+      if (!source) return;
+
+      // Create a new paragraph for this source
+      const sourcePara = document.createElement('div');
+
+      // Check if source has the expected format
+      if (typeof source === 'object' && source.unique_title) {
+        const title = source.unique_title;
+        const sourceUrl = source.unique_source;
+
+        // Check if unique_source is a URL
+        const isUrl = sourceUrl && (
+          sourceUrl.startsWith('http://') ||
+          sourceUrl.startsWith('https://') ||
+          sourceUrl.startsWith('www.')
+        );
+
+        if (isUrl) {
+          // Create a link if it's a URL
+          const sourceLink = document.createElement('a');
+          sourceLink.href = sourceUrl;
+          sourceLink.textContent = title;
+          sourceLink.target = '_blank';
+          sourceLink.rel = 'noopener noreferrer';
+
+          sourcePara.appendChild(sourceLink);
+        } else {
+          // Just display the title if not a URL
+          const titleElement = document.createElement('p');
+          titleElement.textContent = title;
+          titleElement.style.margin = '0';
+          titleElement.style.padding = '8px 10px';
+          titleElement.style.borderRadius = '8px';
+          titleElement.style.backgroundColor = theme === 'dark' ? 'rgba(42, 42, 42, 0.7)' : 'rgba(255, 255, 255, 0.7)';
+          titleElement.style.border = `1px solid ${theme === 'dark' ? '#333333' : '#eeeeee'}`;
+          titleElement.style.fontSize = '11px';
+          sourcePara.appendChild(titleElement);
+        }
+      } else {
+        // Fallback for other source formats
+        let sourceText = '';
+        try {
+          sourceText = typeof source === 'string' ? source : JSON.stringify(source);
+        } catch (e) {
+          console.error('Error stringifying source:', e);
+          sourceText = 'Unknown source';
+        }
+
+        const textElement = document.createElement('p');
+        textElement.textContent = sourceText;
+        textElement.style.margin = '0';
+        textElement.style.padding = '8px 10px';
+        textElement.style.borderRadius = '8px';
+        textElement.style.backgroundColor = theme === 'dark' ? 'rgba(42, 42, 42, 0.7)' : 'rgba(255, 255, 255, 0.7)';
+        textElement.style.border = `1px solid ${theme === 'dark' ? '#333333' : '#eeeeee'}`;
+        textElement.style.fontSize = '11px';
+        sourcePara.appendChild(textElement);
+      }
+
+      sourcesContainer.appendChild(sourcePara);
+    });
+
+    // Only add the sources container if we actually added any sources
+    if (sourcesContainer.children.length > 1) { // More than just the title
+      // Attach sources directly to the message element
+      messageElement.appendChild(sourcesContainer);
+      console.log('Successfully added sources');
+
+      // Force scroll to latest message to ensure sources are visible
+      const messagesContainer = document.getElementById('ai-chat-widget-messages');
+      if (messagesContainer) {
+        messagesContainer.scrollTop = messagesContainer.scrollHeight;
+      }
+    } else {
+      console.log('No sources were added to the message');
+    }
+  }
+
   // Fetch agent configuration first, then initialize the chat widget
   async function initializeChatWidget() {
     let agentConfig = {
@@ -1046,9 +1187,26 @@
     const container = document.createElement('div');
     container.id = 'ai-chat-widget-container';
 
+    // Create and style button with improved logo visibility
     const chatButton = document.createElement('button');
     chatButton.id = 'ai-chat-widget-button';
-    chatButton.innerHTML = `<i class="fas fa-comment-dots"></i>`;
+    chatButton.style.overflow = 'visible'; // Ensure the logo isn't cropped
+    chatButton.style.padding = '0'; // Remove default padding
+
+    // Replace Font Awesome icon with properly sized and positioned logo
+    const logoImg = document.createElement('img');
+    logoImg.src = `${base}logo.png`;
+    logoImg.alt = 'Chat logo';
+    logoImg.style.width = '40px'; // Reduced from 60px to 40px
+    logoImg.style.height = '40px'; // Reduced from 60px to 40px
+    logoImg.style.objectFit = 'contain'; // Prevent squishing
+    logoImg.style.position = 'absolute';
+    logoImg.style.top = '0';
+    logoImg.style.left = '0';
+    logoImg.style.right = '0';
+    logoImg.style.bottom = '0';
+    logoImg.style.margin = 'auto'; // Center the logo
+    chatButton.appendChild(logoImg);
 
     const popup = document.createElement('div');
     popup.id = 'ai-chat-widget-popup';
@@ -1058,7 +1216,8 @@
 
     const title = document.createElement('h3');
     title.id = 'ai-chat-widget-title';
-    title.innerHTML = `<i class="fas fa-robot"></i> ${agentConfig.title || 'Chat Assistant'}`;
+    // Replace Font Awesome robot icon with logo image
+    title.innerHTML = `<img src="${base}logo.png" alt="Chat logo" style="width: 24px; height: 24px; margin-right: 8px;"> ${agentConfig.title || 'Chat Assistant'}`;
 
     const closeButton = document.createElement('button');
     closeButton.id = 'ai-chat-widget-close';
@@ -1171,7 +1330,8 @@
       // Update avatar icon with a more modern design
       const avatar = document.createElement('div');
       avatar.classList.add('ai-chat-widget-avatar', 'bot');
-      avatar.innerHTML = `<i class="fas fa-brain"></i>`;
+      // Replace brain icon with logo image
+      avatar.innerHTML = `<img src="${base}logo.png" alt="Bot logo" style="width: 24px; height: 24px;">`;
       messageContainer.appendChild(avatar);
 
       const messageContent = document.createElement('div');
@@ -1397,6 +1557,7 @@
       const signal = controller.signal;
       let accumulatedText = '';
       let messageId = null;
+      let pendingSources = null; // ตัวแปรสำหรับเก็บ sources ที่มาก่อน message ID
 
       console.log('Connecting to stream URL:', url);
       console.log('Request body:', body);
@@ -1422,6 +1583,21 @@
                 // Stream is complete, update UI
                 console.log('Stream complete, final text:', accumulatedText);
                 updateBotMessage(messageElement, accumulatedText, true);
+
+                // ถ้ามี sources ให้แสดงทุกครั้งหลังจาก answer_chunk สุดท้าย ไม่ว่าจะมี messageId หรือไม่
+                if (pendingSources) {
+                  console.log('Stream ended, displaying sources:', pendingSources);
+                  // หา messageContainer จาก messageElement
+                  const messageContainer = messageElement.closest('.ai-chat-widget-message-container');
+                  if (messageContainer) {
+                    displaySources(messageContainer, pendingSources);
+                  } else {
+                    // ถ้าหา container ไม่พบก็ส่ง messageElement ไปตรงๆ
+                    displaySources(messageElement, pendingSources);
+                  }
+                  pendingSources = null;
+                }
+
                 currentStream = null;
                 hideLoading();
                 return;
@@ -1452,7 +1628,15 @@
                       console.log('Updated bot message with text:', accumulatedText);
                     }
 
-                    // Handle message ID when it comes at the end
+                    // เมื่อพบ sources ให้เก็บไว้ในตัวแปร pendingSources เสมอ
+                    if (data.sources) {
+                      console.log('Found sources in chunk:', data.sources);
+                      pendingSources = data.sources;
+                      updateBotMessage(messageElement, pendingSources);
+                      console.log('Updated bot message with text:', pendingSources);
+                    }
+
+                    // เมื่อพบ agent_msg_id ให้เก็บไว้ใช้สำหรับการแสดง feedback
                     if (data.agent_msg_id && !messageId) {
                       messageId = data.agent_msg_id;
                       console.log('Received message ID:', messageId);
@@ -1460,7 +1644,7 @@
                       // Store the message ID in the DOM element for feedback
                       messageElement.setAttribute('data-message-id', messageId);
 
-                      // Also add feedback buttons now that we have a message ID
+                      // Add feedback buttons now that we have a message ID
                       const messageContainer = messageElement.closest('.ai-chat-widget-message-content');
                       if (messageContainer) {
                         addFeedbackButtons(messageContainer, messageId);

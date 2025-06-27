@@ -283,21 +283,6 @@ export default function EditUserPage() {
         }
     };
 
-    const handleRoleChange = async (newRole: 'admin' | 'user') => {
-        if (!user) return;
-        try {
-            setLoading(true);
-            await setUserRole(user.id, newRole);
-            setUser({ ...user, role: newRole });
-            toast.success(`User role updated to ${newRole}`);
-        } catch (error) {
-            console.error('Error updating user role:', error);
-            toast.error(error instanceof Error ? error.message : 'Failed to update user role');
-        } finally {
-            setLoading(false);
-        }
-    };
-
     if (loading) {
         return (
             <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex justify-center items-center p-8">
@@ -456,7 +441,7 @@ export default function EditUserPage() {
                                 </label>
                                 <select
                                     value={user.role}
-                                    onChange={(e) => handleRoleChange(e.target.value as 'admin' | 'user')}
+                                    onChange={(e) => setUser({ ...user, role: e.target.value as 'admin' | 'user' })}
                                     className="bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white p-3 rounded-md border border-gray-300 dark:border-gray-600 focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 w-full"
                                 >
                                     <option value="user">User</option>

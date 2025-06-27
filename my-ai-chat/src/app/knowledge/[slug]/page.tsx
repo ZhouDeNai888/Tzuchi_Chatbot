@@ -682,7 +682,7 @@ export default function KnowledgePage() {
       <div className="max-w-6xl mx-auto">
         {/* Improved header with breadcrumb navigation */}
         <div className="flex flex-col mb-6">
-          <nav className="flex items-center text-sm mb-4" aria-label="Breadcrumb">
+          {/* <nav className="flex items-center text-sm mb-4" aria-label="Breadcrumb">
             <ol className="inline-flex items-center space-x-1 md:space-x-3">
               <li className="inline-flex items-center">
                 <Link href="/" className="inline-flex items-center text-gray-600 hover:text-blue-600 dark:text-gray-400 dark:hover:text-blue-400">
@@ -713,7 +713,7 @@ export default function KnowledgePage() {
                 </div>
               </li>
             </ol>
-          </nav>
+          </nav> */}
 
           <div className="flex justify-between items-center">
             <button

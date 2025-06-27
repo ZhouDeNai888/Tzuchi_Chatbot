@@ -11,9 +11,8 @@ import {
   updateAgent,
   deleteAgent,
   getKnowledgeBases,
-  getAvailableModels,
+  getAllModels,
   getDepartments,
-  checkUserPermission,
   Agent
 } from '@/utils/apiService';
 import { toast } from 'react-hot-toast';
@@ -59,6 +58,7 @@ export default function AgentPage() {
   const [departments, setDepartments] = useState<Array<{ id: number; name: string }>>([]);
   const [loading, setLoading] = useState(true);
   const [availableModels, setAvailableModels] = useState<string[]>(['gpt-4o-mini']);
+  const [fullModelData, setFullModelData] = useState<any[]>([]);
   const { language } = useLanguage();
   const t = translations[language].agent;
   const [isAdmin, setIsAdmin] = useState(false);
@@ -100,24 +100,11 @@ export default function AgentPage() {
             return;
           }
 
-          // ตรวจสอบสิทธิ์เพิ่มเติมหากไม่ใช่ admin
-          const [useAgentPerm, fullAdminPerm] = await Promise.all([
-            checkUserPermission('use_agent'),
-            checkUserPermission('full_admin')
-          ]);
+          // Assume user has access by default and let the API calls determine access
+          // If API returns authentication errors, they will be handled accordingly
+          setUseAgent(true);
+          setPermissionLoading(false);
 
-          console.log("Permissions check:", { useAgentPerm, fullAdminPerm });
-          setUseAgent(useAgentPerm);
-          setFullAdmin(fullAdminPerm);
-
-          // ถ้าไม่มีสิทธิ์เข้าใช้หน้านี้ให้ redirect กลับไปที่หน้าหลัก
-          if (!useAgentPerm && !fullAdminPerm && !isAdmin) {
-            console.log("Access denied, redirecting to home");
-            toast.error('You do not have permission to access this page');
-            setTimeout(() => {
-              window.location.href = '/';
-            }, 1000);
-          }
         } catch (error) {
           console.error("Error loading user data:", error);
           // หากไม่สามารถตรวจสอบข้อมูลผู้ใช้ได้ ให้อนุญาตการเข้าถึงชั่วคราว
@@ -145,7 +132,7 @@ export default function AgentPage() {
           const [agentsData, kbData, modelsData, departmentsData] = await Promise.all([
             getAgents(),
             getKnowledgeBases(),
-            getAvailableModels(),
+            getAllModels(),
             getDepartments()
           ]);
 
@@ -155,13 +142,17 @@ export default function AgentPage() {
             id: Number(dept.department_id) || 0,
             name: dept.name
           }));
+          console.log("Transformed departments:", transformedDepartments);
           setDepartments(transformedDepartments);
 
           if (modelsData && modelsData.length > 0) {
-            setAvailableModels(modelsData);
+            // Store the full model data array for reference
+            setFullModelData(modelsData);
+            setAvailableModels(modelsData.map(model => model.ModelName));
+            // Set initial model to first available model
             setSettings(prev => ({
               ...prev,
-              model: modelsData[0]
+              model: modelsData[0].ModelName
             }));
           }
         } catch (error) {
@@ -447,8 +438,11 @@ export default function AgentPage() {
   }, [searchQuery, agents]);
 
   useEffect(() => {
+    console.log(departments.length, "departments length");
     if (departments.length > 0) {
-      if (departmentSearchQuery.trim() === '') {
+      console.log("Filtering departments with query:", departmentSearchQuery);
+      if (departmentSearchQuery.trim() == '') {
+        console.log(departments, "departments without filter");
         setFilteredDepartments(departments);
       } else {
         const filtered = departments.filter(dept =>
@@ -457,8 +451,11 @@ export default function AgentPage() {
         setFilteredDepartments(filtered);
       }
     } else {
+      console.warn("No departments available to filter");
       setFilteredDepartments([]);
     }
+    console.log("Filtered departments:", filteredDepartments);
+
   }, [departmentSearchQuery, departments]);
 
   useEffect(() => {
@@ -476,6 +473,20 @@ export default function AgentPage() {
       setFilteredKnowledgeBases([]);
     }
   }, [kbSearchQuery, knowledgeBases]);
+
+  // Group models by platform
+  const getModelsByPlatform = () => {
+    const platformGroups: Record<string, any[]> = {};
+
+    fullModelData.forEach(model => {
+      if (!platformGroups[model.Platform]) {
+        platformGroups[model.Platform] = [];
+      }
+      platformGroups[model.Platform].push(model);
+    });
+
+    return platformGroups;
+  };
 
   if (permissionLoading) {
     return (
@@ -624,10 +635,14 @@ export default function AgentPage() {
                       onChange={handleChange}
                       className="w-full px-3 py-2 bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
                     >
-                      {availableModels.map((model) => (
-                        <option key={model} value={model}>
-                          {model}
-                        </option>
+                      {Object.entries(getModelsByPlatform()).map(([platform, models]) => (
+                        <optgroup key={platform} label={platform}>
+                          {models.map(model => (
+                            <option key={model.ModelID} value={model.ModelName}>
+                              {model.ModelName}
+                            </option>
+                          ))}
+                        </optgroup>
                       ))}
                     </select>
                   </div>
@@ -728,28 +743,42 @@ export default function AgentPage() {
                         />
                       </div>
                       <div className="space-y-2 max-h-48 overflow-y-auto pr-2">
-                        {filteredDepartments
-                          .filter(dept =>
-                            isAdmin || fullAdmin ||
-                            (user?.departments?.some(userDept => userDept.id === dept.id))
-                          )
-                          .map((dept) => (
-                            <label
-                              key={dept.id}
-                              htmlFor={`dept-${dept.id}`}
-                              className="flex items-center space-x-2 p-2 bg-gray-100 dark:bg-gray-700 rounded-md hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors cursor-pointer"
-                            >
-                              <input
-                                type="radio"
-                                id={`dept-${dept.id}`}
-                                name="department"
-                                checked={settings.department_id === dept.id}
-                                onChange={() => handleDepartmentChange(dept.id)}
-                                className="text-blue-600 focus:ring-blue-500 bg-gray-100 dark:bg-gray-700 border-gray-300 dark:border-gray-600"
-                              />
-                              <div className="font-medium">{dept.name}</div>
-                            </label>
-                          ))}
+                        {/* Check if no departments are available to show proper message */}
+                        {filteredDepartments.length === 0 ? (
+                          <p className="text-gray-400">{translations[language].departments?.noDepartments || 'No departments available'}</p>
+                        ) : (
+                          <>
+                            {/* Only filter departments if user is not admin - admins can see all */}
+                            {filteredDepartments
+                              .filter(dept =>
+                                isAdmin || fullAdmin ||
+                                !user?.departments || // If user.departments is undefined or null, show all departments
+                                user.departments.length === 0 || // If user has no departments assigned, show all departments
+                                user.departments.some(userDept => {
+                                  // Use type assertion to access either property safely
+                                  const deptId = (userDept as any).DepartmentID || userDept.id;
+                                  return deptId === dept.id;
+                                })
+                              )
+                              .map((dept) => (
+                                <label
+                                  key={dept.id}
+                                  htmlFor={`dept-${dept.id}`}
+                                  className="flex items-center space-x-2 p-2 bg-gray-100 dark:bg-gray-700 rounded-md hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors cursor-pointer"
+                                >
+                                  <input
+                                    type="radio"
+                                    id={`dept-${dept.id}`}
+                                    name="department"
+                                    checked={settings.department_id === dept.id}
+                                    onChange={() => handleDepartmentChange(dept.id)}
+                                    className="text-blue-600 focus:ring-blue-500 bg-gray-100 dark:bg-gray-700 border-gray-300 dark:border-gray-600"
+                                  />
+                                  <div className="font-medium">{dept.name}</div>
+                                </label>
+                              ))}
+                          </>
+                        )}
                       </div>
                     </div>
                   )}

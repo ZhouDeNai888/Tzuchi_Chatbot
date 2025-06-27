@@ -120,7 +120,11 @@ export function middleware(request: NextRequest) {
     const redirectUrl = new URL(redirectPath, request.url);
     redirectUrl.searchParams.append('t', Date.now().toString());
 
-    return NextResponse.redirect(redirectUrl);
+    // Clear the access token cookie
+    const response = NextResponse.redirect(redirectUrl);
+    response.cookies.delete('access_token');
+
+    return response;
   }
 
   // Create a new response with no-cache headers

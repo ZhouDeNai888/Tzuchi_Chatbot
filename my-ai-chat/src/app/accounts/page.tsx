@@ -644,7 +644,7 @@ export default function AccountsPage() {
                   {displayedAccounts.map((account) => (
                     <div
                       key={account.id}
-                      className="p-6 hover:bg-gray-50 dark:hover:bg-gray-750 transition-colors cursor-pointer"
+                      className="p-6 hover:bg-gray-50 dark:hover:bg-gray-750 dark:hover:text-black transition-colors cursor-pointer"
                       onClick={() => handleUserClick(account)}
                     >
                       <div className="flex flex-col md:flex-row md:justify-between md:items-center">
@@ -656,7 +656,9 @@ export default function AccountsPage() {
                               </svg>
                             </div>
                             <div>
-                              <h3 className="text-lg font-medium text-gray-900 dark:text-white">{account.username}</h3>
+                              <h3 className="text-lg font-medium text-gray-900 dark:text-black group-hover:text-gray-900 dark:group-hover:text-black">
+                                {account.username}
+                              </h3>
                               <div className="flex flex-wrap items-center text-sm text-gray-500 dark:text-gray-400 space-x-2">
                                 <span>{account.email}</span>
                                 <span>•</span>

@@ -23,8 +23,10 @@ export default function ModelSettingPage() {
     const [models, setModels] = useState<Model[]>([]);
     const [loading, setLoading] = useState(true);
     const [addingModel, setAddingModel] = useState(false);
-    const [platform, setPlatform] = useState<'gpt' | 'ollama' | 'custom'>('gpt');
+    const [platform, setPlatform] = useState<'gpt' | 'azure' | 'ollama' | 'custom'>('gpt');
     const [modelName, setModelName] = useState('');
+    const [apiKey, setApiKey] = useState('');
+    const [apiVersion, setApiVersion] = useState('2023-05-15');
     const [selectedModel, setSelectedModel] = useState<Model | null>(null);
     const [showDeleteModal, setShowDeleteModal] = useState(false);
     const { isAuthenticated } = useAuth();
@@ -59,17 +61,38 @@ export default function ModelSettingPage() {
             return;
         }
 
+        // Validate API key for GPT and Azure platforms
+        if ((platform === 'gpt' || platform === 'azure') && !apiKey.trim()) {
+            toast.error('API key is required for this platform');
+            return;
+        }
+
+        // Validate API version for Azure platform
+        if (platform === 'azure' && !apiVersion.trim()) {
+            toast.error('API version is required for Azure platform');
+            return;
+        }
+
         try {
             setAddingModel(true);
             // Get the current user ID or use a default if not available
             const userProfile = await apiService.getUserProfile();
             const userId = userProfile?.UserID || 1;
 
-            const result = await addModel(platform, modelName, userId);
+            // Pass API key and api_version directly (not in config)
+            const result = await addModel(
+                platform,
+                modelName,
+                userId,
+                apiKey,
+                platform === 'azure' ? apiVersion : undefined
+            );
 
             if (result.success) {
                 toast.success(t.addModelSuccess);
                 setModelName('');
+                setApiKey('');
+                setApiVersion('2023-05-15'); // Reset to default
                 fetchModels(); // Refresh the models list
             } else {
                 toast.error(t.addModelError);
@@ -202,12 +225,13 @@ export default function ModelSettingPage() {
                                 <select
                                     id="platform"
                                     value={platform}
-                                    onChange={(e) => setPlatform(e.target.value as 'gpt' | 'ollama' | 'custom')}
+                                    onChange={(e) => setPlatform(e.target.value as 'gpt' | 'azure' | 'ollama' | 'custom')}
                                     className="w-full px-3 py-2 bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
                                 >
                                     <option value="gpt">{t.platforms.gpt}</option>
+                                    <option value="azure">Azure OpenAI</option>
                                     <option value="ollama">{t.platforms.ollama}</option>
-                                    <option value="custom">{t.platforms.custom}</option>
+                                    {/* <option value="custom">{t.platforms.custom}</option> */}
                                 </select>
                             </div>
 
@@ -224,6 +248,38 @@ export default function ModelSettingPage() {
                                     className="w-full px-3 py-2 bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
                                 />
                             </div>
+
+                            {(platform === 'gpt' || platform === 'azure') && (
+                                <div>
+                                    <label htmlFor="apiKey" className="block text-sm font-medium mb-2 dark:text-gray-300">
+                                        API Key
+                                    </label>
+                                    <input
+                                        type="password"
+                                        id="apiKey"
+                                        value={apiKey}
+                                        onChange={(e) => setApiKey(e.target.value)}
+                                        placeholder="Enter your API key"
+                                        className="w-full px-3 py-2 bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
+                                    />
+                                </div>
+                            )}
+
+                            {platform === 'azure' && (
+                                <div>
+                                    <label htmlFor="apiVersion" className="block text-sm font-medium mb-2 dark:text-gray-300">
+                                        API Version
+                                    </label>
+                                    <input
+                                        type="text"
+                                        id="apiVersion"
+                                        value={apiVersion}
+                                        onChange={(e) => setApiVersion(e.target.value)}
+                                        placeholder="Enter API version (e.g., 2023-05-15)"
+                                        className="w-full px-3 py-2 bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
+                                    />
+                                </div>
+                            )}
 
                             <div className="flex justify-end">
                                 <button

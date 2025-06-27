@@ -6,6 +6,7 @@ import logging
 from dotenv import load_dotenv
 import os
 import bcrypt
+import json
 
 sys.stdout.reconfigure(encoding='utf-8')
 
@@ -235,6 +236,9 @@ class Database():
                 elif 'last_name' in kwargs and field == 'LastName':
                     update_fields.append("LastName = ?")
                     update_values.append(kwargs['last_name'])
+                elif 'user_role' in kwargs and field == 'UserRole':
+                    update_fields.append("UserRole = ?")
+                    update_values.append(kwargs['user_role'])
             if 'is_active' in kwargs:
                 update_fields.append("IsActive = ?")
                 update_values.append(1 if kwargs['is_active'] else 0)
@@ -664,7 +668,7 @@ class Database():
         Args:
             user_id (int): The ID of the user to check
             permission_name (str): The name of the permission to check
-            
+        
         Returns:
             bool: True if user has the permission, False otherwise
         """
@@ -707,6 +711,93 @@ class Database():
         except pyodbc.Error as e:
             logger.error(f"Error checking user permission: {e}")
             return False
+
+    def check_user_permissions_pattern(self, user_id, path, method):
+        """
+        Check if a user has any permissions matching a specific path and method.
+        Supports dynamic paths with various parameter patterns like '{id}', '{user_id}', etc.
+        
+        Args:
+            user_id (int): The ID of the user to check
+            path (str): The actual API path (e.g., 'api/documents/1')
+            method (str): The HTTP method to match (e.g., 'GET', 'POST')
+            
+        Returns:
+            bool: True if user has any matching permissions, False otherwise
+        """
+        try:
+            if not self.conn:
+                self.Conn_Sql()
+                
+            cursor = self.conn.cursor()
+            
+            # Check if user is an admin
+            cursor.execute("SELECT UserRole FROM Users WHERE UserID = ?", (user_id,))
+            user_role = cursor.fetchone()
+            
+            if not user_role:
+                logger.warning(f"User ID {user_id} not found")
+                cursor.close()
+                return False
+                
+            # Admins have all permissions
+            if user_role.UserRole == 'admin':
+                cursor.close()
+                return True
+                
+            # Check for matching permissions with dynamic path support for any parameter pattern
+            query = """
+                SELECT 1 FROM UserPermissions up
+                JOIN Permissions p ON up.PermissionID = p.PermissionID
+                JOIN ApiPermissions ap ON ap.RequiredPermission = p.PermissionName
+                WHERE up.UserID = ? AND ap.Method = ?
+            """
+            params = [user_id, method]
+            
+            # Execute the initial query to get all potential matching permissions
+            cursor.execute(query, params)
+            potential_matches = cursor.fetchall()
+            
+            # If no potential matches found based on user and method, return False
+            if not potential_matches:
+                cursor.close()
+                return False
+            
+            # Get all path patterns for the user's permissions with this method
+            cursor.execute("""
+                SELECT ap.PathPattern 
+                FROM UserPermissions up
+                JOIN Permissions p ON up.PermissionID = p.PermissionID
+                JOIN ApiPermissions ap ON ap.RequiredPermission = p.PermissionName
+                WHERE up.UserID = ? AND ap.Method = ?
+            """, params)
+            
+            path_patterns = [row.PathPattern for row in cursor.fetchall()]
+            
+            # Check each pattern against the actual path
+            for pattern in path_patterns:
+                # Convert the path pattern with parameters to a regex pattern
+                # Replace any {param_name} with a wildcard regex pattern
+                import re
+                regex_pattern = re.sub(r'\{[^}]+\}', r'[^/]+', pattern)
+                regex_pattern = f"^{regex_pattern}$"  # Ensure full path matching
+                
+                # Check if the actual path matches the pattern
+                if re.match(regex_pattern, path):
+                    cursor.close()
+                    logger.info(f"User ID {user_id} has permission for {method} {path} (matched pattern: {pattern})")
+                    return True
+            
+            logger.warning(f"User ID {user_id} does not have permission for {method} {path}")
+            cursor.close()
+            return False
+            
+        except pyodbc.Error as e:
+            logger.error(f"Error checking user permissions pattern: {e}")
+            return False
+
+
+
 
     def set_user_role(self, user_id, role, updated_by):
         """
@@ -1928,13 +2019,36 @@ class Database():
                 cursor.close()
                 return False
                 
+            # Retrieve and update agent configurations
+            cursor.execute("SELECT AgentID, Configuration FROM Agents WHERE Configuration IS NOT NULL")
+            agents = cursor.fetchall()
+            
+            for agent in agents:
+                agent_id, config = agent
+                try:
+                    # Parse the configuration as JSON
+                    config_json = json.loads(config)
+                    
+                    # Remove the knowledge_base_id if it exists
+                    if 'knowledge_base_ids' in config_json and knowledge_base_id in config_json['knowledge_base_ids']:
+                        config_json['knowledge_base_ids'].remove(knowledge_base_id)
+                        
+                        # Update the configuration in the database
+                        updated_config = json.dumps(config_json)
+                        cursor.execute(
+                            "UPDATE Agents SET Configuration = ? WHERE AgentID = ?",
+                            (updated_config, agent_id)
+                        )
+                except json.JSONDecodeError:
+                    logger.warning(f"Invalid JSON configuration for Agent ID {agent_id}, skipping update")
+            
             # Delete the knowledge base (cascades to KnowledgeDocuments and AgentKnowledgeBases)
             cursor.execute("DELETE FROM KnowledgeBases WHERE KnowledgeBaseID = ?", (knowledge_base_id,))
             
             self.conn.commit()
             cursor.close()
             
-            logger.info(f"Knowledge Base ID {knowledge_base_id} deleted successfully")
+            logger.info(f"Knowledge Base ID {knowledge_base_id} deleted successfully and references in agent configurations updated")
             return True
             
         except pyodbc.Error as e:
@@ -2242,8 +2356,7 @@ class Database():
             
             for row in cursor.fetchall():
                 document = dict(zip(columns, row))
-                documents.append(document)
-            
+                documents.append(document)           
             cursor.close()
             
             logger.info(f"Retrieved {len(documents)} documents from Knowledge Base ID {knowledge_base_id}")
@@ -3580,7 +3693,7 @@ class Database():
 
 
     # AI Model Management Functions
-    def create_ai_model(self, platform, model_name, created_by, is_active=True):
+    def create_ai_model(self, platform, model_name, created_by,apiKey,apiVersion, is_active=True):
         """
         Create a new AI model in the database.
 
@@ -3609,11 +3722,11 @@ class Database():
             # Insert AI model
             cursor.execute(
                 """
-                INSERT INTO AIModels (Platform, ModelName, CreatedBy, IsActive)
+                INSERT INTO AIModels (Platform, ModelName, CreatedBy,ApiKey,ApiVersion, IsActive)
                 OUTPUT INSERTED.ModelID
-                VALUES (?, ?, ?, ?)
+                VALUES (?, ?, ?, ?,?,?)
                 """,
-                (platform, model_name, created_by, 1 if is_active else 0)
+                (platform, model_name, created_by,apiKey,apiVersion, 1 if is_active else 0)
             )
 
             # Get the ModelID
@@ -3735,7 +3848,7 @@ class Database():
 
             # Build query
             query = """
-                SELECT am.*, u.Username AS CreatedByUsername
+                SELECT am.ModelID, am.Platform, am.ModelName, am.CreatedBy, am.IsActive, am.CreatedAt, am.ApiVersion, u.Username AS CreatedByUsername
                 FROM AIModels am
                 JOIN Users u ON am.CreatedBy = u.UserID
                 WHERE 1=1
@@ -3950,6 +4063,7 @@ class Database():
                 self.conn.rollback()
             return False
         
+
     def check_permission(self,permission_name:str):
         """
         Check if a permission exists in the database.
@@ -4020,3 +4134,349 @@ class Database():
         except pyodbc.Error as e:
             logger.error(f"Error getting permission details: {e}")
             return None
+        
+
+    def get_platform(self,model_name):
+        """
+        Get the platform of an AI model by its name.
+
+        Args:
+            model_name (str): The name of the AI model
+
+        Returns:
+            str: The platform of the AI model, or None if not found
+        """
+        try:
+            if not self.conn:
+                self.Conn_Sql()
+
+            cursor = self.conn.cursor()
+
+            # Get platform information
+            cursor.execute(
+                """
+                SELECT Platform FROM AIModels WHERE ModelName = ?
+                """,
+                (model_name,)
+            )
+
+            row = cursor.fetchone()
+            if not row:
+                logger.warning(f"AI model '{model_name}' not found")
+                cursor.close()
+                return None
+
+            platform = row.Platform
+            print(f"Platform: {platform}")
+            cursor.close()
+            logger.info(f"Retrieved platform for AI model '{model_name}': {platform}")
+            return platform
+
+        except pyodbc.Error as e:
+            logger.error(f"Error getting AI model platform: {e}")
+            return None
+        
+
+    def get_model_api_key(self,model_name,model_platform):
+        """
+        Get the API key for an AI model by its name and platform.
+
+        Args:
+            model_name (str): The name of the AI model
+            model_platform (str): The platform of the AI model
+
+        Returns:
+            str: The API key for the AI model, or None if not found
+        """
+        try:
+            if not self.conn:
+                self.Conn_Sql()
+
+            cursor = self.conn.cursor()
+
+            # Get API key information
+            cursor.execute(
+                """
+                SELECT ApiKey FROM AIModels WHERE ModelName = ? AND Platform = ?
+                """,
+                (model_name, model_platform)
+            )
+
+            row = cursor.fetchone()
+            if not row:
+                logger.warning(f"AI model '{model_name}' on platform '{model_platform}' not found")
+                cursor.close()
+                return None
+
+            api_key = row.ApiKey
+            cursor.close()
+            logger.info(f"Retrieved API key for AI model '{model_name}' on platform '{model_platform}'")
+            return api_key
+
+        except pyodbc.Error as e:
+            logger.error(f"Error getting AI model API key: {e}")
+            return None
+
+    def get_model_api_version(self, model_name, model_platform):
+        """
+        Get the API version for an AI model by its name and platform.
+
+        Args:
+            model_name (str): The name of the AI model
+            model_platform (str): The platform of the AI model
+
+        Returns:
+            str: The API version for the AI model, or None if not found
+        """
+        try:
+            if not self.conn:
+                self.Conn_Sql()
+
+            cursor = self.conn.cursor()
+
+            # Get API version information
+            cursor.execute(
+                """
+                SELECT ApiVersion FROM AIModels WHERE ModelName = ? AND Platform = ?
+                """,
+                (model_name, model_platform)
+            )
+
+            row = cursor.fetchone()
+            if not row:
+                logger.warning(f"AI model '{model_name}' on platform '{model_platform}' not found")
+                cursor.close()
+                return None
+
+            api_version = row.ApiVersion
+            cursor.close()
+            logger.info(f"Retrieved API version for AI model '{model_name}' on platform '{model_platform}'")
+            return api_version
+
+        except pyodbc.Error as e:
+            logger.error(f"Error getting AI model API version: {e}")
+            return None
+
+
+    def add_api_permission(self,permission_name,method,api_path):
+        """
+        Add a new API permission to the database.
+
+        Args:
+            RequiredPermission (str): The name of the API permission
+            Method (str): HTTP method (e.g., GET, POST)
+            PathPattern (str): The API path
+
+        Returns:
+            int: The ID of the newly created API permission, or None if failed
+        """
+        try:
+            if not self.conn:
+                self.Conn_Sql()
+
+            cursor = self.conn.cursor()
+
+            # Insert API permission
+            cursor.execute(
+                """
+                INSERT INTO ApiPermissions (RequiredPermission, Method, PathPattern)
+                OUTPUT INSERTED.ApiPermissionID
+                VALUES (?, ?, ?)
+                """,
+                (permission_name, method, api_path)
+            )
+
+            # Get the ApiPermissionID
+            api_permission_id = cursor.fetchval()
+
+            self.conn.commit()
+            cursor.close()
+
+            logger.info(f"API permission '{permission_name}' created successfully with ID: {api_permission_id}")
+            return api_permission_id
+
+        except pyodbc.Error as e:
+            logger.error(f"Error creating API permission: {e}")
+            if self.conn:
+                self.conn.rollback()
+            return None
+
+
+    def get_api_permission(self, api_permission_id):
+        """
+        Get API permission details by ID.
+
+        Args:
+            api_permission_id (int): The ID of the API permission to retrieve
+
+        Returns:
+            dict: API permission details, or None if not found
+        """
+        try:
+            if not self.conn:
+                self.Conn_Sql()
+
+            cursor = self.conn.cursor()
+
+            # Get API permission information
+            cursor.execute(
+                """
+                SELECT * FROM ApiPermissions WHERE ApiPermissionID = ?
+                """,
+                (api_permission_id,)
+            )
+
+            row = cursor.fetchone()
+            if not row:
+                logger.warning(f"API permission ID {api_permission_id} not found")
+                cursor.close()
+                return None
+
+            # Convert to dictionary
+            columns = [column[0] for column in cursor.description]
+            api_permission = dict(zip(columns, row))
+
+            cursor.close()
+            logger.info(f"Retrieved details for API permission ID: {api_permission_id}")
+            return api_permission
+
+        except pyodbc.Error as e:
+            logger.error(f"Error getting API permission details: {e}")
+            return None
+
+    def get_all_api_permissions(self):
+        """
+        Get all API permissions in the database.
+        Returns:
+            list: List of API permissions
+        """
+        try:
+            if not self.conn:
+                self.Conn_Sql()
+                
+            cursor = self.conn.cursor()
+            
+            # Get all API permissions
+            cursor.execute("SELECT * FROM ApiPermissions ORDER BY RequiredPermission")
+            
+            # Format results
+            api_permissions = []
+            columns = [column[0] for column in cursor.description]
+            
+            for row in cursor.fetchall():
+                api_permission = dict(zip(columns, row))
+                api_permissions.append(api_permission)
+            
+            cursor.close()
+            
+            logger.info(f"Retrieved {len(api_permissions)} API permissions")
+            return api_permissions
+
+        except pyodbc.Error as e:
+            logger.error(f"Error getting API permissions: {e}")
+            return []
+        
+
+    def delete_api_permission(self, api_permission_id):
+        """
+        Delete an API permission from the database.
+
+        Args:
+            api_permission_id (int): The ID of the API permission to delete
+
+        Returns:
+            bool: True if deletion successful, False otherwise
+        """
+        try:
+            if not self.conn:
+                self.Conn_Sql()
+
+            cursor = self.conn.cursor()
+
+            # Check if API permission exists
+            cursor.execute("SELECT 1 FROM ApiPermissions WHERE ApiPermissionID = ?", (api_permission_id,))
+            if not cursor.fetchone():
+                logger.warning(f"API permission ID {api_permission_id} not found")
+                cursor.close()
+                return False
+
+            # Delete the API permission
+            cursor.execute("DELETE FROM ApiPermissions WHERE ApiPermissionID = ?", (api_permission_id,))
+
+            self.conn.commit()
+            cursor.close()
+
+            logger.info(f"API permission ID {api_permission_id} deleted successfully")
+            return True
+
+        except pyodbc.Error as e:
+            logger.error(f"Error deleting API permission: {e}")
+            if self.conn:
+                self.conn.rollback()
+            return False
+        
+
+    def update_api_permission(self, api_permission_id, required_permission=None, method=None, path_pattern=None):
+        """
+        Update an existing API permission.
+
+        Args:
+            api_permission_id (int): The ID of the API permission to update
+            required_permission (str, optional): New name for the API permission
+            method (str, optional): New HTTP method
+            path_pattern (str, optional): New API path
+
+        Returns:
+            bool: True if update successful, False otherwise
+        """
+        try:
+            if not self.conn:
+                self.Conn_Sql()
+
+            cursor = self.conn.cursor()
+
+            # Check if API permission exists
+            cursor.execute("SELECT 1 FROM ApiPermissions WHERE ApiPermissionID = ?", (api_permission_id,))
+            if not cursor.fetchone():
+                logger.warning(f"API permission ID {api_permission_id} not found")
+                cursor.close()
+                return False
+
+            # Build update query
+            update_parts = []
+            update_values = []
+
+            if required_permission:
+                update_parts.append("RequiredPermission = ?")
+                update_values.append(required_permission)
+
+            if method:
+                update_parts.append("Method = ?")
+                update_values.append(method)
+
+            if path_pattern:
+                update_parts.append("PathPattern = ?")
+                update_values.append(path_pattern)
+
+            if not update_parts:
+                logger.warning("No valid fields provided for API permission update")
+                cursor.close()
+                return False
+
+            query = f"UPDATE ApiPermissions SET {', '.join(update_parts)} WHERE ApiPermissionID = ?"
+            update_values.append(api_permission_id)
+
+            # Execute the update
+            cursor.execute(query, update_values)
+
+            self.conn.commit()
+            cursor.close()
+
+            logger.info(f"API permission ID {api_permission_id} updated successfully")
+            return True
+
+        except pyodbc.Error as e:
+            logger.error(f"Error updating API permission: {e}")
+            if self.conn:
+                self.conn.rollback()
+            return False

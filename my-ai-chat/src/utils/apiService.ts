@@ -227,6 +227,16 @@ export interface MessageHistory {
 }
 
 /**
+ * Interface for API Route
+ */
+export interface ApiRoute {
+  path: string;
+  methods: string[];
+  summary?: string;
+  description?: string;
+}
+
+/**
  * Utility function to handle API calls with authentication
  */
 const fetchWithAuth = async (url: string, options: RequestInit = {}): Promise<Response> => {
@@ -2094,7 +2104,9 @@ export const getAvailableModels = async (): Promise<string[]> => {
 export const addModel = async (
   platform: string,
   modelName: string,
-  createdBy: number
+  createdBy: number,
+  apiKey?: string,
+  apiVersion?: string
 ): Promise<{ success: boolean; message: string }> => {
   try {
     const response = await fetchWithAuth(`/api/models`, {
@@ -2102,7 +2114,13 @@ export const addModel = async (
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({ platform, model_name: modelName, created_by: createdBy }),
+      body: JSON.stringify({
+        platform,
+        model_name: modelName,
+        created_by: createdBy,
+        api_key: apiKey,
+        api_version: apiVersion
+      }),
     });
 
     if (!response.ok) {
@@ -2159,10 +2177,256 @@ export const getAllModels = async (): Promise<any[]> => {
   }
 };
 
+/**
+ * Get all permissions
+ */
+export const getAllPermissions = async (): Promise<any[]> => {
+  try {
+    const response = await fetchWithAuth(`/api/permissions`);
 
+    if (!response.ok) {
+      throw new Error('Failed to get permissions');
+    }
 
+    const data = await response.json();
+    return data || [];
+  } catch (error) {
+    console.error('Error fetching permissions:', error);
+    return [];
+  }
+};
 
+/**
+ * Create a new permission
+ */
+export const createPermission = async (permissionData: { permission_name: string; description: string }): Promise<any> => {
+  try {
+    const response = await fetchWithAuth(`/api/permissions`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(permissionData),
+    });
 
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error || 'Failed to create permission');
+    }
+
+    return await response.json();
+  } catch (error) {
+    console.error('Error creating permission:', error);
+    throw error;
+  }
+};
+
+/**
+ * Update an existing permission
+ */
+export const updatePermission = async (permissionId: number, permissionData: { permission_name?: string; description?: string }): Promise<any> => {
+  try {
+    const response = await fetchWithAuth(`/api/permissions/${permissionId}`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(permissionData),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error || 'Failed to update permission');
+    }
+
+    return await response.json();
+  } catch (error) {
+    console.error(`Error updating permission with ID ${permissionId}:`, error);
+    throw error;
+  }
+};
+
+/**
+ * Delete a permission
+ */
+export const deletePermission = async (permissionId: number): Promise<boolean> => {
+  try {
+    const response = await fetchWithAuth(`/api/permissions/${permissionId}`, {
+      method: 'DELETE',
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error || 'Failed to delete permission');
+    }
+
+    return true;
+  } catch (error) {
+    console.error(`Error deleting permission with ID ${permissionId}:`, error);
+    throw error;
+  }
+};
+
+/**
+ * Get all API permissions
+ */
+export const getApiPermissions = async (): Promise<any[]> => {
+  try {
+    const response = await fetchWithAuth(`/api/api-permissions`);
+
+    if (!response.ok) {
+      throw new Error('Failed to get API permissions');
+    }
+
+    const data = await response.json();
+
+    // Transform backend field names to frontend field names
+    if (Array.isArray(data)) {
+      return data.map(item => ({
+        permission_id: item.ApiPermissionID,
+        permission_name: item.RequiredPermission,
+        method: item.Method,
+        api_path: item.PathPattern,
+        description: '' // Description will be populated from the route description
+      }));
+    }
+
+    return data || [];
+  } catch (error) {
+    console.error('Error fetching API permissions:', error);
+    return [];
+  }
+};
+
+/**
+ * Create a new API permission
+ */
+export const createApiPermission = async (permissionData: {
+  permission_name: string;
+  description: string;
+  method: string;
+  api_path: string;
+}): Promise<any> => {
+  try {
+    // Transform frontend field names to backend field names
+    const backendData = {
+      RequiredPermission: permissionData.permission_name,
+      Method: permissionData.method,
+      PathPattern: permissionData.api_path,
+      // Description is handled internally by the backend
+    };
+
+    const response = await fetchWithAuth(`/api/api-permissions`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(backendData),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error || 'Failed to create API permission');
+    }
+
+    return await response.json();
+  } catch (error) {
+    console.error('Error creating API permission:', error);
+    throw error;
+  }
+};
+
+/**
+ * Update an existing API permission
+ */
+export const updateApiPermission = async (
+  permissionId: number,
+  permissionData: {
+    permission_name?: string;
+    description?: string;
+    method?: string;
+    api_path?: string;
+  }
+): Promise<any> => {
+  try {
+    // Transform frontend field names to backend field names
+    const backendData = {
+      ApiPermissionID: permissionId,
+      RequiredPermission: permissionData.permission_name,
+      Method: permissionData.method,
+      PathPattern: permissionData.api_path,
+      // Description is not needed as it's derived from the route
+    };
+
+    const response = await fetchWithAuth(`/api/api-permissions/${permissionId}`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(backendData),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error || 'Failed to update API permission');
+    }
+
+    return await response.json();
+  } catch (error) {
+    console.error(`Error updating API permission with ID ${permissionId}:`, error);
+    throw error;
+  }
+};
+
+/**
+ * Delete an API permission
+ */
+export const deleteApiPermission = async (permissionId: number): Promise<boolean> => {
+  try {
+    const response = await fetchWithAuth(`/api/api-permissions/${permissionId}`, {
+      method: 'DELETE',
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error || 'Failed to delete API permission');
+    }
+
+    return true;
+  } catch (error) {
+    console.error(`Error deleting API permission with ID ${permissionId}:`, error);
+    throw error;
+  }
+};
+
+/**
+ * Get all available API routes
+ */
+export const getAllApiRoutes = async (): Promise<ApiRoute[]> => {
+  try {
+    const response = await fetchWithAuth(`/api/all-api`);
+
+    if (!response.ok) {
+      throw new Error('Failed to fetch API routes');
+    }
+
+    const data = await response.json();
+    console.log('API routes response:', data); // Debug the actual response format
+
+    // Handle different response formats
+    if (Array.isArray(data)) {
+      return data;
+    } else if (data.routes && Array.isArray(data.routes)) {
+      return data.routes;
+    } else {
+      console.error('Unexpected API routes response format:', data);
+      return [];
+    }
+  } catch (error) {
+    console.error('Error fetching API routes:', error);
+    return [];
+  }
+};
 
 export default {
   fetchWithAuth,
@@ -2224,5 +2488,14 @@ export default {
   getDepartmentMessages,
   addModel,
   deleteModel,
-  getAllModels
+  getAllModels,
+  getAllPermissions,
+  createPermission,
+  updatePermission,
+  deletePermission,
+  getApiPermissions,
+  createApiPermission,
+  updateApiPermission,
+  deleteApiPermission,
+  getAllApiRoutes
 };

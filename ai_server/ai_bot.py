@@ -2,7 +2,7 @@
 import os
 import hashlib
 from uuid import uuid4
-from langchain_openai import ChatOpenAI
+from langchain_openai import ChatOpenAI,AzureChatOpenAI
 from langchain_ollama import OllamaLLM
 from langchain.chains.combine_documents import create_stuff_documents_chain
 from langchain.chains import create_retrieval_chain
@@ -25,8 +25,9 @@ from langchain.retrievers import EnsembleRetriever
 import pickle
 import asyncio  # Add asyncio for async operations
 from MultiQdrant import MultiCollectionQdrant
+from db import Database
 sys.stdout.reconfigure(encoding='utf-8')
-
+db = Database()
 # ตั้งค่า logging
 log_dir = "/app/data/logs"
 os.makedirs(log_dir, exist_ok=True)
@@ -41,8 +42,8 @@ logger.setLevel(logging.INFO)
 
 # โหลดไฟล์ .env
 load_dotenv()
-api_key = os.getenv("OPENAI_API_KEY")
-
+# api_key = os.getenv("OPENAI_API_KEY")
+azure_entpoint = os.getenv("AZURE_OPENAI_ENDPOINT")
 
 class BaseAIChat:
     async def embeddings(self, docs):
@@ -257,7 +258,7 @@ class RAG(BaseAIChat):
                         dept_id, knowledge_base_id, str(e))
             return False
 
-    async def retrieval(self,model_name:str= "gpt-4o-mini",dept_id:list|str = "",knowledge_base_id:list|str="", vectordb=None,prompt:str="", nftext:str='',temperature:float=0.5,max_tokens:int=1024):
+    async def retrieval(self,model_name:str= "gpt-4o-mini",dept_id:list|str = "",knowledge_base_id:list|str="", vectordb=None,prompt:str="", nftext:str='',temperature:float=0.5,max_tokens:int=1024,platform:str="gtp"):
         try:
             logger.info("Starting retrieval process")
             print(f"dept_id: {dept_id}, knowledge_base_id: {knowledge_base_id}")
@@ -266,14 +267,27 @@ class RAG(BaseAIChat):
                 await self._load_bm25_docs(dept_id[0] if isinstance(dept_id, list) else dept_id,
                                   knowledge_base_id[0] if isinstance(knowledge_base_id, list) else knowledge_base_id)
 
-            if "gpt" in model_name:
+            if "gpt" in platform:
+                api_key = db.get_model_api_key(model_name, platform)
                 llm = ChatOpenAI(model=model_name, api_key=api_key, streaming=True, callbacks=[AsyncIteratorCallbackHandler()], max_tokens=max_tokens,temperature=temperature)
-            else:
-            
+            if "ollama" in platform:
+                
                 base_url="http://ollama:11434"
                 llm = OllamaLLM(base_url=base_url,model=model_name,
-                                callbacks=[AsyncIteratorCallbackHandler()], streaming=True)
-
+                                callbacks=[AsyncIteratorCallbackHandler()], streaming=True, max_tokens=max_tokens,temperature=temperature)
+            if "azure" in platform:
+                api_version = db.get_model_api_version(model_name, platform)
+                api_key = db.get_model_api_key(model_name, platform)
+                llm = AzureChatOpenAI(
+                    azure_deployment=model_name,
+                    azure_endpoint=azure_entpoint,
+                    openai_api_version=api_version,
+                    api_key=api_key,
+                    streaming=True,
+                    callbacks=[AsyncIteratorCallbackHandler()],
+                    max_tokens=max_tokens,
+                    temperature=temperature
+                )
             # Handle multiple collections
             dept_ids = dept_id if isinstance(dept_id, list) else [dept_id]
             kb_ids = knowledge_base_id if isinstance(knowledge_base_id, list) else [knowledge_base_id]

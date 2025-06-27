@@ -365,7 +365,7 @@ export default function DepartmentsPage() {
               {getPaginatedDepartments().map((department) => (
                 <div
                   key={department.id}
-                  className="grid grid-cols-12 p-4 hover:bg-gray-50 dark:hover:bg-gray-750 transition-colors items-center"
+                  className="grid grid-cols-12 p-4 hover:bg-gray-50 dark:hover:bg-gray-750 dark:hover:text-black transition-colors items-center"
                 >
                   <div
                     className="col-span-5 sm:col-span-4 font-medium cursor-pointer"

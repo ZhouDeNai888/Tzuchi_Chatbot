@@ -393,9 +393,9 @@ export default function SharePage() {
                       <div key={agent.id} className={`border border-gray-200 dark:border-gray-700 rounded-lg p-5 flex flex-col shadow-sm hover:shadow-md transition-shadow ${getCardGradient(agent.id)}`}>
                         <div className="flex-1">
                           <h3 className="text-lg font-medium text-gray-900 dark:text-white">{agent.name}</h3>
-                          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1 line-clamp-2">{agent.description || 'No description'}</p>
+                          <p className="text-sm text-gray-500 dark:text-gray-100 mt-1 line-clamp-2">{agent.description || 'No description'}</p>
                           <div className="mt-3 flex flex-wrap gap-2">
-                            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300">
+                            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-100">
                               {agent.model}
                             </span>
                           </div>
