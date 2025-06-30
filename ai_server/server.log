@@ -164935,3 +164935,130 @@ KeyError: 'context'
 2025-06-30 00:33:28,618 - httpx - INFO - HTTP Request: POST http://qdrant:6333/collections/qdrant_dept_37/points/search "HTTP/1.1 200 OK"
 2025-06-30 00:33:29,945 - httpx - INFO - HTTP Request: POST https://openaichat2025.openai.azure.com/openai/deployments/gpt-4o/chat/completions?api-version=2023-05-15 "HTTP/1.1 200 OK"
 2025-06-30 00:33:30,983 - Database - INFO - Message added to Conversation ID 1793 with Message ID: 2604
+2025-06-30 09:38:02,471 - Server - INFO - User authenticated via JWT token: admin
+2025-06-30 09:38:02,474 - Server - INFO - User has permission for this route: True
+2025-06-30 09:38:02,489 - Database - INFO - Retrieved details for user ID: 1
+2025-06-30 09:38:02,541 - Server - INFO - User authenticated via JWT token: admin
+2025-06-30 09:38:02,542 - Server - INFO - User has permission for this route: True
+2025-06-30 09:38:02,564 - Database - INFO - Retrieved details for user ID: 1
+2025-06-30 09:38:02,612 - Database - INFO - Retrieved details for agent ID: 12
+2025-06-30 09:38:02,634 - Database - INFO - Retrieved shared agent with API key: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJhZ2VudF9pZCI6MTIsInVzZXJfaWQiOjEsImFsbG93ZWRfb3JpZ2lucyI6IioiLCJ1c2FnZV9saW1pdCI6bnVsbH0.28wN7sQbLpnWSe5p4ZX4xg2gHA9HQLu3pgyoAl-CkL0
+2025-06-30 09:38:02,652 - Server - INFO - User authenticated via JWT token: admin
+2025-06-30 09:38:02,654 - Server - INFO - User has permission for this route: True
+2025-06-30 09:38:02,665 - Database - INFO - Retrieved details for user ID: 1
+2025-06-30 09:38:02,703 - Server - INFO - User authenticated via JWT token: admin
+2025-06-30 09:38:02,704 - Server - INFO - User has permission for this route: True
+2025-06-30 09:38:02,719 - Database - INFO - Retrieved details for user ID: 1
+2025-06-30 09:38:02,741 - Server - INFO - User authenticated via JWT token: admin
+2025-06-30 09:38:02,743 - Server - INFO - User has permission for this route: True
+2025-06-30 09:38:02,761 - Database - INFO - Retrieved details for user ID: 1
+2025-06-30 09:38:02,799 - Server - INFO - User authenticated via JWT token: admin
+2025-06-30 09:38:02,800 - Server - INFO - User has permission for this route: True
+2025-06-30 09:38:02,813 - Database - INFO - Retrieved details for user ID: 1
+2025-06-30 09:38:02,842 - Server - INFO - User authenticated via JWT token: admin
+2025-06-30 09:38:02,842 - Server - INFO - User has permission for this route: True
+2025-06-30 09:38:02,851 - Database - INFO - Retrieved details for user ID: 1
+2025-06-30 09:38:02,873 - Server - INFO - User authenticated via JWT token: admin
+2025-06-30 09:38:02,874 - Server - INFO - User has permission for this route: True
+2025-06-30 09:38:02,882 - Database - INFO - Retrieved details for user ID: 1
+2025-06-30 09:38:02,908 - Server - INFO - User authenticated via JWT token: admin
+2025-06-30 09:38:02,909 - Server - INFO - User has permission for this route: True
+2025-06-30 09:38:02,916 - Database - INFO - Retrieved details for user ID: 1
+2025-06-30 09:38:02,934 - Server - INFO - User authenticated via JWT token: admin
+2025-06-30 09:38:02,935 - Server - INFO - User has permission for this route: True
+2025-06-30 09:38:02,943 - Database - INFO - Retrieved details for user ID: 1
+2025-06-30 09:38:02,959 - Server - INFO - User authenticated via JWT token: admin
+2025-06-30 09:38:02,959 - Server - INFO - User has permission for this route: True
+2025-06-30 09:38:02,968 - Database - INFO - Retrieved details for user ID: 1
+2025-06-30 09:38:18,380 - Database - INFO - Retrieved details for agent ID: 12
+2025-06-30 09:38:18,389 - Database - INFO - Retrieved shared agent with API key: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJhZ2VudF9pZCI6MTIsInVzZXJfaWQiOjEsImFsbG93ZWRfb3JpZ2lucyI6IioiLCJ1c2FnZV9saW1pdCI6bnVsbH0.28wN7sQbLpnWSe5p4ZX4xg2gHA9HQLu3pgyoAl-CkL0
+2025-06-30 10:39:06,830 - Server - INFO - User authenticated via JWT token: admin
+2025-06-30 10:39:06,833 - Server - INFO - User has permission for this route: True
+2025-06-30 10:39:06,846 - Database - INFO - Retrieved 8 AI models
+2025-06-30 13:04:09,134 - Server - INFO - User authenticated via JWT token: admin
+2025-06-30 13:04:09,137 - Server - INFO - User has permission for this route: True
+2025-06-30 13:04:09,163 - Database - INFO - Retrieved details for user ID: 1
+2025-06-30 13:04:09,209 - Server - INFO - User authenticated via JWT token: admin
+2025-06-30 13:04:09,210 - Server - INFO - User has permission for this route: True
+2025-06-30 13:04:09,221 - Database - INFO - Retrieved details for user ID: 1
+2025-06-30 13:04:09,345 - Server - INFO - User authenticated via JWT token: admin
+2025-06-30 13:04:09,346 - Server - INFO - User has permission for this route: True
+2025-06-30 13:04:09,357 - Database - INFO - Retrieved 3 knowledge bases accessible by User ID 1
+2025-06-30 13:04:09,364 - Server - INFO - User authenticated via JWT token: admin
+2025-06-30 13:04:09,365 - Server - INFO - User has permission for this route: True
+2025-06-30 13:04:09,382 - Database - INFO - Retrieved 8 AI models
+2025-06-30 13:04:09,392 - Server - INFO - User authenticated via JWT token: admin
+2025-06-30 13:04:09,393 - Server - INFO - User has permission for this route: True
+2025-06-30 13:04:09,407 - Database - INFO - Retrieved 4 agents
+2025-06-30 13:04:09,418 - Server - INFO - User authenticated via JWT token: admin
+2025-06-30 13:04:09,421 - Server - INFO - User has permission for this route: True
+2025-06-30 13:04:09,425 - Server - INFO - User admin is fetching all departments
+2025-06-30 13:04:09,449 - Database - INFO - Retrieved 5 departments with user and knowledge base counts
+2025-06-30 13:04:24,133 - Server - INFO - User authenticated via JWT token: admin
+2025-06-30 13:04:24,135 - Server - INFO - User has permission for this route: True
+2025-06-30 13:04:24,168 - Database - INFO - Retrieved 8 AI model names
+2025-06-30 13:04:24,356 - httpx - INFO - HTTP Request: GET http://qdrant:6333 "HTTP/1.1 200 OK"
+2025-06-30 13:04:24,433 - httpx - INFO - HTTP Request: GET http://qdrant:6333 "HTTP/1.1 200 OK"
+2025-06-30 13:04:24,444 - Database - INFO - Retrieved platform for AI model 'gpt-4o-mini': gpt
+2025-06-30 13:04:24,446 - Server - WARNING - Attempting to cache a coroutine for test. This will be skipped to prevent 'cannot reuse already awaited coroutine' errors.
+2025-06-30 13:04:24,459 - Server - INFO - Model and retrieval chain cached: gpt-4o-mini for dept 1, kb [37], agent test
+2025-06-30 13:04:24,486 - Database - INFO - Agent 'test' created successfully with ID: 35
+2025-06-30 13:04:24,496 - Database - INFO - Retrieved details for agent ID: 35
+2025-06-30 13:04:24,571 - Server - INFO - User authenticated via JWT token: admin
+2025-06-30 13:04:24,571 - Server - INFO - User has permission for this route: True
+2025-06-30 13:04:24,579 - Database - INFO - Retrieved details for user ID: 1
+2025-06-30 13:04:24,608 - Server - INFO - User authenticated via JWT token: admin
+2025-06-30 13:04:24,609 - Server - INFO - User has permission for this route: True
+2025-06-30 13:04:24,615 - Database - INFO - Retrieved 5 agents
+2025-06-30 13:04:29,741 - Server - INFO - User authenticated via JWT token: admin
+2025-06-30 13:04:29,753 - Server - INFO - User has permission for this route: True
+2025-06-30 13:04:29,770 - Database - INFO - Retrieved details for user ID: 1
+2025-06-30 13:04:29,798 - Server - INFO - User authenticated via JWT token: admin
+2025-06-30 13:04:29,800 - Server - INFO - User has permission for this route: True
+2025-06-30 13:04:29,812 - Database - INFO - Retrieved 5 agents
+2025-06-30 13:04:35,041 - Server - INFO - User authenticated via JWT token: admin
+2025-06-30 13:04:35,043 - Server - INFO - User has permission for this route: True
+2025-06-30 13:04:35,045 - Database - INFO - Starting create_conversation
+2025-06-30 13:04:35,046 - Database - INFO - Parameters - user_id: 1, title: Chat with test, department_id: 1
+2025-06-30 13:04:35,047 - Database - INFO - Created cursor
+2025-06-30 13:04:35,049 - Database - INFO - Checking if user 1 exists
+2025-06-30 13:04:35,052 - Database - INFO - User found
+2025-06-30 13:04:35,053 - Database - INFO - Checking if department 1 exists
+2025-06-30 13:04:35,062 - Database - INFO - Department found
+2025-06-30 13:04:35,063 - Database - INFO - Inserting new conversation
+2025-06-30 13:04:35,070 - Database - INFO - Retrieved conversation ID: 1794
+2025-06-30 13:04:35,072 - Database - INFO - Committed transaction
+2025-06-30 13:04:35,074 - Database - INFO - Closed cursor
+2025-06-30 13:04:35,075 - Database - INFO - Conversation created successfully with ID: 1794
+2025-06-30 13:04:35,121 - Server - ERROR - Invalid API key: Not enough segments
+2025-06-30 13:04:35,133 - Server - INFO - User authenticated via JWT token: admin
+2025-06-30 13:04:35,138 - Server - INFO - User has permission for this route: True
+2025-06-30 13:04:35,148 - Database - INFO - Retrieved details for agent ID: 35
+2025-06-30 13:04:35,157 - Database - INFO - Retrieved 8 AI model names
+2025-06-30 13:04:35,158 - Database - INFO - Starting create_conversation
+2025-06-30 13:04:35,159 - Database - INFO - Parameters - user_id: 1, title: Chat 2025-06-30 13:04:35, department_id: 1
+2025-06-30 13:04:35,160 - Database - INFO - Created cursor
+2025-06-30 13:04:35,161 - Database - INFO - Checking if user 1 exists
+2025-06-30 13:04:35,166 - Database - INFO - User found
+2025-06-30 13:04:35,166 - Database - INFO - Checking if department 1 exists
+2025-06-30 13:04:35,169 - Database - INFO - Department found
+2025-06-30 13:04:35,170 - Database - INFO - Inserting new conversation
+2025-06-30 13:04:35,176 - Database - INFO - Retrieved conversation ID: 1795
+2025-06-30 13:04:35,180 - Database - INFO - Committed transaction
+2025-06-30 13:04:35,187 - Database - INFO - Closed cursor
+2025-06-30 13:04:35,188 - Database - INFO - Conversation created successfully with ID: 1795
+2025-06-30 13:04:35,205 - Database - INFO - Message added to Conversation ID 1795 with Message ID: 2605
+2025-06-30 13:04:35,317 - httpx - INFO - HTTP Request: GET http://qdrant:6333 "HTTP/1.1 200 OK"
+2025-06-30 13:04:35,391 - httpx - INFO - HTTP Request: GET http://qdrant:6333 "HTTP/1.1 200 OK"
+2025-06-30 13:04:35,404 - Database - INFO - Retrieved platform for AI model 'gpt-4o-mini': gpt
+2025-06-30 13:04:35,405 - AI - INFO - Starting retrieval process
+2025-06-30 13:04:35,438 - AI - INFO - BM25 documents loaded from ./bm25_data/bm25_docs_37.pkl
+2025-06-30 13:04:35,444 - Database - INFO - Retrieved API key for AI model 'gpt-4o-mini' on platform 'gpt'
+2025-06-30 13:04:35,538 - sentence_transformers.SentenceTransformer - INFO - Load pretrained SentenceTransformer: sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2
+2025-06-30 13:04:41,899 - httpx - INFO - HTTP Request: GET http://qdrant:6333/collections "HTTP/1.1 200 OK"
+2025-06-30 13:04:41,917 - AI - INFO - Retrieval process completed with enhanced ensemble retriever
+2025-06-30 13:04:41,924 - Server - INFO - Clearing previous cache entry for agent_key: test in kb: [37]
+2025-06-30 13:04:41,937 - Server - INFO - Model and retrieval chain cached: gpt-4o-mini for dept 1, kb [37], agent test
+2025-06-30 13:04:42,261 - httpx - INFO - HTTP Request: POST http://qdrant:6333/collections/qdrant_dept_37/points/search "HTTP/1.1 200 OK"
+2025-06-30 13:04:43,538 - httpx - INFO - HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2025-06-30 13:04:44,557 - Database - INFO - Message added to Conversation ID 1795 with Message ID: 2606

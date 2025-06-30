@@ -88,22 +88,22 @@ CREATE TABLE Agents (
 GO
 
 -- Create SharedAgents table for making agents available to external websites
-CREATE TABLE SharedAgents (
-    ShareID INT IDENTITY(1,1) PRIMARY KEY,
-    AgentID INT NOT NULL,
-    SharedByUserID INT NOT NULL,
-    ApiKey NVARCHAR(64) NOT NULL UNIQUE, -- API key for external access
-    Name NVARCHAR(100) NOT NULL, -- Display name for the shared agent
-    Description NVARCHAR(500), -- Optional description for external users
-    AllowedOrigins NVARCHAR(MAX), -- Comma-separated list of allowed website origins
-    UsageLimit INT DEFAULT NULL, -- Maximum number of API calls allowed (NULL = unlimited)
-    UsageCount INT DEFAULT 0 NOT NULL, -- Current count of API calls made
-    IsActive BIT DEFAULT 1 NOT NULL,
-    ExpiresAt DATETIME, -- Optional expiration date
-    CreatedAt DATETIME DEFAULT GETDATE() NOT NULL,
-    LastUsedAt DATETIME,
-    FOREIGN KEY (AgentID) REFERENCES Agents(AgentID) ON DELETE CASCADE,
-    FOREIGN KEY (SharedByUserID) REFERENCES Users(UserID) ON DELETE CASCADE
+CREATE TABLE [dbo].[SharedAgents](
+    [ShareID] [int] IDENTITY(1,1) PRIMARY KEY,
+    [AgentID] [int] NOT NULL,
+    [SharedByUserID] [int] NOT NULL,
+    [ApiKey] [nvarchar](500) UNIQUE NULL,
+      NOT NULL,
+      NULL,
+    [AllowedOrigins] [nvarchar](max) NULL,
+    [UsageLimit] [int] NULL DEFAULT NULL,
+    [UsageCount] [int] NOT NULL DEFAULT 0,
+    [IsActive] [bit] NOT NULL DEFAULT 1,
+    [ExpiresAt] [datetime] NULL,
+    [CreatedAt] [datetime] NOT NULL DEFAULT GETDATE(),
+    [LastUsedAt] [datetime] NULL,
+    FOREIGN KEY ([AgentID]) REFERENCES [dbo].[Agents]([AgentID]) ON DELETE CASCADE,
+    FOREIGN KEY ([SharedByUserID]) REFERENCES [dbo].[Users]([UserID]) ON DELETE CASCADE
 );
 GO
 
