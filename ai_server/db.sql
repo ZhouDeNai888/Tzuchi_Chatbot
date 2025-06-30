@@ -92,7 +92,7 @@ CREATE TABLE SharedAgents (
     ShareID INT IDENTITY(1,1) PRIMARY KEY,
     AgentID INT NOT NULL,
     SharedByUserID INT NOT NULL,
-    ApiKey NVARCHAR(MAX) NOT NULL UNIQUE, -- API key for external access
+    ApiKey NVARCHAR(255) NOT NULL UNIQUE, -- API key for external access
     Name NVARCHAR(100) NOT NULL, -- Display name for the shared agent
     Description NVARCHAR(500), -- Optional description for external users
     AllowedOrigins NVARCHAR(MAX), -- Comma-separated list of allowed website origins
@@ -514,7 +514,7 @@ BEGIN
     END
     
     -- Generate unique API key
-    DECLARE @ApiKey NVARCHAR(64);
+    DECLARE @ApiKey NVARCHAR(255);
     SET @ApiKey = CONVERT(NVARCHAR(36), NEWID()) + CONVERT(NVARCHAR(36), NEWID());
     SET @ApiKey = REPLACE(@ApiKey, '-', '');
     
