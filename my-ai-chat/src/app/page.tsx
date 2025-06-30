@@ -15,6 +15,12 @@ import { sendChatMessage, streamChatResponse, createConversation, ChatRequest, C
 import { useAuth } from '@/context/AuthContext';
 import { useRouter } from 'next/navigation';
 
+interface Source {
+  unique_title?: string;
+  unique_source?: string;
+  [key: string]: any; // Allow for other source properties
+}
+
 interface Message {
   text: string;
   isUser: boolean;
@@ -22,6 +28,7 @@ interface Message {
   id?: number;
   feedback?: 'like' | 'dislike';
   rating?: number;
+  sources?: Source[]; // Add sources property to Message interface
 }
 
 
@@ -178,7 +185,7 @@ export default function Home() {
     };
 
     setMessages(prev => [...prev, userMessage]);
-    setIsProcessing(true); // Use the renamed variable
+    setIsProcessing(true);
     setInput('');
 
     try {
@@ -224,29 +231,40 @@ export default function Home() {
         const assistantMessage: Message = {
           text: '',
           isUser: false,
-          id: undefined // Will be set when we get the response
+          id: undefined, // Will be set when we get the response
+          sources: [] // Initialize empty sources array
         };
         setMessages(prev => [...prev, assistantMessage]);
 
         setStreamingContent('');
 
+        let pendingSources: Source[] = []; // Initialize as empty array
+
         // Connect to stream and update message as chunks arrive
         streamer.connectToStream(
           // On message callback
-          (content: string) => {
+          (content: string, data?: any) => {
             flushSync(() => {
               setStreamingContent(prev => {
-                console.log('streamingContent', content);
-                const newContent = prev + content;
+                // Only append content if it's not empty
+                const newContent = content ? prev + content : prev;
+
+                // Check if data contains sources
+                if (data && data.sources) {
+                  console.log('Found sources in chunk:', data.sources);
+                  pendingSources = data.sources;
+                }
 
                 // Update the last message in the array (assistant message)
                 setMessages(prev => {
                   const updatedMessages = [...prev];
                   const lastMessage = updatedMessages[updatedMessages.length - 1];
+
                   // Preserve the message ID if we have it
                   updatedMessages[updatedMessages.length - 1] = {
                     ...lastMessage,
                     text: newContent,
+                    sources: pendingSources.length > 0 ? pendingSources : lastMessage.sources
                   };
                   return updatedMessages;
                 });
@@ -255,15 +273,22 @@ export default function Home() {
               });
             });
           },
-          //on ID callback
-          (id: number) => {
+          // On ID callback
+          (id: number, data?: any) => {
+            console.log('Message ID received:', id, 'with data:', data);
             setMessages(prev => {
               const updatedMessages = [...prev];
               const lastMessage = updatedMessages[updatedMessages.length - 1];
-              // Preserve the message ID if we have it
+
+              // Include sources if available from response
+              const sources = (data && data.sources) ? data.sources :
+                (pendingSources.length > 0 ? pendingSources : lastMessage.sources);
+
+              // Update the message with ID and sources
               updatedMessages[updatedMessages.length - 1] = {
                 ...lastMessage,
                 id: id,
+                sources: sources
               };
               return updatedMessages;
             });
@@ -279,9 +304,22 @@ export default function Home() {
           },
           // On complete callback
           () => {
-            setIsProcessing(false); // Use the renamed variable
+            setIsProcessing(false);
             setStreamingContent('');
-            // Here we should set the message ID from the response if available
+
+            // Ensure any pending sources are applied to the final message
+            if (pendingSources.length > 0) {
+              console.log('Final sources to add:', pendingSources);
+              setMessages(prev => {
+                const updatedMessages = [...prev];
+                const lastMessage = updatedMessages[updatedMessages.length - 1];
+                updatedMessages[updatedMessages.length - 1] = {
+                  ...lastMessage,
+                  sources: pendingSources
+                };
+                return updatedMessages;
+              });
+            }
           }
         );
       } else {
@@ -293,7 +331,8 @@ export default function Home() {
         const aiMessage: Message = {
           text: response.content,
           isUser: false,
-          id: response.agent_msg_id // Get the message ID from the response
+          id: response.agent_msg_id, // Get the message ID from the response
+          sources: response.sources || [] // Add sources from response
         };
 
         setMessages(prev => [...prev, aiMessage]);
@@ -439,6 +478,38 @@ export default function Home() {
                     {message.text}
                   </ReactMarkdown>
                 </div>
+
+                {/* Display sources section if available - IMPROVED DISPLAY */}
+                {!message.isUser && message.sources && message.sources.length > 0 && (
+                  <div className="mt-3 pt-3 border-t border-gray-200 dark:border-gray-700">
+                    <div className="text-sm font-semibold mb-2 flex items-center gap-1 text-gray-600 dark:text-gray-400">
+                      <i className="fa-solid fa-book text-xs"></i> References
+                    </div>
+                    <div className="space-y-2">
+                      {message.sources.map((source, sourceIndex) => (
+                        <div key={sourceIndex} className="text-xs bg-gray-100 dark:bg-gray-700 rounded p-2">
+                          {source.unique_source && (
+                            source.unique_source.startsWith('http://') ||
+                            source.unique_source.startsWith('https://') ||
+                            source.unique_source.startsWith('www.')
+                          ) ? (
+                            <a
+                              href={source.unique_source}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-blue-500 hover:underline"
+                            >
+                              {source.unique_title || source.unique_source}
+                            </a>
+                          ) : (
+                            <span>{source.unique_title || source.unique_source || 'Reference'}</span>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
                 {!message.isUser && (
                   <div className="flex justify-end mt-2 space-x-2">
                     <button

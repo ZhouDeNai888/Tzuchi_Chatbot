@@ -36,7 +36,7 @@
       width: 50px;
       height: 50px;
       border-radius: 50%;
-      background: ${theme === 'dark' ? '#333333' : '#000000'};
+      background: ${theme === 'dark' ? '#333333' : '#ffffff'};
       color: white;
       display: flex;
       justify-content: center;
@@ -53,7 +53,7 @@
     #ai-chat-widget-button:hover {
       transform: scale(1.05);
       box-shadow: 0 6px 16px rgba(0, 0, 0, ${theme === 'dark' ? '0.3' : '0.2'});
-      background: ${theme === 'dark' ? '#444444' : '#333333'};
+      background: ${theme === 'dark' ? '#444444' : '#f5f5f5'};
     }
     
     #ai-chat-widget-popup {
@@ -183,7 +183,7 @@
     }
     
     .ai-chat-widget-message-container.user .ai-chat-widget-message {
-      background: #000000;
+      background: ${theme === 'dark' ? '#333333' : '#000000'};
       color: white;
       border-bottom-right-radius: 4px;
       margin-left: auto;
@@ -206,7 +206,7 @@
       justify-content: center;
       font-size: 14px;
       margin-right: 8px;
-      background: #000000;
+      background: ${theme === 'dark' ? '#333333' : '#000000'};
       flex-shrink: 0;
     }
     
@@ -1192,6 +1192,7 @@
     chatButton.id = 'ai-chat-widget-button';
     chatButton.style.overflow = 'visible'; // Ensure the logo isn't cropped
     chatButton.style.padding = '0'; // Remove default padding
+    chatButton.style.backgroundColor = theme === 'dark' ? '#333333' : '#000000'; // Match theme colorseme, dark gray for dark theme
 
     // Replace Font Awesome icon with properly sized and positioned logo
     const logoImg = document.createElement('img');
@@ -1216,8 +1217,8 @@
 
     const title = document.createElement('h3');
     title.id = 'ai-chat-widget-title';
-    // Replace Font Awesome robot icon with logo image
-    title.innerHTML = `<img src="${base}logo.png" alt="Chat logo" style="width: 24px; height: 24px; margin-right: 8px;"> ${agentConfig.title || 'Chat Assistant'}`;
+    // Replace Font Awesome robot icon with logo image in a themed container
+    title.innerHTML = `<span style="display: inline-flex; align-items: center; justify-content: center; width: 24px; height: 24px; background-color: ${theme === 'dark' ? '#333333' : '#000000'}; border-radius: 50%; margin-right: 8px;"><img src="${base}logo.png" alt="Chat logo" style="width: 20px; height: 20px;"></span> ${agentConfig.title || 'Chat Assistant'}`;
 
     const closeButton = document.createElement('button');
     closeButton.id = 'ai-chat-widget-close';
@@ -1327,9 +1328,10 @@
       const messageContainer = document.createElement('div');
       messageContainer.classList.add('ai-chat-widget-message-container', 'bot');
 
-      // Update avatar icon with a more modern design
+      // Update avatar icon with a more modern design and themed background
       const avatar = document.createElement('div');
       avatar.classList.add('ai-chat-widget-avatar', 'bot');
+      avatar.style.backgroundColor = theme === 'dark' ? '#333333' : '#000000'; // Match theme colorseme, dark gray for dark theme
       // Replace brain icon with logo image
       avatar.innerHTML = `<img src="${base}logo.png" alt="Bot logo" style="width: 24px; height: 24px;">`;
       messageContainer.appendChild(avatar);

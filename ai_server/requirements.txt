@@ -21,3 +21,4 @@ langchain-qdrant
 PyJWT
 validators
 playwright
+docx2txt

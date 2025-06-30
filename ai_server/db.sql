@@ -138,15 +138,15 @@ CREATE TABLE KnowledgeDocuments (
 );
 GO
 
--- Create AgentKnowledgeBases junction table
-CREATE TABLE AgentKnowledgeBases (
-    AgentID INT NOT NULL,
-    KnowledgeBaseID INT NOT NULL,
-    PRIMARY KEY (AgentID, KnowledgeBaseID),
-    FOREIGN KEY (AgentID) REFERENCES Agents(AgentID) ON DELETE CASCADE,
-    FOREIGN KEY (KnowledgeBaseID) REFERENCES KnowledgeBases(KnowledgeBaseID) ON DELETE CASCADE
-);
-GO
+-- -- Create AgentKnowledgeBases junction table
+-- CREATE TABLE AgentKnowledgeBases (
+--     AgentID INT NOT NULL,
+--     KnowledgeBaseID INT NOT NULL,
+--     PRIMARY KEY (AgentID, KnowledgeBaseID),
+--     FOREIGN KEY (AgentID) REFERENCES Agents(AgentID) ON DELETE CASCADE,
+--     FOREIGN KEY (KnowledgeBaseID) REFERENCES KnowledgeBases(KnowledgeBaseID) ON DELETE CASCADE
+-- );
+-- GO
 
 -- Create Conversations table
 CREATE TABLE Conversations (
@@ -176,66 +176,66 @@ CREATE TABLE Messages (
 );
 GO
 
--- Create SharedConversations table for sharing chat histories
-CREATE TABLE SharedConversations (
-    ShareID INT IDENTITY(1,1) PRIMARY KEY,
-    ConversationID INT NOT NULL,
-    SharedByUserID INT NOT NULL,
-    SharedCode NVARCHAR(50) NOT NULL UNIQUE,
-    IsActive BIT DEFAULT 1 NOT NULL,
-    ExpiresAt DATETIME,
-    CreatedAt DATETIME DEFAULT GETDATE() NOT NULL,
-    FOREIGN KEY (ConversationID) REFERENCES Conversations(ConversationID) ON DELETE CASCADE,
-    FOREIGN KEY (SharedByUserID) REFERENCES Users(UserID) ON DELETE CASCADE
-);
-GO
+-- -- Create SharedConversations table for sharing chat histories
+-- CREATE TABLE SharedConversations (
+--     ShareID INT IDENTITY(1,1) PRIMARY KEY,
+--     ConversationID INT NOT NULL,
+--     SharedByUserID INT NOT NULL,
+--     SharedCode NVARCHAR(50) NOT NULL UNIQUE,
+--     IsActive BIT DEFAULT 1 NOT NULL,
+--     ExpiresAt DATETIME,
+--     CreatedAt DATETIME DEFAULT GETDATE() NOT NULL,
+--     FOREIGN KEY (ConversationID) REFERENCES Conversations(ConversationID) ON DELETE CASCADE,
+--     FOREIGN KEY (SharedByUserID) REFERENCES Users(UserID) ON DELETE CASCADE
+-- );
+-- GO
 
--- Create UserAPIKeys table
-CREATE TABLE UserAPIKeys (
-    KeyID INT IDENTITY(1,1) PRIMARY KEY,
-    UserID INT NOT NULL,
-    KeyName NVARCHAR(100) NOT NULL,
-    APIKey NVARCHAR(255) NOT NULL UNIQUE,
-    LastUsedAt DATETIME,
-    IsActive BIT DEFAULT 1 NOT NULL,
-    CreatedAt DATETIME DEFAULT GETDATE() NOT NULL,
-    ExpiresAt DATETIME,
-    FOREIGN KEY (UserID) REFERENCES Users(UserID) ON DELETE CASCADE
-);
-GO
+-- -- Create UserAPIKeys table
+-- CREATE TABLE UserAPIKeys (
+--     KeyID INT IDENTITY(1,1) PRIMARY KEY,
+--     UserID INT NOT NULL,
+--     KeyName NVARCHAR(100) NOT NULL,
+--     APIKey NVARCHAR(255) NOT NULL UNIQUE,
+--     LastUsedAt DATETIME,
+--     IsActive BIT DEFAULT 1 NOT NULL,
+--     CreatedAt DATETIME DEFAULT GETDATE() NOT NULL,
+--     ExpiresAt DATETIME,
+--     FOREIGN KEY (UserID) REFERENCES Users(UserID) ON DELETE CASCADE
+-- );
+-- GO
 
--- Create UserSessionTokens table
-CREATE TABLE UserSessionTokens (
-    TokenID INT IDENTITY(1,1) PRIMARY KEY,
-    UserID INT NOT NULL,
-    Token NVARCHAR(255) NOT NULL UNIQUE,
-    ExpiresAt DATETIME NOT NULL,
-    CreatedAt DATETIME DEFAULT GETDATE() NOT NULL,
-    LastUsedAt DATETIME,
-    UserAgent NVARCHAR(500),
-    IPAddress NVARCHAR(50),
-    FOREIGN KEY (UserID) REFERENCES Users(UserID) ON DELETE CASCADE
-);
-GO
+-- -- Create UserSessionTokens table
+-- CREATE TABLE UserSessionTokens (
+--     TokenID INT IDENTITY(1,1) PRIMARY KEY,
+--     UserID INT NOT NULL,
+--     Token NVARCHAR(255) NOT NULL UNIQUE,
+--     ExpiresAt DATETIME NOT NULL,
+--     CreatedAt DATETIME DEFAULT GETDATE() NOT NULL,
+--     LastUsedAt DATETIME,
+--     UserAgent NVARCHAR(500),
+--     IPAddress NVARCHAR(50),
+--     FOREIGN KEY (UserID) REFERENCES Users(UserID) ON DELETE CASCADE
+-- );
+-- GO
 
--- Create UsageStatistics table
-CREATE TABLE UsageStatistics (
-    StatID INT IDENTITY(1,1) PRIMARY KEY,
-    UserID INT,
-    AgentID INT,
-    DepartmentID INT, -- Department this usage belongs to
-    ConversationID INT,
-    SharedAgentID INT, -- ID from SharedAgents table if used externally
-    RequestCount INT DEFAULT 1 NOT NULL,
-    TokensUsed INT DEFAULT 0 NOT NULL,
-    Date DATE DEFAULT GETDATE() NOT NULL,
-    FOREIGN KEY (UserID) REFERENCES Users(UserID) ON DELETE SET NULL,
-    FOREIGN KEY (AgentID) REFERENCES Agents(AgentID) ON DELETE SET NULL,
-    FOREIGN KEY (DepartmentID) REFERENCES Departments(DepartmentID) ON DELETE SET NULL,
-    FOREIGN KEY (ConversationID) REFERENCES Conversations(ConversationID) ON DELETE SET NULL,
-    FOREIGN KEY (SharedAgentID) REFERENCES SharedAgents(ShareID) ON DELETE NO ACTION
-);
-GO
+-- -- Create UsageStatistics table
+-- CREATE TABLE UsageStatistics (
+--     StatID INT IDENTITY(1,1) PRIMARY KEY,
+--     UserID INT,
+--     AgentID INT,
+--     DepartmentID INT, -- Department this usage belongs to
+--     ConversationID INT,
+--     SharedAgentID INT, -- ID from SharedAgents table if used externally
+--     RequestCount INT DEFAULT 1 NOT NULL,
+--     TokensUsed INT DEFAULT 0 NOT NULL,
+--     Date DATE DEFAULT GETDATE() NOT NULL,
+--     FOREIGN KEY (UserID) REFERENCES Users(UserID) ON DELETE SET NULL,
+--     FOREIGN KEY (AgentID) REFERENCES Agents(AgentID) ON DELETE SET NULL,
+--     FOREIGN KEY (DepartmentID) REFERENCES Departments(DepartmentID) ON DELETE SET NULL,
+--     FOREIGN KEY (ConversationID) REFERENCES Conversations(ConversationID) ON DELETE SET NULL,
+--     FOREIGN KEY (SharedAgentID) REFERENCES SharedAgents(ShareID) ON DELETE NO ACTION
+-- );
+-- GO
 
 -- Create FeedbackRatings table
 CREATE TABLE FeedbackRatings (
@@ -250,28 +250,28 @@ CREATE TABLE FeedbackRatings (
 );
 GO
 
--- Insert default permissions
-INSERT INTO Permissions (PermissionName, Description)
-VALUES 
-    ('view_knowledge', 'Can view knowledge bases'),
-    ('edit_knowledge', 'Can create and edit knowledge bases'),
-    ('use_agent', 'Can use chat agents'),
-    ('view_conversations', 'Can view conversation history'),
-    ('view_department_data', 'Can view data from their department'),
-    ('admin_department', 'Can manage department settings'),
-    ('view_all_departments', 'Can view data from all departments'),
-    ('manage_users', 'Can manage user permissions'),
-    ('share_agent', 'Can share agents for external use'),
-    ('full_admin', 'Has complete administrative control');
-GO
+-- -- Insert default permissions
+-- INSERT INTO Permissions (PermissionName, Description)
+-- VALUES 
+--     ('view_knowledge', 'Can view knowledge bases'),
+--     ('edit_knowledge', 'Can create and edit knowledge bases'),
+--     ('use_agent', 'Can use chat agents'),
+--     ('view_conversations', 'Can view conversation history'),
+--     ('view_department_data', 'Can view data from their department'),
+--     ('admin_department', 'Can manage department settings'),
+--     ('view_all_departments', 'Can view data from all departments'),
+--     ('manage_users', 'Can manage user permissions'),
+--     ('share_agent', 'Can share agents for external use'),
+--     ('full_admin', 'Has complete administrative control');
+-- GO
 
--- Insert default agents
-INSERT INTO Agents (AgentKey, Name, Description, IsGlobal)
-VALUES 
-    ('general', 'General Assistant', 'General knowledge, daily tasks, and basic information', 1),
-    ('code', 'Code Expert', 'Programming, software development, and technical solutions', 1),
-    ('writing', 'Writing Assistant', 'Content creation, grammar, and writing improvement', 1);
-GO
+-- -- Insert default agents
+-- INSERT INTO Agents (AgentKey, Name, Description, IsGlobal)
+-- VALUES 
+--     ('general', 'General Assistant', 'General knowledge, daily tasks, and basic information', 1),
+--     ('code', 'Code Expert', 'Programming, software development, and technical solutions', 1),
+--     ('writing', 'Writing Assistant', 'Content creation, grammar, and writing improvement', 1);
+-- GO
 
 -- Insert admin user with hashed password (password: admin1234)
 -- Note: In a production environment, use a proper password hashing function
@@ -281,15 +281,18 @@ VALUES ('admin', 'admin@example.com',
         '$2b$12$pMtKDqzCvp3JJmMRpv.TZuIzILuuHN7z8kAAttyTEdchLUEsXPKt.', 
         'System', 'Administrator', 'admin', 1);
 
--- Get the admin UserID
-DECLARE @AdminID INT;
-SELECT @AdminID = UserID FROM Users WHERE Username = 'admin';
-
--- Grant full admin permissions
-INSERT INTO UserPermissions (UserID, PermissionID, GrantedBy)
-SELECT @AdminID, PermissionID, @AdminID
-FROM Permissions
-WHERE PermissionName = 'full_admin';
+INSERT INTO Permissions (PermissionName, Description)
+VALUES 
+('General_Permission', 'General Permission for General person'),
+('knowledge_setting', 'Permission to manage the knowledge base, including adding, editing, or deleting content used by the system to answer questions.'),
+('agent_setting', 'Permission to configure agents or bots, such as changing their name, response behavior, or personality.'),
+('history_setting', 'Permission to view or delete usage history, such as user conversations or system activity logs.'),
+('share_setting', 'Permission to manage sharing settings, including enabling public links or sharing content between users.'),
+('account_setting', 'Permission to manage user accounts, including adding new users, editing profiles, or removing users.'),
+('departments_setting', 'Permission to manage departments or organizational units, including assigning managers or customizing department settings.'),
+('permission_setting', 'Permission to manage access rights and roles, including granting or restricting specific permissions to users.'),
+('model_setting', 'Permission to manage AI model configurations, such as selecting models, adjusting accuracy, or updating versions.'),
+('basic_permission', 'super low permission for login');
 GO
 
 -- Create indexes for performance
@@ -299,7 +302,7 @@ CREATE INDEX IX_Conversations_UserID ON Conversations(UserID);
 CREATE INDEX IX_Conversations_DepartmentID ON Conversations(DepartmentID);
 CREATE INDEX IX_KnowledgeBases_DepartmentID ON KnowledgeBases(DepartmentID);
 CREATE INDEX IX_KnowledgeDocuments_KnowledgeBaseID ON KnowledgeDocuments(KnowledgeBaseID);
-CREATE INDEX IX_UserSessionTokens_Token ON UserSessionTokens(Token);
+-- CREATE INDEX IX_UserSessionTokens_Token ON UserSessionTokens(Token);
 CREATE INDEX IX_UserDepartments_DepartmentID ON UserDepartments(DepartmentID);
 CREATE INDEX IX_Agents_DepartmentID ON Agents(DepartmentID);
 CREATE INDEX IX_SharedAgents_ApiKey ON SharedAgents(ApiKey);
@@ -331,7 +334,7 @@ BEGIN
     DECLARE @IsAdmin BIT = 0;
     SELECT @IsAdmin = 1 FROM UserPermissions up
     JOIN Permissions p ON up.PermissionID = p.PermissionID
-    WHERE up.UserID = @UserID AND p.PermissionName = 'full_admin';
+    WHERE up.UserID = @UserID AND p.PermissionName = 'history_setting';
     
     IF @IsAdmin = 1
     BEGIN
@@ -350,7 +353,7 @@ BEGIN
         DECLARE @CanViewAllDepts BIT = 0;
         SELECT @CanViewAllDepts = 1 FROM UserPermissions up
         JOIN Permissions p ON up.PermissionID = p.PermissionID
-        WHERE up.UserID = @UserID AND p.PermissionName = 'view_all_departments';
+        WHERE up.UserID = @UserID AND p.PermissionName = 'departments_setting';
         
         IF @CanViewAllDepts = 1
         BEGIN
@@ -425,11 +428,11 @@ BEGIN
     
     SET @UserID = SCOPE_IDENTITY();
     
-    -- Add default permission for department data viewing
+    -- Add default permission for basic access
     INSERT INTO UserPermissions (UserID, PermissionID, GrantedBy)
     SELECT @UserID, PermissionID, @UserID
     FROM Permissions
-    WHERE PermissionName = 'view_department_data';
+    WHERE PermissionName = 'departments_setting';
     
     -- Add user to departments if specified
     IF @DepartmentIDs IS NOT NULL
@@ -450,7 +453,9 @@ BEGIN
         INSERT INTO UserPermissions (UserID, PermissionID, GrantedBy)
         SELECT @UserID, PermissionID, @UserID
         FROM Permissions
-        WHERE PermissionName = 'full_admin';
+        WHERE PermissionName IN ('permission_setting', 'account_setting', 'departments_setting', 
+                                'knowledge_setting', 'agent_setting', 'model_setting', 
+                                'share_setting', 'history_setting');
     END
     
     COMMIT;
@@ -501,7 +506,7 @@ BEGIN
         SELECT 1 FROM UserPermissions up
         JOIN Permissions p ON up.PermissionID = p.PermissionID
         WHERE up.UserID = @SharedByUserID 
-        AND (p.PermissionName = 'share_agent' OR p.PermissionName = 'full_admin')
+        AND p.PermissionName = 'share_setting'
     )
     BEGIN
         RAISERROR('User does not have permission to share agents', 16, 1);
@@ -588,11 +593,11 @@ BEGIN
     
     SELECT @IsAdmin = 1 FROM UserPermissions up
     JOIN Permissions p ON up.PermissionID = p.PermissionID
-    WHERE up.UserID = @UserID AND p.PermissionName = 'full_admin';
+    WHERE up.UserID = @UserID AND p.PermissionName = 'knowledge_setting';
     
     SELECT @CanViewAllDepts = 1 FROM UserPermissions up
     JOIN Permissions p ON up.PermissionID = p.PermissionID
-    WHERE up.UserID = @UserID AND p.PermissionName = 'view_all_departments';
+    WHERE up.UserID = @UserID AND p.PermissionName = 'departments_setting';
     
     IF @IsAdmin = 1 OR @CanViewAllDepts = 1
     BEGIN
@@ -627,7 +632,7 @@ BEGIN
     DECLARE @IsAdmin BIT = 0;
     SELECT @IsAdmin = 1 FROM UserPermissions up
     JOIN Permissions p ON up.PermissionID = p.PermissionID
-    WHERE up.UserID = @UserID AND p.PermissionName = 'full_admin';
+    WHERE up.UserID = @UserID AND p.PermissionName = 'share_setting';
     
     IF @IsAdmin = 1
     BEGIN
@@ -704,3 +709,108 @@ CREATE TABLE AIModels (
     CreatedAt DATETIME DEFAULT GETDATE() NOT NULL,
     FOREIGN KEY (CreatedBy) REFERENCES Users(UserID) ON DELETE CASCADE
 );
+GO
+CREATE TABLE ApiPermissions (
+    ApiPermissionID INT IDENTITY(1,1) PRIMARY KEY,
+    PathPattern NVARCHAR(255) NOT NULL,
+    Method NVARCHAR(10) NOT NULL,
+    RequiredPermission NVARCHAR(100) NOT NULL
+);
+GO
+
+
+
+
+
+
+INSERT INTO ApiPermissions (PathPattern, Method, RequiredPermission)
+VALUES
+('/api/users/me', 'GET', 'General_Permission'),
+('/api/token', 'POST', 'General_Permission'),
+('/api/permissions/check/{permission_name}', 'GET', 'General_Permission'),
+('/api/token/refresh', 'POST', 'General_Permission'),
+('/api/knowledge-bases', 'GET', 'General_Permission'),
+('/api/knowledge-bases', 'POST', 'General_Permission'),
+('/api/knowledge-bases/{knowledge_base_id}', 'GET', 'General_Permission'),
+('/api/knowledge-bases/{knowledge_base_id}', 'PUT', 'General_Permission'),
+('/api/knowledge-bases/{knowledge_base_id}', 'DELETE', 'General_Permission'),
+('/api/knowledge-bases/{knowledge_base_id}/documents', 'GET', 'General_Permission'),
+('/api/users/me', 'GET', 'basic_permission'),
+('/api/token', 'POST', 'basic_permission'),
+('/api/token/refresh', 'POST', 'basic_permission'),
+('/api/agents', 'GET', 'General_Permission'),
+('/api/agents', 'POST', 'General_Permission'),
+('/api/agents/{agent_id}', 'GET', 'General_Permission'),
+('/api/agents/{agent_id}', 'PUT', 'General_Permission'),
+('/api/agents/{agent_id}', 'DELETE', 'General_Permission'),
+('/api/agents/shared', 'GET', 'General_Permission'),
+('/api/agents/share', 'POST', 'General_Permission'),
+('/api/agents/share/revoke', 'POST', 'General_Permission'),
+('/api/all_models', 'GET', 'General_Permission'),
+('/api/conversations', 'POST', 'General_Permission'),
+('/api/conversations', 'GET', 'General_Permission'),
+('/api/conversations/{conversation_id}', 'GET', 'General_Permission'),
+('/api/conversations/{conversation_id}', 'DELETE', 'General_Permission'),
+('/api/chat', 'POST', 'General_Permission'),
+('/api/messages', 'GET', 'General_Permission'),
+('/api/messages/department', 'GET', 'General_Permission'),
+('/api/messages/{message_id}/rating', 'POST', 'General_Permission'),
+('/api/agents', 'GET', 'agent_setting'),
+('/api/agents', 'POST', 'agent_setting'),
+('/api/agents/{agent_id}', 'GET', 'agent_setting'),
+('/api/agents/{agent_id}', 'PUT', 'agent_setting'),
+('/api/agents/{agent_id}', 'DELETE', 'agent_setting'),
+('/api/departments', 'GET', 'departments_setting'),
+('/api/departments', 'POST', 'departments_setting'),
+('/api/departments/{department_id}', 'GET', 'departments_setting'),
+('/api/departments/{department_id}', 'PUT', 'departments_setting'),
+('/api/departments/{department_id}', 'DELETE', 'departments_setting'),
+('/api/departments/{department_id}/users', 'GET', 'departments_setting'),
+('/api/knowledge-bases', 'GET', 'departments_setting'),
+('/api/all_models', 'GET', 'agent_setting'),
+('/api/departments', 'GET', 'agent_setting'),
+('/api/knowledge-bases', 'GET', 'agent_setting'),
+('/api/messages', 'GET', 'history_setting'),
+('/api/messages/{message_id}/rating', 'POST', 'history_setting'),
+('/api/agents/shared', 'GET', 'share_setting'),
+('/api/agents', 'GET', 'share_setting'),
+('/api/agents/share', 'POST', 'share_setting'),
+('/api/agents/share/revoke', 'POST', 'share_setting'),
+('/api/agents/{agent_id}', 'GET', 'share_setting'),
+('/api/departments', 'GET', 'account_setting'),
+('/api/permissions', 'GET', 'account_setting'),
+('/api/users/all', 'GET', 'account_setting'),
+('/api/users', 'POST', 'account_setting'),
+('/api/permissions/user', 'POST', 'account_setting'),
+('/api/permissions/user', 'DELETE', 'account_setting'),
+('/api/permissions/check/{permission_name}', 'GET', 'basic_permission'),
+('/api/messages/department', 'GET', 'history_setting'),
+('/api/departments/{department_id}', 'GET', 'agent_setting'),
+('/api/agents', 'GET', 'basic_permission'),
+('/api/chat', 'POST', 'basic_permission'),
+('/api/conversations', 'POST', 'basic_permission'),
+('/api/messages/{message_id}/feedback', 'POST', 'share_setting'),
+('/api/knowledge-bases', 'GET', 'knowledge_setting'),
+('/api/knowledge-bases', 'POST', 'knowledge_setting'),
+('/api/knowledge-bases/{knowledge_base_id}', 'GET', 'knowledge_setting'),
+('/api/knowledge-bases/{knowledge_base_id}', 'PUT', 'knowledge_setting'),
+('/api/knowledge-bases/{knowledge_base_id}', 'DELETE', 'knowledge_setting'),
+('/api/documents', 'POST', 'knowledge_setting'),
+('/api/documents/{document_id}', 'PUT', 'knowledge_setting'),
+('/api/documents/{document_id}', 'DELETE', 'knowledge_setting'),
+('/api/knowledge-bases/{knowledge_base_id}/documents', 'GET', 'knowledge_setting'),
+('/api/documents/{document_id}', 'GET', 'knowledge_setting'),
+('/api/models', 'GET', 'model_setting'),
+('/api/models', 'POST', 'model_setting'),
+('/api/models', 'DELETE', 'model_setting'),
+('/api/all_models', 'GET', 'model_setting'),
+('/api/permissions', 'GET', 'permission_setting'),
+('/api/api-permissions', 'GET', 'permission_setting'),
+('/api/api-permissions', 'POST', 'permission_setting'),
+('/api/permissions', 'POST', 'permission_setting'),
+('/api/all-api', 'GET', 'permission_setting'),
+('/api/permissions/{permission_id}', 'PUT', 'permission_setting'),
+('/api/permissions/{permission_id}', 'DELETE', 'permission_setting'),
+('/api/api-permissions/{api_permission_id}', 'PUT', 'permission_setting'),
+('/api/api-permissions/{api_permission_id}', 'DELETE', 'permission_setting');
+GO

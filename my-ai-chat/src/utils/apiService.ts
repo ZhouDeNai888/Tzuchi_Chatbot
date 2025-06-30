@@ -1187,8 +1187,8 @@ export const streamChatResponse = (chatRequest: ChatRequest) => {
 
   return {
     connectToStream: async (
-      onMessage: (content: string) => void,
-      onID: (id: number) => void,
+      onMessage: (content: string, data?: any) => void,
+      onID: (id: number, data?: any) => void,
       onError: (error: Error) => void,
       onComplete: () => void
     ) => {
@@ -1207,11 +1207,13 @@ export const streamChatResponse = (chatRequest: ChatRequest) => {
         const reader = response.body.getReader();
         const decoder = new TextDecoder();
         let buffer = '';
+        let pendingSources: any = null;
 
         while (true) {
           const { value, done } = await reader.read();
 
           if (done) {
+            // Stream is complete, final checks
             if (buffer) {
               // Process any remaining data in buffer
               const lines = buffer.split('\n');
@@ -1219,11 +1221,23 @@ export const streamChatResponse = (chatRequest: ChatRequest) => {
                 if (line.trim()) {
                   try {
                     const parsed = JSON.parse(line);
+
+                    // Handle answer chunks
                     if (parsed.answer_chunk) {
-                      onMessage(parsed.answer_chunk);
+                      onMessage(parsed.answer_chunk, parsed);
                     }
+
+                    // Handle message ID
                     if (parsed.agent_msg_id) {
-                      onID(parsed.agent_msg_id);
+                      // Send the data to include any sources
+                      onID(parsed.agent_msg_id, parsed);
+                    }
+
+                    // Handle sources specifically
+                    if (parsed.sources) {
+                      pendingSources = parsed.sources;
+                      // Send sources in data but no content
+                      onMessage('', { sources: parsed.sources });
                     }
                   } catch (e) {
                     console.error('Error parsing JSON in final buffer:', e);
@@ -1231,11 +1245,15 @@ export const streamChatResponse = (chatRequest: ChatRequest) => {
                 }
               }
             }
+
+            // If we have pending sources at the end, make sure they're sent
+            if (pendingSources) {
+              onMessage('', { sources: pendingSources });
+            }
+
             onComplete();
             break;
           }
-          console.log('chunk raw:', decoder.decode(value));
-
 
           buffer += decoder.decode(value, { stream: true });
           const lines = buffer.split('\n');
@@ -1248,14 +1266,30 @@ export const streamChatResponse = (chatRequest: ChatRequest) => {
             if (line.trim()) {
               try {
                 const parsed = JSON.parse(line);
+                console.log('Parsed stream chunk:', parsed);
+
+                // Handle answer chunks - only send content if there is some
                 if (parsed.answer_chunk) {
-                  onMessage(parsed.answer_chunk);
+                  onMessage(parsed.answer_chunk, parsed);
                 }
+
+                // Handle message ID
                 if (parsed.agent_msg_id) {
-                  onID(parsed.agent_msg_id);
+                  // Include any existing sources when sending the ID
+                  onID(parsed.agent_msg_id, {
+                    ...parsed,
+                    sources: parsed.sources || pendingSources
+                  });
+                }
+
+                // Handle sources specifically
+                if (parsed.sources) {
+                  pendingSources = parsed.sources;
+                  // Send empty content but include sources in data
+                  onMessage('', { sources: parsed.sources });
                 }
               } catch (e) {
-                console.error('Error parsing JSON:', e);
+                console.error('Error parsing JSON:', e, line);
               }
             }
           }

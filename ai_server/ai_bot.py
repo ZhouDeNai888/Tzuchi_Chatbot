@@ -112,7 +112,9 @@ class RAG(BaseAIChat):
             logger.info("Loading or creating vectorstore for dept_id: %s", [dept_id ,knowledge_base_id])
 
             # model_name = "sentence-transformers/all-MiniLM-L6-v2"
-            model_name = "sentence-transformers/all-mpnet-base-v2"
+            model_name = "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2"
+            # model_name = "sentence-transformers/all-mpnet-base-v2"
+            # model_name = "sentence-transformers/distiluse-base-multilingual-cased-v2"
             model_kwargs = {'device': 'cpu'}
             self.embedding = HuggingFaceEmbeddings(model_name=model_name, model_kwargs=model_kwargs)
 
@@ -197,7 +199,9 @@ class RAG(BaseAIChat):
             logger.info("Getting vectorstore for dept_id: %s", [dept_id,knowledge_base_id])
             
             # model_name = "sentence-transformers/all-MiniLM-L6-v2"
-            model_name = "sentence-transformers/all-mpnet-base-v2"
+            model_name = "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2"
+            # model_name = "sentence-transformers/all-mpnet-base-v2"
+            # model_name = "sentence-transformers/distiluse-base-multilingual-cased-v2"
             model_kwargs = {'device': 'cpu'}
             self.embedding = HuggingFaceEmbeddings(model_name=model_name, model_kwargs=model_kwargs)
             
@@ -296,7 +300,9 @@ class RAG(BaseAIChat):
             if len(dept_ids) > 0 or len(kb_ids) > 0:
 
                 # model_name = "sentence-transformers/all-MiniLM-L6-v2"
-                model_name = "sentence-transformers/all-mpnet-base-v2"
+                model_name = "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2"
+                # model_name = "sentence-transformers/all-mpnet-base-v2"
+                # model_name = "sentence-transformers/distiluse-base-multilingual-cased-v2"
                 model_kwargs = {'device': 'cpu'}
                 self.embedding = HuggingFaceEmbeddings(model_name=model_name, model_kwargs=model_kwargs)
                 
@@ -328,6 +334,7 @@ class RAG(BaseAIChat):
                 # Create ensemble retriever with MultiQdrant
                 qdrant_retriever = multi_qdrant.as_retriever(search_kwargs={
                     "k": 5,
+                    "score_threshold": 0.4,  # Adjusted threshold for better recall
                 })
                 
                 if self.bm25_docs:
@@ -338,8 +345,8 @@ class RAG(BaseAIChat):
                     bm25_retriever.k = 5
                     ensemble_retriever = EnsembleRetriever(
                         retrievers=[qdrant_retriever, bm25_retriever],
-                        weights=[0.2, 0.8],
-                        c=20
+                        weights=[0.7, 0.3],
+                        # c=20
                     )
                 else:
                     logger.warning("No BM25 documents found, using only vector search")
@@ -348,7 +355,9 @@ class RAG(BaseAIChat):
                 # Single collection handling (existing code)
                 if vectordb is None:
                     # model_name = "sentence-transformers/all-MiniLM-L6-v2"
-                    model_name = "sentence-transformers/all-mpnet-base-v2"
+                    model_name = "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2"
+                    # model_name = "sentence-transformers/all-mpnet-base-v2"
+                    # model_name = "sentence-transformers/distiluse-base-multilingual-cased-v2"
                     model_kwargs = {'device': 'cpu'}
                     self.embedding = HuggingFaceEmbeddings(model_name=model_name, model_kwargs=model_kwargs)
 
@@ -361,7 +370,7 @@ class RAG(BaseAIChat):
                     # Increased k and adjusted score threshold for better recall
                     qdrant_retriever = qdrant_db.as_retriever(search_kwargs={
                         "k": 5,  # Retrieve more candidates
-                        # "score_threshold": 0.3,  # Lower threshold to catch more potential matches
+                        "score_threshold": 0.4,  # Adjusted threshold for better recall,  # Lower threshold to catch more potential matches
                     })
 
                     # Create BM25 retriever with adjusted parameters
@@ -375,8 +384,8 @@ class RAG(BaseAIChat):
                         # Create ensemble retriever with reweighted combination
                         ensemble_retriever = EnsembleRetriever(
                             retrievers=[qdrant_retriever, bm25_retriever],
-                            weights=[0.2, 0.8],
-                            c=20  # Slightly favor semantic search but keep strong keyword presence
+                            weights=[0.7, 0.3],
+                            # c=20  # Slightly favor semantic search but keep strong keyword presence
                         )
                     else:
                         logger.warning("No BM25 documents found, using only vector search")
@@ -385,7 +394,7 @@ class RAG(BaseAIChat):
                     qdrant_db = vectordb
                     qdrant_retriever = qdrant_db.as_retriever(search_kwargs={
                         "k": 5,
-
+                        "score_threshold": 0.4,  # Adjusted threshold for better recall  
                     })
                     if self.bm25_docs:
                         bm25_retriever = BM25Retriever.from_documents(
@@ -395,8 +404,8 @@ class RAG(BaseAIChat):
                         bm25_retriever.k = 5
                         ensemble_retriever = EnsembleRetriever(
                             retrievers=[qdrant_retriever, bm25_retriever],
-                            weights=[0.2, 0.8],
-                            c=20
+                            weights=[0.7, 0.3],
+                            # c=20
 
                         )
 
@@ -421,13 +430,14 @@ class RAG(BaseAIChat):
             prompt_template = (
                 "Base Prompt:"
                 "You are an AI assistant, providing concise and clear responses based on available information. You do not disclose data details."
-                "Always respond in the same language as the user."
+                "Understand the user's language, the context in which it is received, and always respond in the same language as the user."
+                "Please respond in the language that the user uses when asking a question, and analyze the context directly from that language. For example, if the user writes in Chinese, respond in Chinese by understanding the meaning and intent from the Chinese context. However, if the user asks using just a short word in another language (e.g., English) without enough context, reply that you don't understand or need more information."
                 "Please answer completely first. If you can't find the information but there is a link, please give the link."
                 "If greeted (e.g., 'Hello,' 'Good morning'), respond politely."
                 "If the question is partially related, provide the most relevant response using available context."
-                "When providing links, ensure they open in a new tab using <a href='[URL]' target='_blank'>link text</a>."             
+
                 "If the question is completely irrelevant to the given context or Back context: No information, please reply with '" + nftext + "(or translate this into the user's language)"
-                "When answering, answer in markdown or HTML"
+                "When answering, answer in markdown"
                 "When the user asks for a format, it must be displayed in that format"
                                 "Specific Prompt:\n"
                 ""+prompt+""
@@ -534,7 +544,9 @@ class RAG(BaseAIChat):
             logger.info("Appending new embeddings for dept_id: %s", [dept_id,knowledge_base_id])
 
             # model_name = "sentence-transformers/all-MiniLM-L6-v2"
-            model_name = "sentence-transformers/all-mpnet-base-v2"
+            model_name = "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2"
+            # model_name = "sentence-transformers/all-mpnet-base-v2"
+            # model_name = "sentence-transformers/distiluse-base-multilingual-cased-v2"
             model_kwargs = {'device': 'cpu'}
             self.embedding = HuggingFaceEmbeddings(model_name=model_name, model_kwargs=model_kwargs)
 
@@ -592,7 +604,9 @@ class RAG(BaseAIChat):
         try:
             logger = logging.getLogger("update_embedding_batch")
             # model_name = "sentence-transformers/all-MiniLM-L6-v2"
-            model_name = "sentence-transformers/all-mpnet-base-v2"
+            model_name = "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2"
+            # model_name = "sentence-transformers/all-mpnet-base-v2"
+            # model_name = "sentence-transformers/distiluse-base-multilingual-cased-v2"
             model_kwargs = {'device': 'cpu'}
             embedding = HuggingFaceEmbeddings(model_name=model_name, model_kwargs=model_kwargs)
 

@@ -23,7 +23,7 @@ from concurrent.futures import ThreadPoolExecutor
 from functools import lru_cache
 import hashlib
 from langchain.callbacks import AsyncIteratorCallbackHandler
-from langchain_community.document_loaders import PyPDFLoader, TextLoader, CSVLoader, WebBaseLoader
+from langchain_community.document_loaders import PyPDFLoader, TextLoader, CSVLoader, WebBaseLoader,Docx2txtLoader
 import uuid
 from contextlib import asynccontextmanager
 import jwt  # PyJWT library
@@ -171,6 +171,9 @@ async def lifespan(app: FastAPI):
                                         file_docs = loader.load()
                                     elif file_ext in ['.csv']:
                                         loader = CSVLoader(file_path)
+                                        file_docs = loader.load()
+                                    elif file_ext in ['.docx', '.doc']:
+                                        loader = Docx2txtLoader(file_path)
                                         file_docs = loader.load()
                                     else:
                                         # For unsupported files, try as text
@@ -2502,6 +2505,9 @@ async def create_document(
             elif file_ext in ['.csv']:
                 loader = CSVLoader(file_path)
                 docs = loader.load()
+            elif file_ext in ['.docx', '.doc']:
+                loader = Docx2txtLoader(file_path)
+                docs = loader.load()
             else:
                 # For unsupported files, treat as text
                 try:
@@ -2716,6 +2722,10 @@ async def update_document(
                 loader = PyPDFLoader(file_path)
             elif file_ext == 'csv':
                 loader = CSVLoader(file_path)
+            elif file_ext in ['txt', 'md', 'html', 'htm']:
+                loader = TextLoader(file_path, encoding='utf-8')
+            elif file_ext in ['docx', 'doc']:
+                loader = Docx2txtLoader(file_path)
             else:
                 loader = TextLoader(file_path, encoding='utf-8')
 
