@@ -4,10 +4,10 @@ services:
       context: ./my-ai-chat
       dockerfile: Dockerfile
     # ports:
-    #   - "80:3000"
+    #   - "80:80"
     expose:
       - 80
-      - 443  # Expose HTTPS port
+      - 443 # Expose HTTPS port
     environment:
       - NODE_ENV=production
       # - NEXT_PUBLIC_API_URL=http://localhost:80
@@ -17,9 +17,8 @@ services:
       - app_network
       - public_network
     volumes:
-      - ./letsencrypt:/app/ssl:ro  # Mount SSL certificates as read-only
+      - ./letsencrypt:/app/ssl:ro # Mount SSL certificates as read-only
     restart: unless-stopped
-
 
   ai_server:
     build: ./ai_server
@@ -27,15 +26,14 @@ services:
       - "8000:8000"
     networks:
       - app_network
-    
+
     depends_on:
       - ollama
     environment:
-      - '/ollama/api=http://ollama:11434/api'
+      - "/ollama/api=http://ollama:11434/api"
     volumes:
-      - ./ai_server:/app  # Mount source code for live updates
-      - ai_server_data:/app/data  # Volume for persistent data
-
+      - ./ai_server:/app # Mount source code for live updates
+      - ai_server_data:/app/data # Volume for persistent data
 
   # ngrok:
   #   image: ngrok/ngrok
@@ -49,21 +47,19 @@ services:
   #   ports:
   #     - 4040:4040
 
-
   nginx_proxy_manager:
-    image: 'jc21/nginx-proxy-manager:latest'
+    image: "jc21/nginx-proxy-manager:latest"
     restart: unless-stopped
     ports:
       - "80:80"
       - "443:443"
-      - "81:81"  # Web UI ของ Nginx Proxy Manager
+      - "81:81" # Web UI ของ Nginx Proxy Manager
     volumes:
       - ./data:/data
       - ./letsencrypt:/etc/letsencrypt
     networks:
       - app_network
       - public_network
-
 
   qdrant:
     image: qdrant/qdrant
@@ -108,8 +104,7 @@ services:
   #             count: all
   #             capabilities: [gpu]
 
-
-# cpu version
+  # cpu version
   ollama:
     image: ollama/ollama:latest
     ports:
