@@ -54,6 +54,17 @@ export default function AgentPage() {
     nftext: '',
     description: ''
   });
+  // Add validation errors state
+  const [validationErrors, setValidationErrors] = useState<{
+    name?: string;
+    agent_key?: string;
+    model?: string;
+    temperature?: string;
+    max_tokens?: string;
+    system_prompt?: string;
+    knowledge_base_ids?: string;
+    department_id?: string;
+  }>({});
   const [knowledgeBases, setKnowledgeBases] = useState<KnowledgeBase[]>([]);
   const [departments, setDepartments] = useState<Array<{ id: number; name: string }>>([]);
   const [loading, setLoading] = useState(true);
@@ -75,6 +86,7 @@ export default function AgentPage() {
   const [kbSearchQuery, setKbSearchQuery] = useState('');
   const [filteredDepartments, setFilteredDepartments] = useState<Array<{ id: number; name: string }>>([]);
   const [filteredKnowledgeBases, setFilteredKnowledgeBases] = useState<KnowledgeBase[]>([]);
+  const [summaryError, setSummaryError] = useState<string | null>(null); // Add summary error state
 
   useEffect(() => {
     const checkPermissions = async () => {
@@ -199,6 +211,12 @@ export default function AgentPage() {
     );
   };
 
+  // Add validation for English-only names
+  const isEnglishOnly = (text: string): boolean => {
+    // This regex allows English letters, numbers, spaces, and common punctuation
+    return /^[A-Za-z0-9\s.,!?()-_]+$/.test(text);
+  };
+
   const generateUniqueAgentKey = (baseName: string): string => {
     let key = baseName
       .toLowerCase()
@@ -259,8 +277,68 @@ export default function AgentPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
+    // Clear previous validation errors
+    setValidationErrors({});
+
+    // Create a list to store missing field names for summary message
+    const missingFields: string[] = [];
+
+    // Check required fields one by one
     if (!settings.name.trim()) {
-      toast.error(t.nameRequired);
+      setValidationErrors(prev => ({ ...prev, name: t.nameRequired || 'Agent name is required' }));
+      missingFields.push(t.form?.name || 'Agent Name');
+    }
+
+    if (!settings.model) {
+      setValidationErrors(prev => ({ ...prev, model: t.form?.modelRequired || 'Model selection is required' }));
+      missingFields.push(t.form?.model || 'Model');
+    }
+
+    if (!settings.department_id) {
+      setValidationErrors(prev => ({ ...prev, department_id: t.form?.departmentRequired || 'Department selection is required' }));
+      missingFields.push(t.form?.department || 'Department');
+    }
+
+    // Check if at least one knowledge base is selected
+    if (settings.knowledge_base_ids.length === 0) {
+      setValidationErrors(prev => ({ ...prev, knowledge_base_ids: t.form?.knowledgeBaseRequired || 'At least one knowledge base must be selected' }));
+      missingFields.push(t.form?.knowledgeBase || 'Knowledge Base');
+    }
+
+    // If any required fields are missing, show detailed error message and return
+    if (missingFields.length > 0) {
+      // Create a summary error message at the top of the form
+      setSummaryError(`${t.form?.requiredFieldsError || 'Please fill in all required fields'}: ${missingFields.join(', ')}`);
+
+      // Also show toast with the same message
+      toast.error(`${t.form?.requiredFieldsError || 'Please fill in all required fields'}: ${missingFields.join(', ')}`, {
+        duration: 5000,
+        position: 'top-center',
+      });
+      return;
+    }
+
+    // Clear summary error if all required fields are filled
+    setSummaryError(null);
+
+    // Continue with other validations
+    if (!isEnglishOnly(settings.name)) {
+      setValidationErrors(prev => ({ ...prev, name: t.englishNameOnly || 'Agent name must contain only English characters' }));
+      toast.error(t.englishNameOnly || 'Agent name must contain only English characters');
+      return;
+    }
+
+    // Validate max tokens
+    if (settings.max_tokens <= 0 || settings.max_tokens > 32000) {
+      setValidationErrors(prev => ({ ...prev, max_tokens: t.form?.invalidMaxTokens || 'Max tokens must be between 1 and 32000' }));
+      toast.error(t.form?.invalidMaxTokens || 'Max tokens must be between 1 and 32000');
+      return;
+    }
+
+    // Validate temperature
+    if (settings.temperature < 0 || settings.temperature > 1) {
+      setValidationErrors(prev => ({ ...prev, temperature: t.form?.invalidTemperature || 'Temperature must be between 0 and 1' }));
+      toast.error(t.form?.invalidTemperature || 'Temperature must be between 0 and 1');
       return;
     }
 
@@ -268,6 +346,7 @@ export default function AgentPage() {
       setLoading(true);
       if (selectedAgent) {
         if (isDuplicateName(settings.name, selectedAgent.id)) {
+          setValidationErrors(prev => ({ ...prev, name: t.duplicateError }));
           toast.error(t.duplicateError);
           return;
         }
@@ -275,6 +354,7 @@ export default function AgentPage() {
         if (settings.agent_key &&
           settings.agent_key !== selectedAgent.agent_key &&
           isDuplicateAgentKey(settings.agent_key, selectedAgent.id)) {
+          setValidationErrors(prev => ({ ...prev, agent_key: t.duplicateKeyError || 'Agent key already exists' }));
           toast.error(t.duplicateKeyError || 'Agent key already exists');
           return;
         }
@@ -286,12 +366,14 @@ export default function AgentPage() {
         await refreshData();
       } else {
         if (isDuplicateName(settings.name)) {
+          setValidationErrors(prev => ({ ...prev, name: t.duplicateError }));
           toast.error(t.duplicateError);
           return;
         }
 
         if (settings.agent_key) {
           if (isDuplicateAgentKey(settings.agent_key)) {
+            setValidationErrors(prev => ({ ...prev, agent_key: t.duplicateKeyError || 'Agent key already exists' }));
             toast.error(t.duplicateKeyError || 'Agent key already exists');
             return;
           }
@@ -608,6 +690,12 @@ export default function AgentPage() {
                   {selectedAgent ? t.editAgent : t.createNew}
                 </h2>
 
+                {summaryError && (
+                  <div className="mb-4 p-3 rounded-md bg-red-50 text-red-800 border border-red-300">
+                    {summaryError}
+                  </div>
+                )}
+
                 <form onSubmit={handleSubmit} className="space-y-6">
                   <div>
                     <label htmlFor="name" className="block text-sm font-medium mb-2">
@@ -619,10 +707,34 @@ export default function AgentPage() {
                       name="name"
                       value={settings.name}
                       onChange={handleChange}
-                      className="w-full px-3 py-2 bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
+                      className={`w-full px-3 py-2 bg-gray-50 dark:bg-gray-700 border ${validationErrors.name ? 'border-red-500' : 'border-gray-300'} dark:border-gray-600 rounded-md text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors`}
                       placeholder={t.form.namePlaceholder}
                     />
+                    {validationErrors.name && (
+                      <p className="mt-1 text-sm text-red-500">{validationErrors.name}</p>
+                    )}
                   </div>
+
+                  {/* <div>
+                    <label htmlFor="agent_key" className="block text-sm font-medium mb-2">
+                      {t.form.agentKey || 'Agent Key'}
+                    </label>
+                    <input
+                      type="text"
+                      id="agent_key"
+                      name="agent_key"
+                      value={settings.agent_key}
+                      onChange={handleChange}
+                      className={`w-full px-3 py-2 bg-gray-50 dark:bg-gray-700 border ${validationErrors.agent_key ? 'border-red-500' : 'border-gray-300'} dark:border-gray-600 rounded-md text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors`}
+                      placeholder={t.form.agentKeyPlaceholder || 'Leave blank for auto-generated key'}
+                    />
+                    {validationErrors.agent_key && (
+                      <p className="mt-1 text-sm text-red-500">{validationErrors.agent_key}</p>
+                    )}
+                    <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+                      {t.form.agentKeyHelp || 'Used for API access. Will be auto-generated if left blank.'}
+                    </p>
+                  </div> */}
 
                   <div>
                     <label htmlFor="model" className="block text-sm font-medium mb-2">
@@ -633,7 +745,7 @@ export default function AgentPage() {
                       name="model"
                       value={settings.model}
                       onChange={handleChange}
-                      className="w-full px-3 py-2 bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
+                      className={`w-full px-3 py-2 bg-gray-50 dark:bg-gray-700 border ${validationErrors.model ? 'border-red-500' : 'border-gray-300'} dark:border-gray-600 rounded-md text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors`}
                     >
                       {Object.entries(getModelsByPlatform()).map(([platform, models]) => (
                         <optgroup key={platform} label={platform}>
@@ -645,6 +757,9 @@ export default function AgentPage() {
                         </optgroup>
                       ))}
                     </select>
+                    {validationErrors.model && (
+                      <p className="mt-1 text-sm text-red-500">{validationErrors.model}</p>
+                    )}
                   </div>
 
                   <div>
@@ -660,8 +775,11 @@ export default function AgentPage() {
                       step="0.01"
                       value={settings.temperature}
                       onChange={handleChange}
-                      className="w-full"
+                      className={`w-full ${validationErrors.temperature ? 'border-red-500' : ''}`}
                     />
+                    {validationErrors.temperature && (
+                      <p className="mt-1 text-sm text-red-500">{validationErrors.temperature}</p>
+                    )}
                   </div>
 
                   <div>
@@ -674,10 +792,13 @@ export default function AgentPage() {
                       name="max_tokens"
                       value={settings.max_tokens}
                       onChange={handleChange}
-                      className="w-full px-3 py-2 bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
+                      className={`w-full px-3 py-2 bg-gray-50 dark:bg-gray-700 border ${validationErrors.max_tokens ? 'border-red-500' : 'border-gray-300'} dark:border-gray-600 rounded-md text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors`}
                       min="1"
                       max="32000"
                     />
+                    {validationErrors.max_tokens && (
+                      <p className="mt-1 text-sm text-red-500">{validationErrors.max_tokens}</p>
+                    )}
                   </div>
 
                   <div>

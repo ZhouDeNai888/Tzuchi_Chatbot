@@ -4480,3 +4480,76 @@ class Database():
             if self.conn:
                 self.conn.rollback()
             return False
+        
+    def get_user_by_email(self, email):
+        """
+        Get user details by email.
+
+        Args:
+            email (str): The email of the user to retrieve
+
+        Returns:
+            dict: User details, or None if not found
+        """
+        try:
+            if not self.conn:
+                self.Conn_Sql()
+
+            cursor = self.conn.cursor()
+
+            # Get user information
+            cursor.execute(
+                """
+                SELECT * FROM Users WHERE Email = ?
+                """,
+                (email,)
+            )
+
+            row = cursor.fetchone()
+            if not row:
+                logger.warning(f"User with email '{email}' not found")
+                cursor.close()
+                return None
+
+            # Convert to dictionary
+            columns = [column[0] for column in cursor.description]
+            user = dict(zip(columns, row))
+
+            cursor.close()
+            logger.info(f"Retrieved details for user with email: {email}")
+            return user
+
+        except pyodbc.Error as e:
+            logger.error(f"Error getting user by email: {e}")
+            return None
+        
+    def get_admin_emails(self):
+        """
+        Get a list of all admin user emails.
+
+        Returns:
+            list: List of admin user emails
+        """
+        try:
+            if not self.conn:
+                self.Conn_Sql()
+
+            cursor = self.conn.cursor()
+
+            # Get all admin users
+            cursor.execute(
+                """
+                SELECT Email FROM Users WHERE UserRole = 'admin'
+                """
+            )
+
+            # Format results
+            admin_emails = [row.Email for row in cursor.fetchall()]
+
+            cursor.close()
+            logger.info(f"Retrieved {len(admin_emails)} admin emails")
+            return admin_emails
+
+        except pyodbc.Error as e:
+            logger.error(f"Error getting admin emails: {e}")
+            return []

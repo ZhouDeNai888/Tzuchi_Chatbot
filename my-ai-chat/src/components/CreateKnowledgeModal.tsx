@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 
 interface CreateKnowledgeModalProps {
   isOpen: boolean;
@@ -7,14 +7,30 @@ interface CreateKnowledgeModalProps {
 }
 
 export default function CreateKnowledgeModal({ isOpen, onClose, onSubmit }: CreateKnowledgeModalProps) {
-  const [title, setTitle] = React.useState('');
-  const [description, setDescription] = React.useState('');
+  const [title, setTitle] = useState('');
+  const [description, setDescription] = useState('');
+  const [error, setError] = useState<string | null>(null);
+
+  // Function to validate if text contains only English characters
+  const isEnglishOnly = (text: string): boolean => {
+    // This regex allows English letters, numbers, spaces, and common punctuation
+    return /^[A-Za-z0-9\s.,!?()-_]+$/.test(text);
+  };
 
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+    setError(null);
+
+    // Validate that title contains only English characters
+    if (!isEnglishOnly(title)) {
+      setError('Please enter title in English only');
+      return;
+    }
+
     onSubmit(title, description);
     setTitle('');
     setDescription('');
+    setError(null);
     onClose();
   };
 
@@ -45,6 +61,7 @@ export default function CreateKnowledgeModal({ isOpen, onClose, onSubmit }: Crea
               className="w-full bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-white p-2 rounded-lg border border-gray-300 dark:border-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 transition-colors h-32"
             />
           </div>
+          {error && <div className="mb-4 text-red-500 dark:text-red-400">{error}</div>}
           <div className="flex justify-end gap-4">
             <button
               type="button"

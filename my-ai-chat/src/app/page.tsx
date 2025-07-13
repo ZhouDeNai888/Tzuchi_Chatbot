@@ -212,6 +212,17 @@ export default function Home() {
         role: 'user'
       };
 
+      // Generate or retrieve chat_id using UID
+      const generateUID = () => {
+        return `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+      };
+
+      let chatId = sessionStorage.getItem('chat_id');
+      if (!chatId) {
+        chatId = generateUID(); // Generate a new UID if no chat_id exists
+        sessionStorage.setItem('chat_id', chatId); // Store the new chat_id in sessionStorage
+      }
+
       // Create request object
       const chatRequest: ChatRequest = {
         messages: [chatMessage],
@@ -219,7 +230,8 @@ export default function Home() {
         department_id: agent?.department_id || 1, // Use agent's department ID or default to 1
         // conversation_id: conversationId || undefined,
         stream: process.env.NEXT_PUBLIC_USE_STREAMING === 'true',
-        agent_key: agent?.agent_key // Add the agent_key parameter
+        agent_key: agent?.agent_key,// Add the agent_key parameter
+        chat_id: chatId
       };
 
       if (process.env.NEXT_PUBLIC_USE_STREAMING === 'true') {

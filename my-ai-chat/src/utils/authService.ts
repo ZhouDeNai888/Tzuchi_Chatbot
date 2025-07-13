@@ -79,8 +79,8 @@ export const login = async (username: string, password: string): Promise<any> =>
     if (data.access_token) {
       localStorage.setItem('access_token', data.access_token);
       // Also set a client-side cookie as backup in case localStorage is cleared
-      setCookie('access_token_js', data.access_token, 1); // 1 day expiry for backup
-      console.log('Token stored in localStorage and cookie');
+      // setCookie('access_token_js', data.access_token, 1); // 1 day expiry for backup
+      // console.log('Token stored in localStorage and cookie');
 
       // Force refresh permission checks by making a request with cache prevention
       try {

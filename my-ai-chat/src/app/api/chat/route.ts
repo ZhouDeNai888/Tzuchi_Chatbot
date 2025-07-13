@@ -6,13 +6,13 @@ export async function POST(request: NextRequest) {
   try {
     // Get token from cookies, authorization header, or localStorage-backup cookie
     const token = request.cookies.get('access_token')?.value ||
-      request.headers.get('authorization')?.replace('Bearer ', '') ||
-      request.cookies.get('access_token_js')?.value;
+      request.headers.get('authorization')?.replace('Bearer ', '')
+    // request.cookies.get('access_token_js')?.value;
 
     console.log('Chat API token sources checked:', {
       cookiePresent: !!request.cookies.get('access_token')?.value,
       headerPresent: !!request.headers.get('authorization'),
-      backupPresent: !!request.cookies.get('access_token_js')?.value
+      // backupPresent: !!request.cookies.get('access_token_js')?.value
     });
     const api_key = request.headers.get('x-api-key') || 'Unknown'
     console.log('API key from headers:', request.headers.get('x-api-key') || 'None');

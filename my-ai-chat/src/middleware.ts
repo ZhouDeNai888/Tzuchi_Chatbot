@@ -33,7 +33,9 @@ export function middleware(request: NextRequest) {
 
   // Ensure that the `/api/embed.js` route is always accessible
   if (request.nextUrl.pathname === '/api/embed.js') {
-    return applyHeaders(NextResponse.next(), origin, isAllowedOrigin);
+    const res = applyHeaders(NextResponse.next(), origin, isAllowedOrigin);
+    res.headers.set('Cache-Control', 'no-store');
+    return res;
   }
   if (request.nextUrl.pathname === '/api/chat') {
     return applyHeaders(NextResponse.next(), origin, isAllowedOrigin);
@@ -41,11 +43,15 @@ export function middleware(request: NextRequest) {
   if (request.nextUrl.pathname === '/api/agents/config') {
     return applyHeaders(NextResponse.next(), origin, isAllowedOrigin);
   }
-
   if (request.nextUrl.pathname.startsWith('/api/messages/') && request.nextUrl.pathname.includes('/feedback')) {
     return applyHeaders(NextResponse.next(), origin, isAllowedOrigin);
   }
-
+  if (request.nextUrl.pathname.startsWith('/api/contact-admin/')) {
+    return applyHeaders(NextResponse.next(), origin, isAllowedOrigin);
+  }
+  if (request.nextUrl.pathname.startsWith('/api/forgot-password/')) {
+    return applyHeaders(NextResponse.next(), origin, isAllowedOrigin);
+  }
   // Get access token from cookies or auth header
   const token = request.cookies.get('access_token')?.value ||
     request.headers.get('authorization')?.replace('Bearer ', '');
@@ -63,6 +69,8 @@ export function middleware(request: NextRequest) {
     '/api/token/refresh',
     '/api/agents/config',
     '/api/messages/',
+    '/api/contact-admin',
+    '/api/forgot-password',
   ];
 
   const isPublicPath = publicPaths.some(path =>

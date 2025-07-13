@@ -10,6 +10,8 @@ import { Trash2, Edit, Plus, Search, ChevronDown, ChevronRight } from 'lucide-re
 import ConfirmDeleteModal from '@/components/ConfirmDeleteModal';
 import EditModal from '@/components/EditModal';
 import apiService from '@/utils/apiService';
+import { useLanguage } from '@/context/LanguageContext';
+import { translations } from '@/utils/translations';
 
 interface Permission {
     permission_id: number;
@@ -40,6 +42,12 @@ interface GroupedApiPermissions {
 // HTTP Methods for the dropdown
 const HTTP_METHODS = ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS', 'HEAD'];
 
+// Helper function for formatting page information
+const formatPageInfo = (page: number, totalPages: number, language: 'en' | 'zh-TW') => {
+    const t = translations[language].permission;
+    return `${t.page} ${page} ${t.of} ${totalPages}`;
+};
+
 export default function PermissionPage() {
     const [activeTab, setActiveTab] = useState<"permissions" | "apiPermissions">("permissions");
     const [permissions, setPermissions] = useState<Permission[]>([]);
@@ -51,6 +59,13 @@ export default function PermissionPage() {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [isProcessing, setIsProcessing] = useState(false);
+    const { language } = useLanguage();
+    const t = translations[language].permission;
+
+    // Helper method to format page information
+    const pageInfo = (current: number, total: number) => {
+        return `${t.page} ${current} ${t.of} ${total}`;
+    };
 
     // Pagination and search state
     const [currentPage, setCurrentPage] = useState(1);
@@ -409,8 +424,8 @@ export default function PermissionPage() {
 
     return (
         <div className="container mx-auto p-6 mt-16">
-            <h1 className="text-2xl font-bold mb-6 dark:text-white">Permission Management</h1>
-            <p className="text-gray-600 dark:text-gray-300 mb-4">Manage system permissions for users and features</p>
+            <h1 className="text-2xl font-bold mb-6 dark:text-white">{t.title}</h1>
+            <p className="text-gray-600 dark:text-gray-300 mb-4">{t.description}</p>
 
             <div className="flex justify-center mb-6"></div>
 
@@ -419,7 +434,7 @@ export default function PermissionPage() {
                     {/* Regular Permission List */}
                     <div className="md:col-span-2">
                         <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6">
-                            <h2 className="text-xl font-semibold mb-4 dark:text-white">Available Permissions</h2>
+                            <h2 className="text-xl font-semibold mb-4 dark:text-white">{t.availablePermissions}</h2>
 
                             {error && (
                                 <div className="bg-red-100 dark:bg-red-900/30 border border-red-400 dark:border-red-800 text-red-700 dark:text-red-300 px-4 py-3 rounded mb-4">
@@ -433,13 +448,13 @@ export default function PermissionPage() {
                                         onClick={() => setActiveTab("permissions")}
                                         className={`px-4 py-2 rounded-l-md ${compareTab(activeTab, "permissions") ? "bg-blue-600 text-white" : "bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300"} transition-colors`}
                                     >
-                                        Regular Permissions
+                                        {t.regularPermissions}
                                     </button>
                                     <button
                                         onClick={() => setActiveTab("apiPermissions")}
                                         className={`px-4 py-2 rounded-r-md ${compareTab(activeTab, "apiPermissions") ? "bg-blue-600 text-white" : "bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300"} transition-colors`}
                                     >
-                                        API Permissions
+                                        {t.apiPermissions}
                                     </button>
                                 </div>
 
@@ -450,7 +465,7 @@ export default function PermissionPage() {
                                             type="text"
                                             value={searchTerm}
                                             onChange={(e) => setSearchTerm(e.target.value)}
-                                            placeholder="Search permissions..."
+                                            placeholder={compareTab(activeTab, "permissions") ? t.searchPermissions : t.searchApiPermissions}
                                             className="px-4 py-2 pr-10 bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
                                         />
                                         <span className="absolute inset-y-0 right-0 flex items-center pr-3">
@@ -464,17 +479,17 @@ export default function PermissionPage() {
                                             disabled={currentPage === 1}
                                             className="px-3 py-2 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-md hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                                         >
-                                            Previous
+                                            {t.previous}
                                         </button>
                                         <span className="text-gray-900 dark:text-white">
-                                            Page {currentPage} of {totalPages}
+                                            {formatPageInfo(currentPage, totalPages, language)}
                                         </span>
                                         <button
                                             onClick={() => setCurrentPage((prev) => Math.min(prev + 1, totalPages))}
                                             disabled={currentPage === totalPages}
                                             className="px-3 py-2 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-md hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                                         >
-                                            Next
+                                            {t.next}
                                         </button>
                                     </div>
                                 </div>
@@ -489,10 +504,10 @@ export default function PermissionPage() {
                                     <table className="min-w-full bg-white dark:bg-gray-800">
                                         <thead className="bg-gray-100 dark:bg-gray-700">
                                             <tr>
-                                                <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">ID</th>
-                                                <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Name</th>
-                                                <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Description</th>
-                                                <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Actions</th>
+                                                <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">{t.id}</th>
+                                                <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">{t.name}</th>
+                                                <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">{t.description}</th>
+                                                <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">{t.actions}</th>
                                             </tr>
                                         </thead>
                                         <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
@@ -526,7 +541,7 @@ export default function PermissionPage() {
                                 </div>
                             ) : (
                                 <div className="text-center py-8 text-gray-500 dark:text-gray-400">
-                                    No permissions found
+                                    {t.noPermissions}
                                 </div>
                             )}
                         </div>
@@ -535,11 +550,11 @@ export default function PermissionPage() {
                     {/* Add Regular Permission Form */}
                     <div className="md:col-span-1">
                         <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6">
-                            <h2 className="text-xl font-semibold mb-4 dark:text-white">Add New Permission</h2>
+                            <h2 className="text-xl font-semibold mb-4 dark:text-white">{t.addNewPermission}</h2>
                             <form onSubmit={(e) => { e.preventDefault(); handleAddPermission(); }} className="space-y-4">
                                 <div>
                                     <label htmlFor="permission_name" className="block text-sm font-medium mb-2 dark:text-gray-300">
-                                        Permission Name
+                                        {t.permissionName}
                                     </label>
                                     <input
                                         type="text"
@@ -547,14 +562,14 @@ export default function PermissionPage() {
                                         name="permission_name"
                                         value={formData.permission_name}
                                         onChange={handleInputChange}
-                                        placeholder="Enter permission name"
+                                        placeholder={t.enterPermissionName}
                                         className="w-full px-3 py-2 bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
                                     />
                                 </div>
 
                                 <div>
                                     <label htmlFor="description" className="block text-sm font-medium mb-2 dark:text-gray-300">
-                                        Description
+                                        {t.description}
                                     </label>
                                     <input
                                         type="text"
@@ -562,7 +577,7 @@ export default function PermissionPage() {
                                         name="description"
                                         value={formData.description}
                                         onChange={handleInputChange}
-                                        placeholder="Enter permission description"
+                                        placeholder={t.fieldDescription}
                                         className="w-full px-3 py-2 bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
                                     />
                                 </div>
@@ -573,7 +588,7 @@ export default function PermissionPage() {
                                         disabled={!formData.permission_name.trim() || isProcessing}
                                         className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                                     >
-                                        {isProcessing ? 'Adding...' : 'Add Permission'}
+                                        {isProcessing ? t.adding : t.addPermission}
                                     </button>
                                 </div>
                             </form>
@@ -585,7 +600,7 @@ export default function PermissionPage() {
                     {/* API Permission List */}
                     <div className="md:col-span-2">
                         <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6">
-                            <h2 className="text-xl font-semibold mb-4 dark:text-white">Available API Permissions</h2>
+                            <h2 className="text-xl font-semibold mb-4 dark:text-white">{t.availableApiPermissions}</h2>
 
                             {error && (
                                 <div className="bg-red-100 dark:bg-red-900/30 border border-red-400 dark:border-red-800 text-red-700 dark:text-red-300 px-4 py-3 rounded mb-4">
@@ -599,13 +614,13 @@ export default function PermissionPage() {
                                         onClick={() => setActiveTab("permissions")}
                                         className={`px-4 py-2 rounded-l-md ${compareTab(activeTab, "permissions") ? "bg-blue-600 text-white" : "bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300"} transition-colors`}
                                     >
-                                        Regular Permissions
+                                        {t.regularPermissions}
                                     </button>
                                     <button
                                         onClick={() => setActiveTab("apiPermissions")}
                                         className={`px-4 py-2 rounded-r-md ${compareTab(activeTab, "apiPermissions") ? "bg-blue-600 text-white" : "bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300"} transition-colors`}
                                     >
-                                        API Permissions
+                                        {t.apiPermissions}
                                     </button>
                                 </div>
 
@@ -616,7 +631,7 @@ export default function PermissionPage() {
                                             type="text"
                                             value={searchTerm}
                                             onChange={(e) => setSearchTerm(e.target.value)}
-                                            placeholder="Search API permissions..."
+                                            placeholder={compareTab(activeTab, "permissions") ? t.searchPermissions : t.searchApiPermissions}
                                             className="px-4 py-2 pr-10 bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
                                         />
                                         <span className="absolute inset-y-0 right-0 flex items-center pr-3">
@@ -630,17 +645,17 @@ export default function PermissionPage() {
                                             disabled={currentPage === 1}
                                             className="px-3 py-2 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-md hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                                         >
-                                            Previous
+                                            {t.previous}
                                         </button>
                                         <span className="text-gray-900 dark:text-white">
-                                            Page {currentPage} of {totalPages}
+                                            {formatPageInfo(currentPage, totalPages, language)}
                                         </span>
                                         <button
                                             onClick={() => setCurrentPage((prev) => Math.min(prev + 1, totalPages))}
                                             disabled={currentPage === totalPages}
                                             className="px-3 py-2 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-md hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                                         >
-                                            Next
+                                            {t.next}
                                         </button>
                                     </div>
                                 </div>
@@ -653,7 +668,7 @@ export default function PermissionPage() {
                             ) : apiPermissions.length > 0 ? (
                                 <div className="overflow-x-auto">
                                     <div className="mb-4">
-                                        <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">Categorized View</h3>
+                                        <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">{t.categorizedView}</h3>
                                         <div className="space-y-2">
                                             {Object.keys(groupedApiPermissions).length > 0 ? (
                                                 Object.entries(groupedApiPermissions).map(([category, permissions]) => (
@@ -712,21 +727,21 @@ export default function PermissionPage() {
                                                 ))
                                             ) : (
                                                 <div className="text-center py-4 text-gray-500 dark:text-gray-400">
-                                                    No API permissions to categorize
+                                                    {t.noApiPermissions}
                                                 </div>
                                             )}
                                         </div>
                                     </div>
 
-                                    <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">Detailed List</h3>
+                                    <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">{t.detailedList}</h3>
                                     <table className="min-w-full bg-white dark:bg-gray-800">
                                         <thead className="bg-gray-100 dark:bg-gray-700">
                                             <tr>
-                                                <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">ID</th>
-                                                <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Name</th>
-                                                <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Method</th>
-                                                <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">API Path</th>
-                                                <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Actions</th>
+                                                <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">{t.id}</th>
+                                                <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">{t.name}</th>
+                                                <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">{t.method}</th>
+                                                <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">{t.apiPath}</th>
+                                                <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">{t.actions}</th>
                                             </tr>
                                         </thead>
                                         <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
@@ -774,7 +789,7 @@ export default function PermissionPage() {
                                 </div>
                             ) : (
                                 <div className="text-center py-8 text-gray-500 dark:text-gray-400">
-                                    No API permissions found
+                                    {t.noApiPermissions}
                                 </div>
                             )}
                         </div>
@@ -783,11 +798,11 @@ export default function PermissionPage() {
                     {/* Add API Permission Form */}
                     <div className="md:col-span-1">
                         <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6">
-                            <h2 className="text-xl font-semibold mb-4 dark:text-white">Add New API Permission</h2>
+                            <h2 className="text-xl font-semibold mb-4 dark:text-white">{t.addNewApiPermission}</h2>
                             <form onSubmit={(e) => { e.preventDefault(); handleAddApiPermission(); }} className="space-y-4">
                                 <div>
                                     <label htmlFor="api_permission_name" className="block text-sm font-medium mb-2 dark:text-gray-300">
-                                        Permission Name
+                                        {t.permissionName}
                                     </label>
                                     <select
                                         id="api_permission_name"
@@ -796,11 +811,11 @@ export default function PermissionPage() {
                                         onChange={handleSelectChange}
                                         className="w-full px-3 py-2 bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
                                     >
-                                        <option value="">Select Permission Name</option>
+                                        <option value="">{t.selectPermissionName}</option>
                                         {permissionNames.map(name => (
                                             <option key={name} value={name}>{name}</option>
                                         ))}
-                                        <option value="custom">Custom (Enter new)</option>
+                                        <option value="custom">{t.custom} ({t.enterNew})</option>
                                     </select>
                                     {formData.permission_name === 'custom' && (
                                         <input
@@ -808,7 +823,7 @@ export default function PermissionPage() {
                                             name="permission_name"
                                             value=""
                                             onChange={handleInputChange}
-                                            placeholder="Enter custom permission name"
+                                            placeholder={t.enterCustomPermissionName}
                                             className="mt-2 w-full px-3 py-2 bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
                                         />
                                     )}
@@ -816,7 +831,7 @@ export default function PermissionPage() {
 
                                 <div>
                                     <label htmlFor="api_path" className="block text-sm font-medium mb-2 dark:text-gray-300">
-                                        API Path
+                                        {t.apiPath}
                                     </label>
                                     <select
                                         id="api_path"
@@ -825,7 +840,7 @@ export default function PermissionPage() {
                                         onChange={handleSelectChange}
                                         className="w-full px-3 py-2 bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
                                     >
-                                        <option value="">Select API Path</option>
+                                        <option value="">{t.selectApiPath}</option>
                                         {[...new Set(availableRoutes.map(route => route.path))].map(path => (
                                             <option key={path} value={path}>{path}</option>
                                         ))}
@@ -834,7 +849,7 @@ export default function PermissionPage() {
 
                                 <div>
                                     <label htmlFor="method" className="block text-sm font-medium mb-2 dark:text-gray-300">
-                                        HTTP Method
+                                        {t.httpMethod}
                                     </label>
                                     <select
                                         id="method"
@@ -844,7 +859,7 @@ export default function PermissionPage() {
                                         disabled={!formData.api_path}
                                         className="w-full px-3 py-2 bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                                     >
-                                        <option value="">Select HTTP Method</option>
+                                        <option value="">{t.selectHttpMethod}</option>
                                         {getMethodsForPath(formData.api_path || '').map(method => (
                                             <option key={method} value={method}>{method}</option>
                                         ))}
@@ -863,7 +878,7 @@ export default function PermissionPage() {
                                         disabled={!formData.permission_name.trim() || !formData.method || !formData.api_path?.trim() || isProcessing}
                                         className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                                     >
-                                        {isProcessing ? 'Adding...' : 'Add API Permission'}
+                                        {isProcessing ? t.adding : t.addApiPermission}
                                     </button>
                                 </div>
                             </form>
@@ -877,15 +892,15 @@ export default function PermissionPage() {
                 isOpen={isEditOpen}
                 onClose={onEditClose}
                 onSave={activeTab === "permissions" ? handleEditPermission : handleApiEditPermission}
-                title={activeTab === "permissions" ? "Edit Permission" : "Edit API Permission"}
-                saveText="Save Changes"
-                cancelText="Cancel"
+                title={activeTab === "permissions" ? t.editPermission : t.editApiPermission}
+                saveText={t.saveChanges}
+                cancelText={t.cancel}
                 isProcessing={isProcessing}
             >
                 <div className="space-y-4">
                     <div>
                         <label htmlFor="edit-name" className="block text-sm font-medium mb-2 dark:text-gray-300">
-                            Permission Name
+                            {t.permissionName}
                         </label>
                         {activeTab === "permissions" ? (
                             <input
@@ -894,7 +909,7 @@ export default function PermissionPage() {
                                 name="permission_name"
                                 value={formData.permission_name}
                                 onChange={handleInputChange}
-                                placeholder="Enter permission name"
+                                placeholder={t.enterPermissionName}
                                 className="w-full px-3 py-2 bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
                             />
                         ) : (
@@ -905,11 +920,11 @@ export default function PermissionPage() {
                                 onChange={handleSelectChange}
                                 className="w-full px-3 py-2 bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
                             >
-                                <option value="">Select Permission Name</option>
+                                <option value="">{t.selectPermissionName}</option>
                                 {permissionNames.map(name => (
                                     <option key={name} value={name}>{name}</option>
                                 ))}
-                                <option value="custom">Custom (Enter new)</option>
+                                <option value="custom">{t.custom} ({t.enterNew})</option>
                             </select>
                         )}
                         {formData.permission_name === 'custom' && activeTab === "apiPermissions" && (
@@ -918,7 +933,7 @@ export default function PermissionPage() {
                                 name="permission_name"
                                 value=""
                                 onChange={handleInputChange}
-                                placeholder="Enter custom permission name"
+                                placeholder={t.enterCustomPermissionName}
                                 className="mt-2 w-full px-3 py-2 bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
                             />
                         )}
@@ -928,7 +943,7 @@ export default function PermissionPage() {
                         <>
                             <div>
                                 <label htmlFor="edit-api-path" className="block text-sm font-medium mb-2 dark:text-gray-300">
-                                    API Path
+                                    {t.apiPath}
                                 </label>
                                 <select
                                     id="edit-api-path"
@@ -937,7 +952,7 @@ export default function PermissionPage() {
                                     onChange={handleSelectChange}
                                     className="w-full px-3 py-2 bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
                                 >
-                                    <option value="">Select API Path</option>
+                                    <option value="">{t.selectApiPath}</option>
                                     {[...new Set(availableRoutes.map(route => route.path))].map(path => (
                                         <option key={path} value={path}>{path}</option>
                                     ))}
@@ -946,7 +961,7 @@ export default function PermissionPage() {
 
                             <div>
                                 <label htmlFor="edit-method" className="block text-sm font-medium mb-2 dark:text-gray-300">
-                                    HTTP Method
+                                    {t.httpMethod}
                                 </label>
                                 <select
                                     id="edit-method"
@@ -956,7 +971,7 @@ export default function PermissionPage() {
                                     disabled={!formData.api_path}
                                     className="w-full px-3 py-2 bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                                 >
-                                    <option value="">Select HTTP Method</option>
+                                    <option value="">{t.selectHttpMethod}</option>
                                     {getMethodsForPath(formData.api_path || '').map(method => (
                                         <option key={method} value={method}>{method}</option>
                                     ))}
@@ -974,7 +989,7 @@ export default function PermissionPage() {
                     {activeTab === "permissions" && (
                         <div>
                             <label htmlFor="edit-description" className="block text-sm font-medium mb-2 dark:text-gray-300">
-                                Description
+                                {t.description}
                             </label>
                             <input
                                 type="text"
@@ -982,7 +997,7 @@ export default function PermissionPage() {
                                 name="description"
                                 value={formData.description}
                                 onChange={handleInputChange}
-                                placeholder="Enter permission description"
+                                placeholder={t.fieldDescription}
                                 className="w-full px-3 py-2 bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
                             />
                         </div>
@@ -995,10 +1010,10 @@ export default function PermissionPage() {
                 isOpen={isDeleteOpen}
                 onClose={onDeleteClose}
                 onConfirm={activeTab === "permissions" ? handleDeletePermission : handleApiDeletePermission}
-                title={activeTab === "permissions" ? "Delete Permission" : "Delete API Permission"}
-                message={`Are you sure you want to delete the ${activeTab === "permissions" ? "permission" : "API permission"} "${formData.permission_name}"? This action cannot be undone.`}
-                confirmText="Delete"
-                cancelText="Cancel"
+                title={activeTab === "permissions" ? t.deletePermission : t.deleteApiPermission}
+                message={`Are you sure you want to delete the ${activeTab === "permissions" ? t.permission : t.apiPermission} "${formData.permission_name}"? ${t.actionCannotBeUndone}`}
+                confirmText={t.delete}
+                cancelText={t.cancel}
             />
         </div>
     );

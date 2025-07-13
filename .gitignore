@@ -1,1 +1,4 @@
 ollama/*
+**/.env
+**/.env.local
+

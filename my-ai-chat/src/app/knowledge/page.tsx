@@ -95,6 +95,12 @@ export default function Knowledge() {
     fetchKnowledgeBases();
   }, [isAuthenticated, user]); // Update dependency to just user since we don't use DepartmentID anymore
 
+  const isEnglishOnly = (text: string) => {
+    // Regular expression to match non-English characters
+    const regex = /[^\x00-\x7F]+/;
+    return !regex.test(text);
+  };
+
   const handleCreateKnowledge = async (title: string, description: string) => {
     // Check if title already exists
     const titleExists = knowledgeBases.some(
@@ -103,6 +109,13 @@ export default function Knowledge() {
 
     if (titleExists) {
       alert(t.duplicateError);
+      return;
+    }
+
+    // Validate that title contains only English characters
+    if (!isEnglishOnly(title)) {
+      // Show bilingual alert message for English-only requirement
+      alert(t.englishTitleOnly || 'Please enter title in English only / 請使用英文輸入標題');
       return;
     }
 

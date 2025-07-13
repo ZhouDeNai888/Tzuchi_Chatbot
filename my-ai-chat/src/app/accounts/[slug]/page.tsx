@@ -52,6 +52,8 @@ const PermissionDisplay = ({
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [refreshKey, setRefreshKey] = useState(0);
+    const { language } = useLanguage();
+    const t = translations[language];
 
     // Fetch permissions when component mounts or refresh key changes
     useEffect(() => {
@@ -63,14 +65,14 @@ const PermissionDisplay = ({
                 setError(null);
             } catch (err) {
                 console.error('Failed to fetch permissions:', err);
-                setError('Failed to load available permissions');
+                setError(t.accountEdit?.failedToLoad || 'Failed to load available permissions');
             } finally {
                 setLoading(false);
             }
         };
 
         fetchPermissions();
-    }, [refreshKey]);
+    }, [refreshKey, t]);
 
     const handleTogglePermission = async (permissionName: string, checked: boolean) => {
         try {
@@ -78,10 +80,10 @@ const PermissionDisplay = ({
 
             if (checked) {
                 await addPermissionToUser(permissionName, parseInt(userId));
-                toast.success(`Added permission: ${permissionName}`);
+                toast.success(`${t.accountEdit?.addedPermission || 'Added permission'}: ${permissionName}`);
             } else {
                 await removePermissionFromUser(permissionName, parseInt(userId));
-                toast.success(`Removed permission: ${permissionName}`);
+                toast.success(`${t.accountEdit?.removedPermission || 'Removed permission'}: ${permissionName}`);
             }
 
             // Update the parent component's state
@@ -95,7 +97,7 @@ const PermissionDisplay = ({
             setRefreshKey(prev => prev + 1);
         } catch (err) {
             console.error(`Failed to ${checked ? 'add' : 'remove'} permission:`, err);
-            toast.error(`Failed to ${checked ? 'add' : 'remove'} permission: ${permissionName}`);
+            toast.error(`${checked ? t.accountEdit?.failedToAdd || 'Failed to add' : t.accountEdit?.failedToRemove || 'Failed to remove'} ${t.accountEdit?.permission || 'permission'}: ${permissionName}`);
         } finally {
             setLoading(false);
         }
@@ -133,7 +135,7 @@ const PermissionDisplay = ({
             {isAdmin && (
                 <div className="bg-blue-50 dark:bg-blue-900/30 p-3 border-b border-gray-200 dark:border-gray-700">
                     <p className="text-sm text-blue-800 dark:text-blue-200">
-                        <span className="font-medium">Administrator permissions:</span> As an admin, this user has all permissions by default.
+                        <span className="font-medium">{t.accountEdit?.adminPermissions || 'Administrator permissions'}:</span> {t.accountEdit?.adminHasAllPermissions || 'As an admin, this user has all permissions by default.'}
                     </p>
                 </div>
             )}
@@ -143,7 +145,7 @@ const PermissionDisplay = ({
                     Object.entries(groupedPermissions).map(([category, permissions]) => (
                         <div key={category} className="mb-4">
                             <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300 capitalize mb-2 px-2">
-                                {category === 'general' ? 'General Permissions' : `${category} Permissions`}
+                                {category === 'general' ? (t.accountEdit?.generalPermissions || 'General Permissions') : `${category} ${t.accountEdit?.permissions || 'Permissions'}`}
                             </h3>
                             <div className="space-y-1">
                                 {permissions.map((permission) => (
@@ -177,7 +179,7 @@ const PermissionDisplay = ({
                     ))
                 ) : (
                     <div className="text-center text-gray-500 dark:text-gray-400 py-8">
-                        No permissions available
+                        {t.accountEdit?.noPermissionsAvailable || 'No permissions available'}
                     </div>
                 )}
             </div>
@@ -194,6 +196,7 @@ export default function EditUserPage() {
     const [saving, setSaving] = useState(false);
     const { language } = useLanguage();
     const t = translations[language].accountEdit;
+    const commonT = translations[language].common;
 
     const { slug } = params;
 
@@ -242,14 +245,14 @@ export default function EditUserPage() {
                 });
             } catch (error) {
                 console.error('Error fetching user data:', error);
-                toast.error('Failed to load user data');
+                toast.error(t.failedToLoad || 'Failed to load user data');
             } finally {
                 setLoading(false);
             }
         };
 
         fetchUserData();
-    }, [slug]);
+    }, [slug, t]);
 
     const handleUpdateUser = async () => {
         if (!user) return;
@@ -273,11 +276,11 @@ export default function EditUserPage() {
             }
 
             await updateUser(user.id, updateData);
-            toast.success('User updated successfully');
+            toast.success(t.userUpdated || 'User updated successfully');
             router.push('/accounts');
         } catch (error) {
             console.error('Error updating user:', error);
-            toast.error(error instanceof Error ? error.message : 'Failed to update user');
+            toast.error(error instanceof Error ? error.message : (t.failedToUpdate || 'Failed to update user'));
         } finally {
             setSaving(false);
         }
@@ -299,8 +302,8 @@ export default function EditUserPage() {
                         <svg className="h-16 w-16 text-gray-400 mx-auto mb-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                         </svg>
-                        <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-4">User Not Found</h1>
-                        <p className="text-gray-600 dark:text-gray-400 mb-8">The requested account could not be found or you don't have permission to view it.</p>
+                        <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-4">{t.userNotFound || 'User Not Found'}</h1>
+                        <p className="text-gray-600 dark:text-gray-400 mb-8">{t.userNotFoundMessage || 'The requested account could not be found or you don\'t have permission to view it.'}</p>
                         <button
                             onClick={() => router.push('/accounts')}
                             className="bg-blue-600 dark:bg-blue-500 text-white px-6 py-2 rounded-md hover:bg-blue-700 dark:hover:bg-blue-600 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
@@ -343,10 +346,10 @@ export default function EditUserPage() {
                             ? 'bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200'
                             : 'bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-200'
                             }`}>
-                            {user.status === 'active' ? 'Active' : 'Inactive'}
+                            {user.status === 'active' ? (t.status?.active || 'Active') : (t.status?.inactive || 'Inactive')}
                         </span>
                         <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200">
-                            {user.role === 'admin' ? 'Administrator' : 'User'}
+                            {user.role === 'admin' ? (t.roles?.administrator || 'Administrator') : (t.roles?.user || 'User')}
                         </span>
                     </div>
                 </div>
@@ -354,13 +357,13 @@ export default function EditUserPage() {
                 <div className="bg-white dark:bg-gray-800 shadow-lg rounded-lg overflow-hidden">
                     <div className="p-6 border-b border-gray-200 dark:border-gray-700">
                         <h2 className="text-lg font-medium text-gray-900 dark:text-white mb-4">
-                            {'Account Details'}
+                            {t.accountDetails || 'Account Details'}
                         </h2>
 
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                                    {t.form.username || 'Username'} *
+                                    {t.form?.username || 'Username'} *
                                 </label>
                                 <input
                                     type="text"
@@ -372,7 +375,7 @@ export default function EditUserPage() {
 
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                                    {'Email'} *
+                                    {t.email || 'Email'} *
                                 </label>
                                 <input
                                     type="email"
@@ -384,7 +387,7 @@ export default function EditUserPage() {
 
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                                    {'First Name'}
+                                    {t.firstName || 'First Name'}
                                 </label>
                                 <input
                                     type="text"
@@ -396,7 +399,7 @@ export default function EditUserPage() {
 
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                                    {'Last Name'}
+                                    {t.lastName || 'Last Name'}
                                 </label>
                                 <input
                                     type="text"
@@ -408,44 +411,44 @@ export default function EditUserPage() {
 
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                                    {t.form.password || 'Password'}
+                                    {t.form?.password || 'Password'}
                                 </label>
                                 <input
                                     type="password"
-                                    placeholder={t.form.passwordPlaceholder || "Enter to change password"}
+                                    placeholder={t.form?.passwordPlaceholder || "Enter to change password"}
                                     onChange={(e) => setUser({ ...user, password: e.target.value })}
                                     className="bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white p-3 rounded-md border border-gray-300 dark:border-gray-600 focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 w-full"
                                 />
                                 <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                                    {t.form.passwordHint || "Leave blank to keep current password"}
+                                    {t.form?.passwordHint || "Leave blank to keep current password"}
                                 </p>
                             </div>
 
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                                    {t.form.status || 'Status'}
+                                    {t.form?.status || 'Status'}
                                 </label>
                                 <select
                                     value={user.status}
                                     onChange={(e) => setUser({ ...user, status: e.target.value as 'active' | 'inactive' })}
                                     className="bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white p-3 rounded-md border border-gray-300 dark:border-gray-600 focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 w-full"
                                 >
-                                    <option value="active">Active</option>
-                                    <option value="inactive">Inactive</option>
+                                    <option value="active">{t.status?.active || 'Active'}</option>
+                                    <option value="inactive">{t.status?.inactive || 'Inactive'}</option>
                                 </select>
                             </div>
 
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                                    {t.form.role || 'Role'}
+                                    {t.form?.role || 'Role'}
                                 </label>
                                 <select
                                     value={user.role}
                                     onChange={(e) => setUser({ ...user, role: e.target.value as 'admin' | 'user' })}
                                     className="bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white p-3 rounded-md border border-gray-300 dark:border-gray-600 focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 w-full"
                                 >
-                                    <option value="user">User</option>
-                                    <option value="admin">Administrator</option>
+                                    <option value="user">{t.roles?.user || 'User'}</option>
+                                    <option value="admin">{t.roles?.administrator || 'Administrator'}</option>
                                 </select>
                             </div>
                         </div>
@@ -454,14 +457,14 @@ export default function EditUserPage() {
                     {/* Departments Section */}
                     <div className="p-6 border-b border-gray-200 dark:border-gray-700">
                         <h2 className="text-lg font-medium text-gray-900 dark:text-white mb-4">
-                            {t.form.department || 'Department Access'}
+                            {t.form?.department || 'Department Access'}
                         </h2>
 
                         {departments.length > 0 ? (
                             <>
                                 <div className="mb-4">
                                     <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">
-                                        Select the departments this user can access:
+                                        {t.selectDepartmentsInfo || 'Select the departments this user can access:'}
                                     </p>
                                     <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2 max-h-60 overflow-y-auto bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md p-3">
                                         {departments.map(dept => {
@@ -515,7 +518,7 @@ export default function EditUserPage() {
                                 {user.selectedDepartments.length > 0 && (
                                     <div className="mt-4">
                                         <p className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                                            Selected Departments:
+                                            {t.selectedDepartments || 'Selected Departments:'}
                                         </p>
                                         <div className="flex flex-wrap gap-2">
                                             {user.selectedDepartments.map(deptId => {
@@ -550,7 +553,7 @@ export default function EditUserPage() {
                                                                 });
                                                             }}
                                                         >
-                                                            <span className="sr-only">Remove</span>
+                                                            <span className="sr-only">{t.remove || 'Remove'}</span>
                                                             <svg className="h-3 w-3" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
                                                                 <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
                                                             </svg>
@@ -564,7 +567,7 @@ export default function EditUserPage() {
                             </>
                         ) : (
                             <div className="text-center p-4 bg-gray-50 dark:bg-gray-700 rounded-md">
-                                <p className="text-gray-500 dark:text-gray-400">No departments available</p>
+                                <p className="text-gray-500 dark:text-gray-400">{t.noDepartments || 'No departments available'}</p>
                             </div>
                         )}
                     </div>
@@ -572,7 +575,7 @@ export default function EditUserPage() {
                     {/* Permissions Section */}
                     <div className="p-6">
                         <h2 className="text-lg font-medium text-gray-900 dark:text-white mb-4">
-                            {t.form.permissions || 'Permissions'}
+                            {t.form?.permissions || 'Permissions'}
                         </h2>
 
                         <PermissionDisplay
@@ -591,9 +594,9 @@ export default function EditUserPage() {
                                         </svg>
                                     </div>
                                     <div className="ml-3">
-                                        <h3 className="text-sm font-medium text-yellow-800 dark:text-yellow-300">Full Administrator Access</h3>
+                                        <h3 className="text-sm font-medium text-yellow-800 dark:text-yellow-300">{t.fullAdminAccess || 'Full Administrator Access'}</h3>
                                         <div className="mt-1 text-xs text-yellow-700 dark:text-yellow-200">
-                                            <p>This user has full administrator privileges with unrestricted access to all system features.</p>
+                                            <p>{t.fullAdminDescription || 'This user has full administrator privileges with unrestricted access to all system features.'}</p>
                                         </div>
                                     </div>
                                 </div>
@@ -608,7 +611,7 @@ export default function EditUserPage() {
                         onClick={() => router.push('/accounts')}
                         className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
                     >
-                        {'Cancel'}
+                        {commonT.cancel || 'Cancel'}
                     </button>
 
                     <button
@@ -622,10 +625,10 @@ export default function EditUserPage() {
                                     <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                                     <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                                 </svg>
-                                {'Saving...'}
+                                {commonT.saving || 'Saving...'}
                             </>
                         ) : (
-                            t.form.saveChanges || 'Save Changes'
+                            t.form?.saveChanges || commonT.saveChanges || 'Save Changes'
                         )}
                     </button>
                 </div>

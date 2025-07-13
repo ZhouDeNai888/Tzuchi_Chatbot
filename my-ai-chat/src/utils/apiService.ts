@@ -15,6 +15,7 @@ export interface ChatRequest {
   conversation_id?: number;
   stream?: boolean;
   agent_key?: string;
+  chat_id?: string;  // Added chat_id to match usage
 }
 
 /**
@@ -54,6 +55,7 @@ export interface UserUpdateRequest {
   username?: string;
   email?: string;
   password?: string;
+  current_password?: string;
   first_name?: string;
   last_name?: string;
   department_ids?: number[];
@@ -2462,6 +2464,71 @@ export const getAllApiRoutes = async (): Promise<ApiRoute[]> => {
   }
 };
 
+/**
+ * Interface for contact admin request
+ */
+export interface ContactAdminRequest {
+  email: string;
+  content: string;
+}
+
+/**
+ * Interface for forgot password request
+ */
+export interface ForgotPasswordRequest {
+  email: string;
+}
+
+/**
+ * Send a contact admin request
+ */
+export const contactAdmin = async (data: ContactAdminRequest): Promise<boolean> => {
+  try {
+    const response = await fetch(`/api/contact-admin`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(data),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.detail || 'Failed to send message to admin');
+    }
+
+    return true;
+  } catch (error) {
+    console.error('Contact admin error:', error);
+    throw error;
+  }
+};
+
+/**
+ * Send a forgot password request
+ */
+export const forgotPassword = async (email: string): Promise<boolean> => {
+  try {
+    const response = await fetch(`/api/forgot-password`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ email }),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.detail || 'Failed to process forgot password request');
+    }
+
+    return true;
+  } catch (error) {
+    console.error('Forgot password error:', error);
+    throw error;
+  }
+};
+
 export default {
   fetchWithAuth,
   getUserProfile,
@@ -2531,5 +2598,7 @@ export default {
   createApiPermission,
   updateApiPermission,
   deleteApiPermission,
-  getAllApiRoutes
+  getAllApiRoutes,
+  contactAdmin,
+  forgotPassword
 };

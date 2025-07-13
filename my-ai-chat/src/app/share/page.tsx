@@ -298,7 +298,7 @@ export default function SharePage() {
   );
 
   return (
-    <div className="p-6 mt-16">
+    <div className="p-6 mt-15">
       {/* Header */}
       <h1 className="text-4xl font-bold mb-6 text-left text-black dark:text-white">Share Setting</h1>
       {/* <h1 className="text-2xl font-semibold mb-2 text-black dark:text-white">{t.title}</h1>

@@ -36,6 +36,9 @@ import requests
 from ai_bot import RAG
 from db import Database
 from auto_crawl import crawl
+import smtplib
+from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
 
 # Configure logging
 logging.basicConfig(
@@ -334,6 +337,7 @@ class ChatRequest(BaseModel):
     conversation_id: Optional[int] = None
     stream: bool = True
     agent_key: Optional[str] = None
+    chat_id: Optional[str] = None  # Added chat_id to match usage
 
 class ConversationRequest(BaseModel):
     title: Optional[str] = None
@@ -654,13 +658,21 @@ async def process_chat_streaming(
     max_tokens: int,
     prompt: str,
     agent_key: str ,
-    nftext: str
+    nftext: str,
+    chat_id:str
 ) -> AsyncGenerator[str, None]:
     print(f'*************************************       streaming           *********************************************')
     try:
         # First try to find any cached model for this agent_key regardless of other parameters
         cached_model = None
         cached_retrieval = None
+        
+        # If chat_id is provided, load existing chat history
+        loaded_chat_history = []
+        if chat_id:
+            loaded_chat_history = await load_chat_history(chat_id)
+            if loaded_chat_history:
+                logger.info(f"Using existing chat history for chat_id: {chat_id}")
         
         # Search through all cached models for matching agent_key
         for model in model_cache.values():
@@ -718,12 +730,16 @@ async def process_chat_streaming(
             
         # Format chat history
         chat_history = []
-        if len(messages) > 1:
+        if loaded_chat_history:
+            # Use the loaded chat history if available
+            chat_history = loaded_chat_history
+        elif len(messages) > 1:
+            # Otherwise use the provided messages
             for msg in messages[:-1]:
                 chat_history.append((msg.role, msg.content))
         
         current_message = messages[-1].content
-        
+        print(f'chat_history: {chat_history}')
         # Create the astream generator from the retrieval chain
         async_stream = retrieval_chain.astream({
             "input": current_message,
@@ -809,7 +825,24 @@ async def process_chat_streaming(
             # Convert back to list with no duplicates
             source_list = list(source_dict.values())
             yield json.dumps({"sources": source_list}, ensure_ascii=False) + "\n"
+        
+        # Save updated chat history with new messages
+        if chat_id:
+            # Add the current message and AI response to history
+            updated_messages = list(messages)  # Create a copy of the messages
+            # Add AI response as a new message
+            updated_messages.append(ChatMessage(role="assistant", content=full_answer))
+            # Save the updated chat history
+            await save_chat_history(chat_id, updated_messages)
+            logger.info(f"Updated chat history for chat_id: {chat_id}")
     
+    except KeyError as ke:
+        logger.error(f"KeyError in streaming chat: Missing key {ke}")
+        if str(ke) == "'context'":
+            # Gracefully handle missing context key
+            yield f"เกิดข้อผิดพลาด: ไม่พบข้อมูลบริบทในคำตอบ"
+        else:
+            yield f"เกิดข้อผิดพลาด: ไม่พบข้อมูลสำคัญในคำตอบ ({str(ke)})"
     except Exception as e:
         logger.error(f"Error in streaming chat: {str(e)}")
         yield f"เกิดข้อผิดพลาด: {str(e)}"
@@ -1308,6 +1341,7 @@ async def chat_endpoint(request: ChatRequest, user = Depends(get_current_user)):
     prompt = ""
     department_id = request.department_id
     agent_key = request.agent_key
+    chat_id = request.chat_id
     
     if request.conversation_id:
         conversation = db.get_conversation(request.conversation_id)
@@ -1394,7 +1428,8 @@ async def chat_endpoint(request: ChatRequest, user = Depends(get_current_user)):
                 max_tokens,
                 prompt,
                 agent_key,
-                nftext
+                nftext,
+                chat_id
             ):
                 yield chunk
                 try:
@@ -2264,7 +2299,7 @@ async def delete_knowledge_base(
                 )
                 
                 if retrieval_chain != "notfound":
-                    # Update cache
+                    # Cache both model and retrieval chain
                     await cache_model(
                         model_name=model_name,
                         dept_id=agent_dept_id,
@@ -2273,7 +2308,7 @@ async def delete_knowledge_base(
                         model_instance=model_instance,
                         retrieval_chain=retrieval_chain
                     )
-                    logger.info(f"Successfully updated cache for agent {agent_key}")
+                    logger.info(f"Successfully cached model and retrieval chain for agent {agent_key}")
                 else:
                     logger.warning(f"Could not update retrieval chain for agent {agent_key}")
             except Exception as e:
@@ -2445,6 +2480,7 @@ async def create_document(
             if not document_create.title:
                 try:
                     from bs4 import BeautifulSoup
+
                     response = requests.get(web_url)
                     soup = BeautifulSoup(response.text, 'html.parser')
                     document_create.title = soup.title.string if soup.title else "Web Page"
@@ -2499,11 +2535,11 @@ async def create_document(
             if file_ext in ['.pdf']:
                 loader = PyPDFLoader(file_path)
                 docs = loader.load()
-            elif file_ext in ['.txt', '.md', '.html', '.htm']:
-                loader = TextLoader(file_path, encoding='utf-8')
-                docs = loader.load()
             elif file_ext in ['.csv']:
                 loader = CSVLoader(file_path)
+                docs = loader.load()
+            elif file_ext in ['.txt', '.md', '.html', '.htm']:
+                loader = TextLoader(file_path, encoding='utf-8')
                 docs = loader.load()
             elif file_ext in ['.docx', '.doc']:
                 loader = Docx2txtLoader(file_path)
@@ -2679,7 +2715,7 @@ async def update_document(
         # if user["role"] != "admin" and kb_data.get("OwnerID") != user["user_id"]:
         #     has_permission = db.check_user_has_permission(
         #         user_id=user["user_id"],
-        #         permission_name="edit_knowledge"
+        #         permission_name="edit_knowledge"  # Permission required to update documents
         #     )
         #     if not has_permission:
         #         raise HTTPException(status_code=403, detail="Permission denied")
@@ -3210,7 +3246,7 @@ async def add_user_to_department(
             status_code=404,
             detail="Failed to add user to department"
         )
-    
+
     return {"status": "success", "message": f"User with ID {user_id} added to department with ID {department_id}"}
 
 @app.delete("/api/departments/{department_id}/users/{user_id}")
@@ -3334,8 +3370,9 @@ async def add_permission_to_user(
         )
 
     return {
-        "status": "success", 
-        "message": f"Permission '{request.permission_name}' granted to user ID {target_user_id}"
+        "status": "success",
+        "message": "Feedback added successfully",
+        "feedback_id": success
     }
 
 @app.delete("/api/permissions/user")
@@ -3706,6 +3743,7 @@ async def get_agent_config_by_api_key(api_key: str):
         # Retrieve shared agent details
         shared_agent = db.get_shared_agent_by_api_key(api_key)
         shared_agent_name = shared_agent.get("Name") if shared_agent else "Unknown"
+        shared_agent_origins = shared_agent.get("AllowedOrigins", []) if shared_agent else []
 
         # Parse the agent configuration
         config = json.loads(agent_data.get("Configuration", "{}"))
@@ -3718,7 +3756,8 @@ async def get_agent_config_by_api_key(api_key: str):
             "model": model_name,
             "department_id": department_id,
             "agent_key": agent_key,
-            "shared_agent_name": shared_agent_name
+            "shared_agent_name": shared_agent_name,
+            "allowed_origins":shared_agent_origins,
         }
 
     except HTTPException:
@@ -4075,3 +4114,304 @@ async def delete_api_permission(
         )
     
     return {"status": "success", "message": f"API permission with ID {api_permission_id} deleted successfully"}
+
+# Add these functions after the helper functions section and before the API routes
+
+async def load_chat_history(chat_id: str) -> List[tuple]:
+    """Load existing chat history from a file based on chat_id"""
+    try:
+
+        
+        # Create chat history directory if it doesn't exist
+        chat_dir = os.path.join("chat_history").replace('\\', '/')
+        os.makedirs(chat_dir, exist_ok=True)
+        
+        # Construct the full file path
+        file_path = os.path.join(chat_dir, f"{chat_id}.json").replace('\\', '/')
+        
+        # Check if the file exists
+        if not os.path.exists(file_path):
+            logger.info(f"No existing chat history for chat_id: {chat_id}")
+            return []
+            
+        # Read the chat history from the file in JSON format
+        chat_history = []
+        with open(file_path, "r", encoding="utf-8") as f:
+            chat_data = json.load(f)
+            
+            for message in chat_data:
+                role = message.get("role", "human")
+                content = message.get("content", "")
+                
+                # Map custom roles to standard LLM roles to avoid "Unexpected message type" error
+                if role in ["user", "human"]:
+                    mapped_role = "human"
+                elif role in ["assistant", "ai", "bot"]:
+                    mapped_role = "ai"
+                elif role in ["system"]:
+                    mapped_role = "system"
+                else:
+                    # Default to human for unrecognized roles
+                    logger.warning(f"Unrecognized role '{role}' in chat history, defaulting to 'human'")
+                    mapped_role = "human"
+                
+                chat_history.append((mapped_role, content))
+        
+        logger.info(f"Loaded {len(chat_history)} messages from chat history for chat_id: {chat_id}")
+        return chat_history
+        
+    except Exception as e:
+        logger.error(f"Error loading chat history for chat_id {chat_id}: {str(e)}")
+        return []  # Return empty history on error
+
+def load_chat_history_metadata():
+    """Load chat history metadata from file"""
+    try:
+        metadata_file = os.path.join("chat_history", "metadata.json").replace('\\', '/')
+        if os.path.exists(metadata_file):
+            with open(metadata_file, "r", encoding="utf-8") as f:
+                metadata = json.load(f)
+                print(f"Loaded chat history metadata: {metadata}")
+                return metadata
+        return {}
+    except Exception as e:
+        logger.error(f"Error loading chat history metadata: {str(e)}")
+        return {}
+
+def save_chat_history_metadata(metadata):
+    """Save chat history metadata to file"""
+    try:
+        chat_dir = os.path.join("chat_history").replace('\\', '/')
+        os.makedirs(chat_dir, exist_ok=True)
+        
+        metadata_file = os.path.join(chat_dir, "metadata.json").replace('\\', '/')
+        with open(metadata_file, "w", encoding="utf-8") as f:
+            json.dump(metadata, f, ensure_ascii=False, indent=2)
+        return True
+    except Exception as e:
+        logger.error(f"Error saving chat history metadata: {str(e)}")
+        return False
+
+async def save_chat_history(chat_id: str, messages: List[ChatMessage]) -> bool:
+    """Save chat history to a file based on chat_id"""
+    try:
+        # Create chat history directory if it doesn't exist
+        chat_dir = os.path.join("chat_history").replace('\\', '/')
+        os.makedirs(chat_dir, exist_ok=True)
+        
+        # Load existing metadata
+        metadata = load_chat_history_metadata()
+        
+        
+        # Update the last accessed time for this chat_id
+        current_time = time.time()
+        metadata[chat_id] = current_time
+        
+        # Save updated metadata
+        save_chat_history_metadata(metadata)
+        
+        # Clean up old chat histories that haven't been accessed in an hour
+        cleanup_old_chat_histories()
+        
+        # Construct the full file path
+        file_path = os.path.join(chat_dir, f"{chat_id}.json").replace('\\', '/')
+        
+        # Convert messages to a serializable format
+        new_messages = []
+        for msg in messages:
+            # Map role to standard format before saving
+            role = msg.role
+            if role in ["user", "human"]:
+                standard_role = "human"
+            elif role in ["assistant", "ai", "bot"]:
+                standard_role = "ai"
+            elif role in ["system"]:
+                standard_role = "system"
+            else:
+                # Default to human for unrecognized roles
+                logger.warning(f"Unrecognized role '{role}' in message, defaulting to 'human'")
+                standard_role = "human"
+            
+            new_messages.append({
+                "role": standard_role,
+                "content": msg.content
+            })
+        
+        # Read existing messages if file exists
+        existing_messages = []
+        if os.path.exists(file_path) and os.path.getsize(file_path) > 0:
+            try:
+                with open(file_path, "r", encoding="utf-8") as f:
+                    existing_messages = json.load(f)
+                    if not isinstance(existing_messages, list):
+                        logger.warning(f"Existing chat history in {file_path} is not a valid JSON array. Creating a new file.")
+                        existing_messages = []
+            except json.JSONDecodeError:
+                logger.warning(f"Failed to parse existing chat history in {file_path}. Creating a new file.")
+                existing_messages = []
+        
+        # Combine existing and new messages
+        all_messages = existing_messages + new_messages
+        
+        # Write the complete chat history to the file in JSON format
+        with open(file_path, "w", encoding="utf-8") as f:
+            json.dump(all_messages, f, ensure_ascii=False, indent=2)
+        
+        logger.info(f"Saved {len(messages)} messages to chat history for chat_id: {chat_id}")
+        return True
+        
+    except Exception as e:
+        logger.error(f"Error saving chat history for chat_id {chat_id}: {str(e)}")
+        return False  # Return False on error
+
+def cleanup_old_chat_histories():
+    """Delete chat history files that haven't been accessed in over an hour"""
+    try:
+        current_time = time.time()
+        one_hour_in_seconds = 10  # 1 hour = 3600 seconds
+        chat_history_last_accessed = load_chat_history_metadata()
+        # Check each chat_id in our tracking dictionary
+        for chat_id, last_accessed in list(chat_history_last_accessed.items()):
+            print(f'chat_history_items:{chat_history_last_accessed.items()}')
+            print(f"Checking chat_id: {chat_id}, last accessed: {last_accessed}")
+            print(f'current_time: {current_time}, last_accessed: {last_accessed}, difference: {current_time - last_accessed}')
+            if current_time - last_accessed > one_hour_in_seconds:
+                print(f'current_time: {current_time}, last_accessed: {last_accessed}, difference: {current_time - last_accessed}')
+                # This chat hasn't been accessed in over an hour, delete its file
+                file_path = os.path.join("chat_history", f"{chat_id}.json").replace('\\', '/')
+                if os.path.exists(file_path):
+                    os.remove(file_path)
+                    logger.info(f"Deleted inactive chat history for chat_id: {chat_id}")
+                
+    except Exception as e:
+        logger.error(f"Error cleaning up old chat histories: {str(e)}")
+
+
+@app.post("/api/forgot-password")
+async def forgot_password(email: str = Body(..., embed=True)):
+    """
+    Handle forgot password request.
+    
+    Args:
+        email: User's email address
+        
+    Returns:
+        Success message
+    """
+    print(f"Received forgot password request for email: {email}")
+    # Validate email format
+    if not email or "@" not in email:
+        raise HTTPException(status_code=400, detail="Invalid email address")
+    
+    # Check if user exists
+    user = db.get_user_by_email(email)
+    print(f"User found: {user}")
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    # Notify the user via email
+    try:
+
+        # Email configuration
+        smtp_server = os.getenv("SMTP_SERVER")
+        smtp_port = int(os.getenv("SMTP_PORT", 587))
+        smtp_user = os.getenv("SMTP_USER")
+        smtp_password = os.getenv("SMTP_PASSWORD")
+        sender_email = smtp_user
+
+        # Create email for user
+        user_subject = "Password Reset Request"
+        user_body = f"Dear {user['Username']},\n\nPlease reset your password using the link provided.\n\nBest regards,\nSupport Team"
+        user_message = MIMEMultipart()
+        user_message["From"] = sender_email
+        user_message["To"] = email
+        user_message["Subject"] = user_subject
+        user_message.attach(MIMEText(user_body, "plain"))
+
+        # Send email to user
+        with smtplib.SMTP(smtp_server, smtp_port) as server:
+            server.starttls()
+            server.login(smtp_user, smtp_password)
+            server.sendmail(sender_email, email, user_message.as_string())
+        logger.info(f"Password reset email sent to {email}")
+
+        # Notify admins about the forgot password request
+        admin_emails = db.get_admin_emails()  # Fetch emails of users with admin role
+        admin_subject = "Forgot Password Notification"
+        admin_body = f"User with email {email} has requested a password reset."
+        for admin_email in admin_emails:
+            admin_message = MIMEMultipart()
+            admin_message["From"] = sender_email
+            admin_message["To"] = admin_email
+            admin_message["Subject"] = admin_subject
+            admin_message.attach(MIMEText(admin_body, "plain"))
+
+            # Send email to admin
+            with smtplib.SMTP(smtp_server, smtp_port) as server:
+                server.starttls()
+                server.login(smtp_user, smtp_password)
+                server.sendmail(sender_email, admin_email, admin_message.as_string())
+            logger.info(f"Notification email sent to admin {admin_email}")
+
+        return {"message": "Notification has been sent to the user and admins"}
+    except Exception as e:
+        logger.error(f"Error sending notification email: {str(e)}")
+        raise HTTPException(status_code=500, detail="Failed to send notification email")
+
+
+class ContactAdminRequest(BaseModel):
+    email: str
+    content: str
+
+@app.post("/api/contact-admin")
+async def contact_admin(
+    contact_request: ContactAdminRequest
+):
+    """
+    Allow users to contact the admin.
+    
+    Args:
+        contact_request: Contains email and content of the message
+        
+    Returns:
+        Success message
+    """
+    # Validate email format
+    if not contact_request.email or "@" not in contact_request.email:
+        raise HTTPException(status_code=400, detail="Invalid email address")
+    user = db.get_user_by_email(contact_request.email)
+    # Check if user is authenticated
+    if not user:
+        raise HTTPException(status_code=401, detail="User not authenticated")
+    
+    # Notify the admin via email
+    try:
+        # Email configuration
+        smtp_server = os.getenv("SMTP_SERVER")
+        smtp_port = int(os.getenv("SMTP_PORT", 587))
+        smtp_user = os.getenv("SMTP_USER")
+        smtp_password = os.getenv("SMTP_PASSWORD")
+        sender_email = smtp_user
+
+        # Create email for admin
+        admin_subject = f"Contact from {user['Username']} ({contact_request.email})"
+        admin_body = f"User {user['Username']} ({contact_request.email}) has sent a message:\n\n{contact_request.content}"
+        admin_message = MIMEMultipart()
+        admin_message["From"] = sender_email
+        admin_message["To"] = smtp_user  # Send to the admin's email
+        admin_message["Subject"] = admin_subject
+        admin_message.attach(MIMEText(admin_body, "plain"))
+
+        # Send email to admin
+        with smtplib.SMTP(smtp_server, smtp_port) as server:
+            server.starttls()
+            server.login(smtp_user, smtp_password)
+            server.sendmail(sender_email, smtp_user, admin_message.as_string())
+        
+        logger.info(f"Contact request from {user['Username']} sent to admin")
+ 
+        return {"message": "Your message has been sent to the admin"}
+
+    except Exception as e:
+        logger.error(f"Error sending contact request: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))

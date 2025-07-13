@@ -1,4 +1,4 @@
-(function () {
+(async function () {
   // Get the script element that loaded this script
   const script = document.currentScript;
   const theme = script.getAttribute('data-theme') || 'light';
@@ -7,6 +7,46 @@
   const chatUrl = script.getAttribute('data-api-url') || 'api/chat';
   const configUrl = script.getAttribute('data-config-url') || 'api/agents/config';
   const base = 'https://tcubot.tcu.edu.tw/';
+
+  const currentOrigin = window.location.origin;
+  console.log(`[AI Widget] Current origin: ${currentOrigin}`);
+
+
+  // ตรวจสอบ origin กับ backend
+
+  const response = await fetch(`${base}${configUrl}/${apiKey}`, {
+    method: 'GET',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-api-key': apiKey
+    }
+  });
+
+  if (!response.ok) {
+    throw new Error('Config not found');
+  }
+
+  const config = await response.json();
+  const allowed = (config.allowed_origins || '*')
+    .split(',')
+    .map(o => o.trim());
+
+  if (!(allowed.includes('*') || allowed.includes(currentOrigin))) {
+    console.warn(`[AI Widget] Origin ${currentOrigin} not allowed for this ShareAgent`);
+    // แสดงข้อความบนเว็บแทนที่จะโหลด widget
+    const blockedMsg = document.createElement('div');
+    blockedMsg.textContent = '⚠️ This widget is not authorized for this website.';
+    blockedMsg.style.position = 'fixed';
+    blockedMsg.style.bottom = '10px';
+    blockedMsg.style.right = '10px';
+    blockedMsg.style.padding = '10px';
+    blockedMsg.style.background = '#ffcdd2';
+    blockedMsg.style.color = '#b71c1c';
+    blockedMsg.style.borderRadius = '6px';
+    blockedMsg.style.zIndex = 9999;
+    document.body.appendChild(blockedMsg);
+    return;
+  }
 
   // Add Font Awesome - update to the latest version
   const fontAwesomeLink = document.createElement('link');
@@ -1700,13 +1740,20 @@
       showLoading();
 
       try {
+        // Generate a unique chat_id if not already present
+        let chat_id = sessionStorage.getItem('share_agent_chat_id');
+        if (!chat_id) {
+          chat_id = `chat_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+          sessionStorage.setItem('share_agent_chat_id', chat_id);
+        }
         // Prepare the request data
         const requestBody = {
           messages: [{ content: text, role: 'user' }],
           user_id: 1, // Default user_id or could be made configurable
           model: agentConfig.model,
           department_id: agentConfig.department_id,
-          agent_key: agentConfig.agent_key
+          agent_key: agentConfig.agent_key,
+          chat_id: chat_id
         };
 
         // Check if streaming is supported

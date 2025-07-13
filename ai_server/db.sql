@@ -273,6 +273,13 @@ GO
 --     ('writing', 'Writing Assistant', 'Content creation, grammar, and writing improvement', 1);
 -- GO
 
+
+INSERT INTO Departments (Name, Description)
+VALUES 
+    ('Admin', 'Administrative department for managing the system'),
+
+
+
 -- Insert admin user with hashed password (password: admin1234)
 -- Note: In a production environment, use a proper password hashing function
 INSERT INTO Users (Username, Email, PasswordHash, FirstName, LastName, UserRole, IsActive)
@@ -280,6 +287,18 @@ VALUES ('admin', 'admin@example.com',
         -- This is a bcrypt hash of 'admin1234'
         '$2b$12$pMtKDqzCvp3JJmMRpv.TZuIzILuuHN7z8kAAttyTEdchLUEsXPKt.', 
         'System', 'Administrator', 'admin', 1);
+
+
+
+-- Insert into UserDepartments โดยใช้ UserID และ DepartmentID ที่ต้องการ
+-- ดึง UserID ของ admin ก่อน (ถ้ายังไม่ทราบ)
+DECLARE @UserID INT = (SELECT TOP 1 UserID FROM Users WHERE Username = 'admin');
+DECLARE @ITDeptID INT = (SELECT TOP 1 DepartmentID FROM Departments WHERE Name = 'Admin');
+
+-- เชื่อมโยง admin กับแผนก IT
+INSERT INTO UserDepartments (UserID, DepartmentID)
+VALUES (@UserID, @ITDeptID);
+
 
 INSERT INTO Permissions (PermissionName, Description)
 VALUES 
@@ -815,4 +834,6 @@ VALUES
 ('/api/permissions/{permission_id}', 'DELETE', 'permission_setting'),
 ('/api/api-permissions/{api_permission_id}', 'PUT', 'permission_setting'),
 ('/api/api-permissions/{api_permission_id}', 'DELETE', 'permission_setting');
+('/api/users/{user_id}', 'PUT', 'basic_permission');
+('/api/users/{user_id}', 'PUT', 'General_Permission');
 GO

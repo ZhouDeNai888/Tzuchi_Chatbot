@@ -2,9 +2,10 @@
 
 import { useState, useRef, useEffect } from 'react';
 import { useAuth } from '@/context/AuthContext';
-import { getUserProfile, updateUserProfile, uploadAvatar, updateUser, getUserPermissions } from '@/utils/apiService';
+import { getUserProfile, updateUserProfile, uploadAvatar, updateUser } from '@/utils/apiService';
 import { useLanguage } from '@/context/LanguageContext';
 import { translations } from '@/utils/translations';
+import { toast } from 'react-hot-toast';
 
 interface UserProfile {
   UserID?: number;
@@ -14,13 +15,15 @@ interface UserProfile {
   LastName?: string;
   avatar_url?: string;
   UserRole?: string;
-  departments?: Array<{ id: number, name: string }>;
+  departments?: Array<{ DepartmentID: number, Name: string, Description?: string, CreatedAt?: string, LastUpdatedAt?: string }>;
   permissions?: Array<string | { PermissionID: number, PermissionName: string, Description?: string, GrantedAt?: string, GrantedByUsername?: string }>;
   IsActive?: boolean;
 }
 
 export default function Profile() {
   const { user, isAuthenticated, isLoading } = useAuth();
+  const { language } = useLanguage(); // Get current language
+  const t = translations[language]; // Get translations for current language
   const [profile, setProfile] = useState<UserProfile>({
     Username: '',
     avatar_url: ''
@@ -80,6 +83,7 @@ export default function Profile() {
   const handleSave = async () => {
     setIsSubmitting(true);
     setError('');
+    setPasswordError('');
 
     try {
       if (!profile.UserID) {
@@ -93,21 +97,33 @@ export default function Profile() {
         email: tempProfile.Email
       };
 
-      // Update user profile
-      const updatedProfile = await updateUserProfile(updateData);
+      // Update user profile using updateUser instead of updateUserProfile
+      const updatedProfile = await updateUser(profile.UserID, updateData);
 
       // If password fields are shown and have values, update password too
-      if (showPasswordFields && password.current && password.new && password.confirm) {
+      if (showPasswordFields) {
         if (password.new !== password.confirm) {
           setPasswordError('New password and confirmation do not match');
           setIsSubmitting(false);
           return;
         }
 
-        // Update the user with the new password
-        await updateUser(profile.UserID, {
-          password: password.new
-        });
+        if (password.current && password.new) {
+          try {
+            // Update the user with the new password and include current password for verification
+            await updateUser(profile.UserID, {
+              password: password.new,
+              current_password: password.current // Add current password for verification
+            });
+
+            toast.success('Password updated successfully');
+          } catch (err) {
+            console.error('Password update error:', err);
+            setPasswordError('Failed to update password. Current password may be incorrect.');
+            setIsSubmitting(false);
+            return;
+          }
+        }
 
         // Reset password fields
         setPassword({ current: '', new: '', confirm: '' });
@@ -117,8 +133,10 @@ export default function Profile() {
       // Update local state
       setProfile({
         ...tempProfile,
-        ...updatedProfile
+        ...updatedProfile as UserProfile
       });
+
+      toast.success('Profile updated successfully');
       setIsEditing(false);
       setShowPasswordFields(false);
     } catch (error) {
@@ -168,6 +186,8 @@ export default function Profile() {
           ...prev,
           avatar_url: serverAvatarUrl
         }));
+
+        toast.success('Avatar updated successfully');
       }
     } catch (error) {
       console.error('Error uploading avatar:', error);
@@ -203,183 +223,32 @@ export default function Profile() {
                   style={tempProfile.avatar_url ? { backgroundImage: `url(${tempProfile.avatar_url})`, backgroundSize: 'cover', backgroundPosition: 'center' } : undefined}
                 >
                   {!tempProfile.avatar_url && (
-                    <svg className="h-16 w-16 text-gray-400" fill="currentColor" viewBox="0 0 24 24">
-                      <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 3c1.66 0 3 1.34 3 3s-1.34 3-3 3-3-1.34-3-3 1.34-3 3-3zm0 14.2c-2.5 0-4.71-1.28-6-3.22.03-1.99 4-3.08 6-3.08 1.99 0 5.97 1.09 6 3.08-1.29 1.94-3.5 3.22-6 3.22z" />
-                    </svg>
+                    <span className="text-5xl font-bold text-gray-500 dark:text-gray-400">
+                      {tempProfile.Username ? tempProfile.Username.charAt(0).toUpperCase() : '?'}
+                    </span>
                   )}
                 </div>
-                {isEditing && (
-                  <>
-                    <input
-                      type="file"
-                      ref={fileInputRef}
-                      onChange={handleImageUpload}
-                      accept="image/*"
-                      className="hidden"
-                    />
-                    <button
-                      onClick={() => fileInputRef.current?.click()}
-                      className="absolute bottom-0 right-0 bg-blue-600 dark:bg-blue-500 p-2 rounded-full hover:bg-blue-700 dark:hover:bg-blue-600 transition-colors"
-                      disabled={isSubmitting}
-                    >
-                      <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
-                      </svg>
-                    </button>
-                  </>
-                )}
+                {/* Profile picture editing has been disabled */}
               </div>
 
-              {isEditing ? (
-                <>
-                  <div className="w-full space-y-4 mb-6">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Username</label>
-                      <input
-                        type="text"
-                        name="Username"
-                        value={tempProfile.Username}
-                        onChange={handleInputChange}
-                        className="w-full bg-gray-200 dark:bg-gray-700 text-gray-900 dark:text-white p-2 rounded"
-                        disabled // Username is typically not changeable
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Email</label>
-                      <input
-                        type="Email"
-                        name="Email"
-                        value={tempProfile.Email || ''}
-                        onChange={handleInputChange}
-                        className="w-full bg-gray-200 dark:bg-gray-700 text-gray-900 dark:text-white p-2 rounded"
-                      />
-                    </div>
-
-                    <div className="flex gap-4">
-                      <div className="flex-1">
-                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">First Name</label>
-                        <input
-                          type="text"
-                          name="FirstName"
-                          value={tempProfile.FirstName || ''}
-                          onChange={handleInputChange}
-                          className="w-full bg-gray-200 dark:bg-gray-700 text-gray-900 dark:text-white p-2 rounded"
-                        />
-                      </div>
-                      <div className="flex-1">
-                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Last Name</label>
-                        <input
-                          type="text"
-                          name="LastName"
-                          value={tempProfile.LastName || ''}
-                          onChange={handleInputChange}
-                          className="w-full bg-gray-200 dark:bg-gray-700 text-gray-900 dark:text-white p-2 rounded"
-                        />
-                      </div>
-                    </div>
-
-                    {/* Toggle for password change fields */}
-                    <div className="flex items-center gap-2">
-                      <button
-                        type="button"
-                        onClick={() => setShowPasswordFields(!showPasswordFields)}
-                        className="text-blue-600 dark:text-blue-400 underline text-sm"
-                      >
-                        {showPasswordFields ? 'Hide Password Fields' : 'Change Password'}
-                      </button>
-                    </div>
-
-                    {/* Password Fields (conditionally shown) */}
-                    {showPasswordFields && (
-                      <div className="space-y-3 p-3 bg-gray-200 dark:bg-gray-700 rounded-lg">
-                        {passwordError && (
-                          <div className="p-2 bg-red-100 dark:bg-red-900 text-red-700 dark:text-red-200 rounded-md text-sm">
-                            {passwordError}
-                          </div>
-                        )}
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Current Password</label>
-                          <input
-                            type="password"
-                            value={password.current}
-                            onChange={(e) => setPassword({ ...password, current: e.target.value })}
-                            className="w-full bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-white p-2 rounded"
-                          />
-                        </div>
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">New Password</label>
-                          <input
-                            type="password"
-                            value={password.new}
-                            onChange={(e) => setPassword({ ...password, new: e.target.value })}
-                            className="w-full bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-white p-2 rounded"
-                          />
-                        </div>
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Confirm New Password</label>
-                          <input
-                            type="password"
-                            value={password.confirm}
-                            onChange={(e) => setPassword({ ...password, confirm: e.target.value })}
-                            className="w-full bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-white p-2 rounded"
-                          />
-                        </div>
-                      </div>
-                    )}
-                  </div>
-
-                  <div className="flex gap-4 mb-6 w-full">
-                    <button
-                      onClick={handleSave}
-                      disabled={isSubmitting}
-                      className="flex-1 bg-blue-600 dark:bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-700 dark:hover:bg-blue-600 transition-colors disabled:opacity-50"
-                    >
-                      {isSubmitting ? 'Saving...' : 'Save Changes'}
-                    </button>
-                    <button
-                      onClick={() => {
-                        setTempProfile(profile);
-                        setIsEditing(false);
-                        setShowPasswordFields(false);
-                        setPassword({ current: '', new: '', confirm: '' });
-                        setPasswordError('');
-                      }}
-                      disabled={isSubmitting}
-                      className="flex-1 bg-gray-500 dark:bg-gray-600 text-white px-4 py-2 rounded hover:bg-gray-600 dark:hover:bg-gray-700 transition-colors disabled:opacity-50"
-                    >
-                      Cancel
-                    </button>
-                  </div>
-                </>
-              ) : (
-                <>
-                  <h1 className="text-gray-900 dark:text-white text-2xl font-bold mb-2">{profile.Username}</h1>
-                  {(profile.FirstName || profile.LastName) && (
-                    <h2 className="text-gray-700 dark:text-gray-300 text-lg mb-2">
-                      {[profile.FirstName, profile.LastName].filter(Boolean).join(' ')}
-                    </h2>
-                  )}
-                  {profile.Email && (
-                    <p className="text-gray-500 dark:text-gray-400 mb-4">{profile.Email}</p>
-                  )}
-                  <button
-                    onClick={() => setIsEditing(true)}
-                    className="bg-gray-200 dark:bg-gray-700 text-gray-900 dark:text-white px-4 py-2 rounded mb-6 hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors"
-                  >
-                    Edit Profile
-                  </button>
-                </>
+              {/* User basic information - always show */}
+              <h1 className="text-gray-900 dark:text-white text-2xl font-bold mb-2">{profile.Username}</h1>
+              {(profile.FirstName || profile.LastName) && (
+                <h2 className="text-gray-700 dark:text-gray-300 text-lg mb-2">
+                  {[profile.FirstName, profile.LastName].filter(Boolean).join(' ')}
+                </h2>
+              )}
+              {profile.Email && (
+                <p className="text-gray-500 dark:text-gray-400 mb-4">{profile.Email}</p>
               )}
 
               <div className="grid grid-cols-2 gap-4 w-full text-center mb-6">
                 <div className="bg-gray-200 dark:bg-gray-700 p-4 rounded-lg">
-                  <div className="text-gray-900 dark:text-white font-bold">Role</div>
-                  <div className="text-gray-600 dark:text-gray-400">{profile.UserRole || 'User'}</div>
+                  <div className="text-gray-900 dark:text-white font-bold">{t.profile.role}</div>
+                  <div className="text-gray-600 dark:text-gray-400">{profile.UserRole || t.profile.defaultRole}</div>
                 </div>
                 <div className="bg-gray-200 dark:bg-gray-700 p-4 rounded-lg">
-                  <div className="text-gray-900 dark:text-white font-bold">Account ID</div>
+                  <div className="text-gray-900 dark:text-white font-bold">{t.profile.accountId}</div>
                   <div className="text-gray-600 dark:text-gray-400">#{profile.UserID}</div>
                 </div>
               </div>
@@ -387,21 +256,21 @@ export default function Profile() {
               {/* Departments Section - Always show if available */}
               {profile.departments && profile.departments.length > 0 && (
                 <div className="w-full p-4 bg-gray-200 dark:bg-gray-700 rounded-lg mb-6">
-                  <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Your Departments</h2>
+                  <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">{t.profile.yourDepartments}</h2>
                   <div className="flex flex-wrap gap-2">
                     {profile.departments.map((dept) => (
-                      <span key={dept.id} className="bg-blue-100 dark:bg-blue-800 text-blue-800 dark:text-blue-100 px-3 py-1 rounded-full text-sm">
-                        {dept.name}
+                      <span key={dept.DepartmentID} className="bg-blue-100 dark:bg-blue-800 text-blue-800 dark:text-blue-100 px-3 py-1 rounded-full text-sm">
+                        {dept.Name}
                       </span>
                     ))}
                   </div>
                 </div>
               )}
 
-              {/* Permissions Section - Always show if available */}
+              {/* Permissions Section - Moved above edit profile button */}
               {profile.permissions && profile.permissions.length > 0 && (
-                <div className="w-full p-4 bg-gray-200 dark:bg-gray-700 rounded-lg">
-                  <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Your Permissions</h2>
+                <div className="w-full p-4 bg-gray-200 dark:bg-gray-700 rounded-lg mb-6">
+                  <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">{t.profile.yourPermissions}</h2>
                   <div className="flex flex-wrap gap-2">
                     {profile.permissions.map((perm, index) => {
                       // Handle both string permissions and object permissions
@@ -415,6 +284,138 @@ export default function Profile() {
                         </span>
                       );
                     })}
+                  </div>
+                </div>
+              )}
+
+              {/* Edit Profile button and form */}
+              {!isEditing ? (
+                <button
+                  onClick={() => setIsEditing(true)}
+                  className="bg-gray-200 dark:bg-gray-700 text-gray-900 dark:text-white px-4 py-2 rounded mb-6 hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors"
+                >
+                  {t.profile.editProfile}
+                </button>
+              ) : (
+                <div className="w-full bg-gray-200 dark:bg-gray-700 p-6 rounded-lg mb-6">
+                  <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">{t.profile.editProfile}</h2>
+                  <div className="w-full space-y-4 mb-6">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{t.profile.username}</label>
+                      <input
+                        type="text"
+                        name="Username"
+                        value={tempProfile.Username}
+                        onChange={handleInputChange}
+                        className="w-full bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-white p-2 rounded"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{t.profile.email}</label>
+                      <input
+                        type="email"
+                        name="Email"
+                        value={tempProfile.Email || ''}
+                        onChange={handleInputChange}
+                        className="w-full bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-white p-2 rounded"
+                      />
+                    </div>
+
+                    <div className="flex gap-4">
+                      <div className="flex-1">
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{t.profile.firstName}</label>
+                        <input
+                          type="text"
+                          name="FirstName"
+                          value={tempProfile.FirstName || ''}
+                          onChange={handleInputChange}
+                          className="w-full bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-white p-2 rounded"
+                        />
+                      </div>
+                      <div className="flex-1">
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{t.profile.lastName}</label>
+                        <input
+                          type="text"
+                          name="LastName"
+                          value={tempProfile.LastName || ''}
+                          onChange={handleInputChange}
+                          className="w-full bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-white p-2 rounded"
+                        />
+                      </div>
+                    </div>
+
+                    {/* Toggle for password change fields */}
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setShowPasswordFields(!showPasswordFields)}
+                        className="text-blue-600 dark:text-blue-400 underline text-sm"
+                      >
+                        {showPasswordFields ? t.profile.hidePasswordFields : t.profile.changePassword}
+                      </button>
+                    </div>
+
+                    {/* Password Fields (conditionally shown) */}
+                    {showPasswordFields && (
+                      <div className="space-y-3 p-3 bg-gray-100 dark:bg-gray-800 rounded-lg">
+                        {passwordError && (
+                          <div className="p-2 bg-red-100 dark:bg-red-900 text-red-700 dark:text-red-200 rounded-md text-sm">
+                            {passwordError}
+                          </div>
+                        )}
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{t.profile.currentPassword}</label>
+                          <input
+                            type="password"
+                            value={password.current}
+                            onChange={(e) => setPassword({ ...password, current: e.target.value })}
+                            className="w-full bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white p-2 rounded"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{t.profile.newPassword}</label>
+                          <input
+                            type="password"
+                            value={password.new}
+                            onChange={(e) => setPassword({ ...password, new: e.target.value })}
+                            className="w-full bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white p-2 rounded"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{t.profile.confirmPassword}</label>
+                          <input
+                            type="password"
+                            value={password.confirm}
+                            onChange={(e) => setPassword({ ...password, confirm: e.target.value })}
+                            className="w-full bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white p-2 rounded"
+                          />
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="flex gap-4 w-full">
+                    <button
+                      onClick={handleSave}
+                      disabled={isSubmitting}
+                      className="flex-1 bg-blue-600 dark:bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-700 dark:hover:bg-blue-600 transition-colors disabled:opacity-50"
+                    >
+                      {isSubmitting ? t.common.saving : t.common.saveChanges}
+                    </button>
+                    <button
+                      onClick={() => {
+                        setTempProfile(profile);
+                        setIsEditing(false);
+                        setShowPasswordFields(false);
+                        setPassword({ current: '', new: '', confirm: '' });
+                        setPasswordError('');
+                      }}
+                      disabled={isSubmitting}
+                      className="flex-1 bg-gray-500 dark:bg-gray-600 text-white px-4 py-2 rounded hover:bg-gray-600 dark:hover:bg-gray-700 transition-colors disabled:opacity-50"
+                    >
+                      {t.common.cancel}
+                    </button>
                   </div>
                 </div>
               )}
