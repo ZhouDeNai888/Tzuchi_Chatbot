@@ -14,25 +14,14 @@ export async function POST() {
   // Clear access_token cookie
   const accessTokenCookie = ["access_token=", ...commonOptions].join("; ");
 
-<<<<<<< Updated upstream
-    // Clear access_token_js cookie
-    // const accessTokenJsCookie = ['access_token_js=', ...commonOptions].join('; ');
-=======
   // Clear access_token_js cookie
-  const accessTokenJsCookie = ["access_token_js=", ...commonOptions].join("; ");
->>>>>>> Stashed changes
+  // const accessTokenJsCookie = ['access_token_js=', ...commonOptions].join('; ');
 
   console.log("Clearing cookies with options:", commonOptions);
 
-<<<<<<< Updated upstream
-    const headers = new Headers();
-    headers.append('Set-Cookie', accessTokenCookie);
-    // headers.append('Set-Cookie', accessTokenJsCookie);
-=======
   const headers = new Headers();
   headers.append("Set-Cookie", accessTokenCookie);
-  headers.append("Set-Cookie", accessTokenJsCookie);
->>>>>>> Stashed changes
+  // headers.append('Set-Cookie', accessTokenJsCookie);
 
   return NextResponse.json({ success: true }, { status: 200, headers });
 }

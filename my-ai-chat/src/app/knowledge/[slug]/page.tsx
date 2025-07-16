@@ -1,15 +1,15 @@
-'use client';
+"use client";
 
-import { useEffect, useState, useCallback } from 'react';
-import { useSearchParams, useRouter } from 'next/navigation';
-import Link from 'next/link';
-import CreateDataModal from '../../../components/CreateDataModal';
-import FileInfoModal from '../../../components/FileInfoModal';
-import ConfirmDeleteModal from '../../../components/ConfirmDeleteModal';
-import { useLanguage } from '@/context/LanguageContext';
-import { translations, messageFormatter } from '@/utils/translations';
-import { useAuth } from '@/context/AuthContext';
-import { useParams } from 'next/navigation';
+import { useEffect, useState, useCallback } from "react";
+import { useSearchParams, useRouter } from "next/navigation";
+import Link from "next/link";
+import CreateDataModal from "../../../components/CreateDataModal";
+import FileInfoModal from "../../../components/FileInfoModal";
+import ConfirmDeleteModal from "../../../components/ConfirmDeleteModal";
+import { useLanguage } from "@/context/LanguageContext";
+import { translations, messageFormatter } from "@/utils/translations";
+import { useAuth } from "@/context/AuthContext";
+import { useParams } from "next/navigation";
 import {
   getKnowledgeBase,
   getKnowledgeDataItems,
@@ -22,24 +22,32 @@ import {
   createDocumentWithURL,
   updateDocument,
   deleteDocument,
-  Document
-} from '@/utils/apiService';
+  Document,
+} from "@/utils/apiService";
 
 // Helper functions for local storage
-const STORAGE_KEY_PREFIX = 'knowledge_processing_';
+const STORAGE_KEY_PREFIX = "knowledge_processing_";
 
 const getProcessingStorageKey = (knowledgeBaseId: number) =>
   `${STORAGE_KEY_PREFIX}${knowledgeBaseId}`;
 
-const saveProcessingItemsToStorage = (knowledgeBaseId: number, items: string[]) => {
-  if (typeof window !== 'undefined') {
-    localStorage.setItem(getProcessingStorageKey(knowledgeBaseId), JSON.stringify(items));
+const saveProcessingItemsToStorage = (
+  knowledgeBaseId: number,
+  items: string[]
+) => {
+  if (typeof window !== "undefined") {
+    localStorage.setItem(
+      getProcessingStorageKey(knowledgeBaseId),
+      JSON.stringify(items)
+    );
   }
 };
 
 const getProcessingItemsFromStorage = (knowledgeBaseId: number): string[] => {
-  if (typeof window !== 'undefined') {
-    const stored = localStorage.getItem(getProcessingStorageKey(knowledgeBaseId));
+  if (typeof window !== "undefined") {
+    const stored = localStorage.getItem(
+      getProcessingStorageKey(knowledgeBaseId)
+    );
     return stored ? JSON.parse(stored) : [];
   }
   return [];
@@ -47,43 +55,52 @@ const getProcessingItemsFromStorage = (knowledgeBaseId: number): string[] => {
 
 export default function KnowledgePage() {
   const searchParams = useSearchParams();
-  const knowledgeBaseId = Number(searchParams.get('id'));
+  const knowledgeBaseId = Number(searchParams.get("id"));
   const router = useRouter();
 
   const [knowledge, setKnowledge] = useState<KnowledgeBase | null>(null);
   const [isDataModalOpen, setIsDataModalOpen] = useState(false);
   const [dataItems, setDataItems] = useState<KnowledgeDataItem[]>([]);
   const [processingItems, setProcessingItems] = useState<string[]>([]);
-  const [creatingItems, setCreatingItems] = useState<{ id: string, name: string }[]>([]);
-  const [selectedFile, setSelectedFile] = useState<KnowledgeDataItem | null>(null);
-  const [selectedFileContent, setSelectedFileContent] = useState<string | null>(null);
+  const [creatingItems, setCreatingItems] = useState<
+    { id: string; name: string }[]
+  >([]);
+  const [selectedFile, setSelectedFile] = useState<KnowledgeDataItem | null>(
+    null
+  );
+  const [selectedFileContent, setSelectedFileContent] = useState<string | null>(
+    null
+  );
   const [isContentLoading, setIsContentLoading] = useState(false);
   const [contentError, setContentError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showNotification, setShowNotification] = useState(false);
-  const [notificationTimeout, setNotificationTimeout] = useState<NodeJS.Timeout | null>(null);
+  const [notificationTimeout, setNotificationTimeout] =
+    useState<NodeJS.Timeout | null>(null);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [itemToDelete, setItemToDelete] = useState<string | null>(null);
 
   // Toast notification state
   const [toast, setToast] = useState<{
     message: string;
-    type: 'error' | 'warning' | 'success';
+    type: "error" | "warning" | "success";
     visible: boolean;
   }>({
-    message: '',
-    type: 'error',
-    visible: false
+    message: "",
+    type: "error",
+    visible: false,
   });
 
   // Track completed items for showing checkmarks
-  const [completedItems, setCompletedItems] = useState<{
-    id: string;
-    name: string;
-    visible: boolean;
-    timeout: NodeJS.Timeout | null;
-  }[]>([]);
+  const [completedItems, setCompletedItems] = useState<
+    {
+      id: string;
+      name: string;
+      visible: boolean;
+      timeout: NodeJS.Timeout | null;
+    }[]
+  >([]);
 
   const { language } = useLanguage();
   const { isAuthenticated } = useAuth();
@@ -100,7 +117,7 @@ export default function KnowledgePage() {
       // Fetch knowledge base
       const knowledgeBase = await getKnowledgeBase(knowledgeBaseId);
       if (!knowledgeBase) {
-        throw new Error('Knowledge base not found');
+        throw new Error("Knowledge base not found");
       }
       setKnowledge(knowledgeBase);
 
@@ -110,14 +127,18 @@ export default function KnowledgePage() {
 
         // Convert Document objects to the existing KnowledgeDataItem format
         // For initial page load, properly check isProcessed status for each document
-        const convertedItems = documents.map(doc => ({
+        const convertedItems = documents.map((doc) => ({
           id: doc.document_id.toString(),
           knowledge_base_id: knowledgeBaseId,
-          type: doc.file_url?.includes('http') ? 'link' as const : 'file' as const,
+          type: doc.file_url?.includes("http")
+            ? ("link" as const)
+            : ("file" as const),
           file_name: doc.title,
-          url: doc.file_url || '',
+          url: doc.file_url || "",
           file_size: 0, // Placeholder as this may not be available in the API
-          status: doc.is_processed ? 'processing' as const : 'finished' as const, // Check isProcessed flag
+          status: doc.is_processed
+            ? ("processing" as const)
+            : ("finished" as const), // Check isProcessed flag
           created_at: doc.created_at || new Date().toISOString(),
         }));
 
@@ -125,25 +146,25 @@ export default function KnowledgePage() {
 
         // On initial load, add any processing documents to the processingItems array
         const processingDocIds = documents
-          .filter(doc => doc.is_processed)
-          .map(doc => doc.document_id.toString());
+          .filter((doc) => doc.is_processed)
+          .map((doc) => doc.document_id.toString());
 
         setProcessingItems(processingDocIds);
       } catch (docErr) {
-        console.error('Error fetching documents:', docErr);
+        console.error("Error fetching documents:", docErr);
         // Fallback to original method if document API fails
         const items = await getKnowledgeDataItems(knowledgeBaseId);
         // Mark all existing items as finished
-        const updatedItems = items.map(item => ({
+        const updatedItems = items.map((item) => ({
           ...item,
-          status: 'finished' as const
+          status: "finished" as const,
         }));
         setDataItems(updatedItems);
         setProcessingItems([]);
       }
     } catch (err: any) {
-      console.error('Error fetching knowledge data:', err);
-      setError(err.message || 'Failed to load knowledge data');
+      console.error("Error fetching knowledge data:", err);
+      setError(err.message || "Failed to load knowledge data");
     } finally {
       setIsLoading(false);
     }
@@ -151,7 +172,6 @@ export default function KnowledgePage() {
 
   useEffect(() => {
     fetchData();
-
   }, [fetchData]);
 
   // Poll for processing items status updates
@@ -162,21 +182,25 @@ export default function KnowledgePage() {
       try {
         // Use the document API for polling
         const documents = await getDocumentsInKnowledgeBase(knowledgeBaseId);
-        console.log('Polling documents:', documents);
+        console.log("Polling documents:", documents);
 
         if (documents && documents.length > 0) {
           // Check for newly completed items
           const previouslyProcessingIds = [...processingItems];
 
           // Update data items with current status
-          const convertedItems = documents.map(doc => ({
+          const convertedItems = documents.map((doc) => ({
             id: doc.document_id.toString(),
             knowledge_base_id: knowledgeBaseId,
-            type: doc.file_url?.includes('http') ? 'link' as const : 'file' as const,
+            type: doc.file_url?.includes("http")
+              ? ("link" as const)
+              : ("file" as const),
             file_name: doc.title,
-            url: doc.file_url || '',
+            url: doc.file_url || "",
             file_size: 0,
-            status: doc.is_processed ? 'processing' as const : 'finished' as const, // Check isProcessed flag
+            status: doc.is_processed
+              ? ("processing" as const)
+              : ("finished" as const), // Check isProcessed flag
             created_at: doc.created_at || new Date().toISOString(),
           }));
 
@@ -184,32 +208,32 @@ export default function KnowledgePage() {
 
           // Update processing items - keep only items that are still processing
           const stillProcessingIds = documents
-            .filter(doc => doc.is_processed)
-            .map(doc => doc.document_id.toString());
+            .filter((doc) => doc.is_processed)
+            .map((doc) => doc.document_id.toString());
 
           // Find items that were processing before but are now completed
           const newlyCompletedIds = previouslyProcessingIds.filter(
-            id => !stillProcessingIds.includes(id)
+            (id) => !stillProcessingIds.includes(id)
           );
 
           // Add newly completed items to completedItems with visibility
           if (newlyCompletedIds.length > 0) {
-            const newCompletedItems = newlyCompletedIds.map(id => {
-              const item = convertedItems.find(item => item.id === id);
+            const newCompletedItems = newlyCompletedIds.map((id) => {
+              const item = convertedItems.find((item) => item.id === id);
               const timeout = setTimeout(() => {
                 // Remove item from completed items after 2 seconds
-                setCompletedItems(prev => prev.filter(i => i.id !== id));
+                setCompletedItems((prev) => prev.filter((i) => i.id !== id));
               }, 2000);
 
               return {
                 id,
-                name: item?.file_name || 'Unknown',
+                name: item?.file_name || "Unknown",
                 visible: true,
-                timeout
+                timeout,
               };
             });
 
-            setCompletedItems(prev => [...prev, ...newCompletedItems]);
+            setCompletedItems((prev) => [...prev, ...newCompletedItems]);
           }
 
           setProcessingItems(stillProcessingIds);
@@ -220,22 +244,24 @@ export default function KnowledgePage() {
           }
         } else {
           // If no documents returned, keep the current processing items
-          console.log('No documents returned in polling');
+          console.log("No documents returned in polling");
         }
       } catch (err) {
-        console.error('Error updating processing items:', err);
+        console.error("Error updating processing items:", err);
       }
     }, 5000);
 
     return () => clearInterval(intervalId);
   }, [processingItems, knowledgeBaseId]);
 
-  const isDuplicate = (type: 'file' | 'link', value: string): boolean => {
+  const isDuplicate = (type: "file" | "link", value: string): boolean => {
     if (!value) return false;
 
-    return dataItems.some(item => {
-      if (type === 'file') {
-        return item.file_name && item.file_name.toLowerCase() === value.toLowerCase();
+    return dataItems.some((item) => {
+      if (type === "file") {
+        return (
+          item.file_name && item.file_name.toLowerCase() === value.toLowerCase()
+        );
       }
       return item.url && item.url.toLowerCase() === value.toLowerCase();
     });
@@ -243,10 +269,11 @@ export default function KnowledgePage() {
 
   // Check if a file has already been processed in the knowledge base
   const isFileProcessed = (fileName: string): boolean => {
-    return dataItems.some(item =>
-      item.file_name &&
-      item.file_name.toLowerCase() === fileName.toLowerCase() &&
-      item.status === 'finished'
+    return dataItems.some(
+      (item) =>
+        item.file_name &&
+        item.file_name.toLowerCase() === fileName.toLowerCase() &&
+        item.status === "finished"
     );
   };
 
@@ -287,26 +314,37 @@ export default function KnowledgePage() {
         clearTimeout(notificationTimeout);
       }
     };
-  }, [creatingItems, processingItems, autoCloseNotification, notificationTimeout]);
+  }, [
+    creatingItems,
+    processingItems,
+    autoCloseNotification,
+    notificationTimeout,
+  ]);
 
   // Toast notification for duplicate files/URLs
-  const showToast = (message: string, type: 'error' | 'warning' | 'success' = 'error') => {
+  const showToast = (
+    message: string,
+    type: "error" | "warning" | "success" = "error"
+  ) => {
     setToast({
       message,
       type,
-      visible: true
+      visible: true,
     });
 
     // Auto-hide the toast after 5 seconds
     setTimeout(() => {
-      setToast(prev => ({
+      setToast((prev) => ({
         ...prev,
-        visible: false
+        visible: false,
       }));
     }, 5000);
   };
 
-  const handleAddData = async (type: 'file' | 'link', filesOrLink: File[] | string) => {
+  const handleAddData = async (
+    type: "file" | "link",
+    filesOrLink: File[] | string
+  ) => {
     if (!knowledgeBaseId) return;
     setError(null);
 
@@ -314,7 +352,7 @@ export default function KnowledgePage() {
     setIsDataModalOpen(false);
 
     try {
-      if (type === 'file' && Array.isArray(filesOrLink)) {
+      if (type === "file" && Array.isArray(filesOrLink)) {
         // Add files to UI immediately with processing status
         const tempItems: KnowledgeDataItem[] = [];
         const currentTime = new Date().toISOString();
@@ -323,27 +361,35 @@ export default function KnowledgePage() {
         for (const file of filesOrLink) {
           // Check if the file already exists and is processed
           if (isFileProcessed(file.name)) {
-            showToast(`File "${file.name}" already exists and is processed`, 'warning');
+            showToast(
+              `File "${file.name}" already exists and is processed`,
+              "warning"
+            );
             continue;
-          } else if (isDuplicate('file', file.name)) {
+          } else if (isDuplicate("file", file.name)) {
             // If file exists but isn't processed yet
-            showToast(`File "${file.name}" already exists and is being processed`, 'warning');
+            showToast(
+              `File "${file.name}" already exists and is being processed`,
+              "warning"
+            );
             continue;
           }
 
           // Create a temporary ID with current time and random number
-          const tempId = `temp_${Date.now()}_${Math.floor(Math.random() * 1000)}`;
+          const tempId = `temp_${Date.now()}_${Math.floor(
+            Math.random() * 1000
+          )}`;
 
           // Add file to UI immediately with processing status
           const tempItem: KnowledgeDataItem = {
             id: tempId,
             knowledge_base_id: knowledgeBaseId,
-            type: 'file' as const,
+            type: "file" as const,
             file_name: file.name,
             file_size: file.size,
-            status: 'processing' as const,
+            status: "processing" as const,
             created_at: currentTime,
-            url: ''
+            url: "",
           };
 
           tempItems.push(tempItem);
@@ -351,12 +397,12 @@ export default function KnowledgePage() {
 
         // Update UI with temporary items
         if (tempItems.length > 0) {
-          setDataItems(prev => [...prev, ...tempItems]);
+          setDataItems((prev) => [...prev, ...tempItems]);
 
           // Add files to processing items directly
-          setProcessingItems(prev => [
+          setProcessingItems((prev) => [
             ...prev,
-            ...tempItems.map(item => item.id)
+            ...tempItems.map((item) => item.id),
           ]);
 
           // Show notification
@@ -366,35 +412,44 @@ export default function KnowledgePage() {
         // Process each file with API in a non-blocking way
         for (const file of filesOrLink) {
           // Skip files that already exist
-          if (isFileProcessed(file.name) ||
-            (isDuplicate('file', file.name) && !tempItems.some(item => item.file_name === file.name))) {
+          if (
+            isFileProcessed(file.name) ||
+            (isDuplicate("file", file.name) &&
+              !tempItems.some((item) => item.file_name === file.name))
+          ) {
             continue;
           }
 
           // Start file upload process in background
-          const file_type = file.name.split('.').pop() || 'unknown';
+          const file_type = file.name.split(".").pop() || "unknown";
 
           // Process file in the background without awaiting its completion
           createDocumentWithFile(knowledgeBaseId, file, file_type, file.name)
-            .then(document => {
+            .then((document) => {
               if (document) {
-                console.log('Document processed:', document);
+                console.log("Document processed:", document);
 
                 // Update the document in the data items list
-                setDataItems(prev => {
+                setDataItems((prev) => {
                   // Find and replace the temporary item with the real one
-                  const newItems = prev.filter(item => !(item.file_name === file.name && item.id.startsWith('temp_')));
+                  const newItems = prev.filter(
+                    (item) =>
+                      !(
+                        item.file_name === file.name &&
+                        item.id.startsWith("temp_")
+                      )
+                  );
 
                   // Add the new document with the correct status
                   newItems.push({
                     id: document.document_id.toString(),
                     knowledge_base_id: knowledgeBaseId,
-                    type: 'file',
+                    type: "file",
                     file_name: document.title,
                     file_size: file.size,
-                    url: document.file_url || '',
-                    status: document.is_processed ? 'processing' : 'finished',
-                    created_at: document.created_at || new Date().toISOString()
+                    url: document.file_url || "",
+                    status: document.is_processed ? "processing" : "finished",
+                    created_at: document.created_at || new Date().toISOString(),
                   });
 
                   return newItems;
@@ -403,40 +458,61 @@ export default function KnowledgePage() {
                 // Update processing items
                 if (document.is_processed) {
                   // Replace temp ID with real ID in processing items
-                  setProcessingItems(prev => {
-                    const filtered = prev.filter(id => !id.startsWith('temp_') ||
-                      !prev.some(item => item.startsWith('temp_') &&
-                        dataItems.find(di => di.id === item)?.file_name === file.name));
+                  setProcessingItems((prev) => {
+                    const filtered = prev.filter(
+                      (id) =>
+                        !id.startsWith("temp_") ||
+                        !prev.some(
+                          (item) =>
+                            item.startsWith("temp_") &&
+                            dataItems.find((di) => di.id === item)
+                              ?.file_name === file.name
+                        )
+                    );
 
                     return [...filtered, document.document_id.toString()];
                   });
                 } else {
                   // If already processed, remove from processing items
-                  setProcessingItems(prev =>
-                    prev.filter(id => !id.startsWith('temp_') ||
-                      !prev.some(item => item.startsWith('temp_') &&
-                        dataItems.find(di => di.id === item)?.file_name === file.name))
+                  setProcessingItems((prev) =>
+                    prev.filter(
+                      (id) =>
+                        !id.startsWith("temp_") ||
+                        !prev.some(
+                          (item) =>
+                            item.startsWith("temp_") &&
+                            dataItems.find((di) => di.id === item)
+                              ?.file_name === file.name
+                        )
+                    )
                   );
                 }
               }
             })
-            .catch(err => {
-              console.error('Error uploading file:', err);
+            .catch((err) => {
+              console.error("Error uploading file:", err);
 
               // Remove from processing items if there's an error
-              setProcessingItems(prev =>
-                prev.filter(id => !id.startsWith('temp_') ||
-                  !prev.some(item => item.startsWith('temp_') &&
-                    dataItems.find(di => di.id === item)?.file_name === file.name))
+              setProcessingItems((prev) =>
+                prev.filter(
+                  (id) =>
+                    !id.startsWith("temp_") ||
+                    !prev.some(
+                      (item) =>
+                        item.startsWith("temp_") &&
+                        dataItems.find((di) => di.id === item)?.file_name ===
+                          file.name
+                    )
+                )
               );
             });
         }
-      } else if (type === 'link' && typeof filesOrLink === 'string') {
+      } else if (type === "link" && typeof filesOrLink === "string") {
         const url = filesOrLink.trim();
 
         // Check if URL already exists
-        if (isDuplicate('link', url)) {
-          showToast(`URL "${url}" already exists`, 'warning');
+        if (isDuplicate("link", url)) {
+          showToast(`URL "${url}" already exists`, "warning");
           return;
         }
 
@@ -448,44 +524,46 @@ export default function KnowledgePage() {
         const tempItem: KnowledgeDataItem = {
           id: tempId,
           knowledge_base_id: knowledgeBaseId,
-          type: 'link' as const,
-          file_name: url.split('/').pop() || 'Web Content',
+          type: "link" as const,
+          file_name: url.split("/").pop() || "Web Content",
           file_size: 0,
-          status: 'processing' as const,
+          status: "processing" as const,
           created_at: currentTime,
-          url: url
+          url: url,
         };
 
         // Update UI with temporary item
-        setDataItems(prev => [...prev, tempItem]);
+        setDataItems((prev) => [...prev, tempItem]);
 
         // Add to processing items directly
-        setProcessingItems(prev => [...prev, tempId]);
+        setProcessingItems((prev) => [...prev, tempId]);
 
         // Show notification
         setShowNotification(true);
 
         // Process URL in the background without blocking
         createDocumentWithURL(knowledgeBaseId, url, tempItem.file_name)
-          .then(document => {
+          .then((document) => {
             if (document) {
-              console.log('URL document processed:', document);
+              console.log("URL document processed:", document);
 
               // Update the document in the data items list
-              setDataItems(prev => {
+              setDataItems((prev) => {
                 // Find and replace the temporary item with the real one
-                const newItems = prev.filter(item => !(item.url === url && item.id.startsWith('temp_')));
+                const newItems = prev.filter(
+                  (item) => !(item.url === url && item.id.startsWith("temp_"))
+                );
 
                 // Add the new document with the correct status
                 newItems.push({
                   id: document.document_id.toString(),
                   knowledge_base_id: knowledgeBaseId,
-                  type: 'link',
+                  type: "link",
                   file_name: document.title,
                   file_size: 0,
-                  url: document.file_url || '',
-                  status: document.is_processed ? 'processing' : 'finished',
-                  created_at: document.created_at || new Date().toISOString()
+                  url: document.file_url || "",
+                  status: document.is_processed ? "processing" : "finished",
+                  created_at: document.created_at || new Date().toISOString(),
                 });
 
                 return newItems;
@@ -494,28 +572,30 @@ export default function KnowledgePage() {
               // Update processing items
               if (document.is_processed) {
                 // Replace temp ID with real ID in processing items
-                setProcessingItems(prev => {
-                  const filtered = prev.filter(id => id !== tempId);
+                setProcessingItems((prev) => {
+                  const filtered = prev.filter((id) => id !== tempId);
                   return [...filtered, document.document_id.toString()];
                 });
               } else {
                 // If already processed, remove from processing items
-                setProcessingItems(prev => prev.filter(id => id !== tempId));
+                setProcessingItems((prev) =>
+                  prev.filter((id) => id !== tempId)
+                );
               }
             }
           })
-          .catch(err => {
-            console.error('Error processing URL:', err);
+          .catch((err) => {
+            console.error("Error processing URL:", err);
             // Remove from processing items if there's an error
-            setProcessingItems(prev => prev.filter(id => id !== tempId));
+            setProcessingItems((prev) => prev.filter((id) => id !== tempId));
           });
       }
 
       // Ensure notification is visible
       setShowNotification(true);
     } catch (err: any) {
-      console.error('Error adding data:', err);
-      setError(err.message || 'An error occurred while adding data');
+      console.error("Error adding data:", err);
+      setError(err.message || "An error occurred while adding data");
     }
   };
 
@@ -541,26 +621,34 @@ export default function KnowledgePage() {
           const success = await deleteDocument(documentId);
           if (success) {
             // Remove from dataItems state
-            setDataItems(prev => prev.filter(item => item.id !== itemToDeleteCopy));
+            setDataItems((prev) =>
+              prev.filter((item) => item.id !== itemToDeleteCopy)
+            );
             // Also remove from processing items if it's there
-            setProcessingItems(prev => prev.filter(itemId => itemId !== itemToDeleteCopy));
+            setProcessingItems((prev) =>
+              prev.filter((itemId) => itemId !== itemToDeleteCopy)
+            );
             return;
           }
         }
-        throw new Error('Document deletion failed');
+        throw new Error("Document deletion failed");
       } catch (docErr) {
-        console.error('Error deleting document with new API:', docErr);
+        console.error("Error deleting document with new API:", docErr);
 
         // Fallback to original method if the document API fails
         await deleteKnowledgeDataItem(knowledgeBaseId, itemToDeleteCopy);
 
         // Remove from dataItems state
-        setDataItems(prev => prev.filter(item => item.id !== itemToDeleteCopy));
+        setDataItems((prev) =>
+          prev.filter((item) => item.id !== itemToDeleteCopy)
+        );
         // Also remove from processing items if it's there
-        setProcessingItems(prev => prev.filter(itemId => itemId !== itemToDeleteCopy));
+        setProcessingItems((prev) =>
+          prev.filter((itemId) => itemId !== itemToDeleteCopy)
+        );
       }
     } catch (err: any) {
-      console.error('Error deleting data item:', err);
+      console.error("Error deleting data item:", err);
       alert(`Failed to delete item: ${err.message}`);
     }
   };
@@ -569,19 +657,19 @@ export default function KnowledgePage() {
     try {
       const date = new Date(dateString);
       if (isNaN(date.getTime())) {
-        return 'Invalid Date';
+        return "Invalid Date";
       }
-      return date.toLocaleString('default', {
-        year: 'numeric',
-        month: 'short',
-        day: '2-digit',
-        hour: '2-digit',
-        minute: '2-digit',
-        hour12: true
+      return date.toLocaleString("default", {
+        year: "numeric",
+        month: "short",
+        day: "2-digit",
+        hour: "2-digit",
+        minute: "2-digit",
+        hour12: true,
       });
     } catch (error) {
-      console.error('Date formatting error:', error);
-      return 'Invalid Date';
+      console.error("Date formatting error:", error);
+      return "Invalid Date";
     }
   };
 
@@ -602,19 +690,19 @@ export default function KnowledgePage() {
     try {
       const documentId = parseInt(item.id, 10);
       if (isNaN(documentId)) {
-        throw new Error('Invalid document ID');
+        throw new Error("Invalid document ID");
       }
 
       const document = await getDocument(documentId);
       if (!document) {
-        throw new Error('Document not found');
+        throw new Error("Document not found");
       }
 
       // Set document content
-      setSelectedFileContent(document.content || 'No content available');
+      setSelectedFileContent(document.content || "No content available");
     } catch (err: any) {
-      console.error('Error fetching document content:', err);
-      setContentError(err.message || 'Failed to load document content');
+      console.error("Error fetching document content:", err);
+      setContentError(err.message || "Failed to load document content");
     } finally {
       setIsContentLoading(false);
     }
@@ -623,7 +711,8 @@ export default function KnowledgePage() {
   // Restore processing items from local storage on mount
   useEffect(() => {
     if (knowledgeBaseId) {
-      const storedProcessingItems = getProcessingItemsFromStorage(knowledgeBaseId);
+      const storedProcessingItems =
+        getProcessingItemsFromStorage(knowledgeBaseId);
       if (storedProcessingItems.length > 0) {
         setProcessingItems(storedProcessingItems);
       }
@@ -656,7 +745,10 @@ export default function KnowledgePage() {
           <div className="bg-red-100 dark:bg-red-900 p-4 rounded-lg">
             <p className="text-red-700 dark:text-red-200">{error}</p>
           </div>
-          <Link href="/knowledge" className="text-blue-600 dark:text-blue-500 hover:text-blue-500 dark:hover:text-blue-400 mt-4 block">
+          <Link
+            href="/knowledge"
+            className="text-blue-600 dark:text-blue-500 hover:text-blue-500 dark:hover:text-blue-400 mt-4 block"
+          >
             {t.backToKnowledge}
           </Link>
         </div>
@@ -668,8 +760,13 @@ export default function KnowledgePage() {
     return (
       <div className="pt-16 px-4 bg-white dark:bg-black min-h-screen">
         <div className="max-w-4xl mx-auto">
-          <h1 className="text-gray-900 dark:text-white text-2xl font-bold mb-4">{t.notFound}</h1>
-          <Link href="/knowledge" className="text-blue-600 dark:text-blue-500 hover:text-blue-500 dark:hover:text-blue-400">
+          <h1 className="text-gray-900 dark:text-white text-2xl font-bold mb-4">
+            {t.notFound}
+          </h1>
+          <Link
+            href="/knowledge"
+            className="text-blue-600 dark:text-blue-500 hover:text-blue-500 dark:hover:text-blue-400"
+          >
             {t.backToKnowledge}
           </Link>
         </div>
@@ -678,116 +775,154 @@ export default function KnowledgePage() {
   }
 
   return (
-    <div className="pt-16 px-4 bg-white dark:bg-black min-h-screen">
+    <div className="pt-16 px-4 sm:px-6 lg:px-8 bg-white dark:bg-black min-h-screen">
       <div className="max-w-6xl mx-auto">
         {/* Improved header with breadcrumb navigation */}
         <div className="flex flex-col mb-6">
-          {/* <nav className="flex items-center text-sm mb-4" aria-label="Breadcrumb">
-            <ol className="inline-flex items-center space-x-1 md:space-x-3">
-              <li className="inline-flex items-center">
-                <Link href="/" className="inline-flex items-center text-gray-600 hover:text-blue-600 dark:text-gray-400 dark:hover:text-blue-400">
-                  <svg className="w-4 h-4 mr-2" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M10.707 2.293a1 1 0 00-1.414 0l-7 7a1 1 0 001.414 1.414L4 10.414V17a1 1 0 001 1h2a1 1 0 001-1v-2a1 1 0 011-1h2a1 1 0 011 1v2a1 1 0 001 1h2a1 1 0 001-1v-6.586l.293.293a1 1 0 001.414-1.414l-7-7z"></path>
-                  </svg>
-                  {translations[language].nav.home}
-                </Link>
-              </li>
-              <li>
-                <div className="flex items-center">
-                  <svg className="w-6 h-6 text-gray-400" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
-                    <path fillRule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clipRule="evenodd"></path>
-                  </svg>
-                  <Link href="/knowledge" className="ml-1 text-gray-600 hover:text-blue-600 dark:text-gray-400 dark:hover:text-blue-400 md:ml-2">
-                    {translations[language].nav.knowledgeBase}
-                  </Link>
-                </div>
-              </li>
-              <li aria-current="page">
-                <div className="flex items-center">
-                  <svg className="w-6 h-6 text-gray-400" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
-                    <path fillRule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clipRule="evenodd"></path>
-                  </svg>
-                  <span className="ml-1 text-gray-500 md:ml-2 font-medium dark:text-gray-300">
-                    {knowledge?.title || t.notFound}
-                  </span>
-                </div>
-              </li>
-            </ol>
-          </nav> */}
-
-          <div className="flex justify-between items-center">
+          <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
             <button
-              onClick={() => router.push('/knowledge')}
-              className="flex items-center text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 font-medium transition-colors"
+              onClick={() => router.push("/knowledge")}
+              className="flex items-center text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 font-medium transition-colors w-fit"
             >
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
-                <path fillRule="evenodd" d="M9.707 16.707a1 1 0 01-1.414 0l-6-6a1 1 0 010-1.414l6-6a1 1 0 011.414 1.414L5.414 9H17a1 1 0 110 2H5.414l4.293 4.293a1 1 0 010 1.414z" clipRule="evenodd" />
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                className="h-5 w-5 mr-2"
+                viewBox="0 0 20 20"
+                fill="currentColor"
+              >
+                <path
+                  fillRule="evenodd"
+                  d="M9.707 16.707a1 1 0 01-1.414 0l-6-6a1 1 0 010-1.414l6-6a1 1 0 011.414 1.414L5.414 9H17a1 1 0 110 2H5.414l4.293 4.293a1 1 0 010 1.414z"
+                  clipRule="evenodd"
+                />
               </svg>
               {t.backToKnowledge}
             </button>
 
             <div className="text-sm text-gray-500 dark:text-gray-400 flex items-center">
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                className="h-4 w-4 mr-1"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
+                />
               </svg>
-              <span>{knowledge?.created_at ? formatDate(knowledge.created_at) : '-'}</span>
+              <span>
+                {knowledge?.created_at ? formatDate(knowledge.created_at) : "-"}
+              </span>
             </div>
           </div>
         </div>
 
-        <article className="bg-gradient-to-r from-blue-50 to-gray-50 dark:from-gray-800 dark:to-gray-900 rounded-xl p-6 mb-8 shadow-lg border border-gray-100 dark:border-gray-700">
-          <div className="flex flex-col md:flex-row items-center justify-between">
-            <div className="flex items-center w-full md:w-auto">
-              <div className="bg-blue-100 dark:bg-blue-900/30 p-3 rounded-lg mr-4 shadow-sm">
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-7 w-7 text-blue-600 dark:text-blue-400" viewBox="0 0 20 20" fill="currentColor">
+        <article className="bg-gradient-to-r from-blue-50 to-gray-50 dark:from-gray-800 dark:to-gray-900 rounded-xl p-4 sm:p-6 mb-6 sm:mb-8 shadow-lg border border-gray-100 dark:border-gray-700">
+          <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4">
+            <div className="flex items-start w-full lg:w-auto">
+              <div className="bg-blue-100 dark:bg-blue-900/30 p-2 sm:p-3 rounded-lg mr-3 sm:mr-4 shadow-sm flex-shrink-0">
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  className="h-6 w-6 sm:h-7 sm:w-7 text-blue-600 dark:text-blue-400"
+                  viewBox="0 0 20 20"
+                  fill="currentColor"
+                >
                   <path d="M9 4.804A7.968 7.968 0 005.5 4c-1.255 0-2.443.29-3.5.804v10A7.969 7.969 0 005.5 14c1.669 0 3.218.51 4.5 1.385A7.962 7.962 0 0114.5 14c1.255 0 2.443.29 3.5.804v-10A7.968 7.968 0 0014.5 4c-1.255 0-2.443.29-3.5.804V12a1 1 0 11-2 0V4.804z" />
                 </svg>
               </div>
-              <div>
-                <h1 className="text-2xl md:text-3xl font-bold text-gray-900 dark:text-white">{knowledge?.title}</h1>
+              <div className="min-w-0 flex-1">
+                <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-900 dark:text-white break-words">
+                  {knowledge?.title}
+                </h1>
                 <div className="flex items-center text-sm text-gray-500 dark:text-gray-400 mt-1">
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    className="h-4 w-4 mr-1 flex-shrink-0"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
+                    />
                   </svg>
-                  <span>{knowledge?.created_at ? formatDate(knowledge.created_at) : '-'}</span>
+                  <span className="truncate">
+                    {knowledge?.created_at
+                      ? formatDate(knowledge.created_at)
+                      : "-"}
+                  </span>
                 </div>
               </div>
             </div>
 
             {knowledge?.description && (
-              <div className="w-full md:w-auto mt-4 md:mt-0 md:ml-4 bg-white dark:bg-gray-800 p-4 rounded-lg shadow-sm border border-gray-100 dark:border-gray-700 max-w-2xl">
-                <p className="text-gray-700 dark:text-gray-300">{knowledge.description}</p>
+              <div className="w-full lg:w-auto lg:max-w-lg bg-white dark:bg-gray-800 p-4 rounded-lg shadow-sm border border-gray-100 dark:border-gray-700">
+                <p className="text-gray-700 dark:text-gray-300 text-sm sm:text-base">
+                  {knowledge.description}
+                </p>
               </div>
             )}
           </div>
         </article>
 
-        <div className="bg-gray-100 dark:bg-gray-800 rounded-lg p-8 shadow-lg">
-          <div className="flex justify-between items-center mb-6">
-            <h2 className="text-gray-900 dark:text-white text-2xl font-bold">{t.relatedData}</h2>
-            <div className="flex items-center space-x-3">
+        <div className="bg-gray-100 dark:bg-gray-800 rounded-lg p-4 sm:p-6 lg:p-8 shadow-lg">
+          <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center mb-6 gap-4">
+            <h2 className="text-gray-900 dark:text-white text-xl sm:text-2xl font-bold">
+              {t.relatedData}
+            </h2>
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center space-y-3 sm:space-y-0 sm:space-x-3">
               {/* Processing status badge */}
               {processingItems.length > 0 && (
-                <div className="bg-amber-100 dark:bg-amber-900/30 text-amber-800 dark:text-amber-300 px-3 py-1 rounded-full text-sm flex items-center">
-                  <svg className="animate-spin h-4 w-4 mr-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                <div className="bg-amber-100 dark:bg-amber-900/30 text-amber-800 dark:text-amber-300 px-3 py-1 rounded-full text-sm flex items-center justify-center sm:justify-start">
+                  <svg
+                    className="animate-spin h-4 w-4 mr-2 flex-shrink-0"
+                    xmlns="http://www.w3.org/2000/svg"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                  >
+                    <circle
+                      className="opacity-25"
+                      cx="12"
+                      cy="12"
+                      r="10"
+                      stroke="currentColor"
+                      strokeWidth="4"
+                    ></circle>
+                    <path
+                      className="opacity-75"
+                      fill="currentColor"
+                      d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                    ></path>
                   </svg>
-                  {processingItems.length === 1
-                    ? t.processing?.single || "Processing 1 file..."
-                    : messageFormatter(t.processing?.multiple || "Processing {count} files...", { count: processingItems.length })}
+                  <span className="truncate">
+                    {processingItems.length === 1
+                      ? t.processing?.single || "Processing 1 file..."
+                      : messageFormatter(
+                          t.processing?.multiple ||
+                            "Processing {count} files...",
+                          { count: processingItems.length }
+                        )}
+                  </span>
                 </div>
               )}
               <button
                 onClick={() => setIsDataModalOpen(true)}
-                className="bg-blue-600 dark:bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-700 dark:hover:bg-blue-600 transition-colors"
+                className="bg-blue-600 dark:bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-700 dark:hover:bg-blue-600 transition-colors whitespace-nowrap"
               >
                 {t.addNewData}
               </button>
             </div>
           </div>
 
-          <div className="overflow-x-auto">
+          {/* Desktop Table View */}
+          <div className="hidden lg:block overflow-x-auto">
             <table className="w-full">
               <thead>
                 <tr className="text-left text-gray-600 dark:text-gray-400 border-b border-gray-200 dark:border-gray-700">
@@ -801,45 +936,64 @@ export default function KnowledgePage() {
               </thead>
               <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
                 {dataItems.map((item) => (
-                  <tr key={item.id} className="text-gray-700 dark:text-gray-300">
+                  <tr
+                    key={item.id}
+                    className="text-gray-700 dark:text-gray-300"
+                  >
                     <td className="py-3 px-4">
                       <div className="flex items-center">
-                        <span className="mr-2">{item.type === 'file' ? '📁' : '🔗'}</span>
+                        <span className="mr-2">
+                          {item.type === "file" ? "📁" : "🔗"}
+                        </span>
                         <span className="font-medium">{item.file_name}</span>
                       </div>
                     </td>
                     <td className="py-3 px-4">
                       <div className="truncate max-w-xs">
                         {item.url ? (
-                          <a href={item.url} target="_blank" rel="noopener noreferrer"
-                            className="text-blue-600 dark:text-blue-400 hover:text-blue-500 dark:hover:text-blue-300 truncate">
+                          <a
+                            href={item.url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-blue-600 dark:text-blue-400 hover:text-blue-500 dark:hover:text-blue-300 truncate"
+                          >
                             {item.url}
                           </a>
                         ) : (
-                          <span className="text-gray-500 dark:text-gray-400 italic">N/A</span>
+                          <span className="text-gray-500 dark:text-gray-400 italic">
+                            N/A
+                          </span>
                         )}
                       </div>
                     </td>
                     <td className="py-3 px-4">
-                      {item.type === 'file' ? (
+                      {item.type === "file" ? (
                         <span className="text-gray-700 dark:text-gray-300">
-                          {item.file_name?.split('.').pop()?.toUpperCase() || 'FILE'}
+                          {item.file_name?.split(".").pop()?.toUpperCase() ||
+                            "FILE"}
                         </span>
                       ) : (
-                        <span className="text-gray-700 dark:text-gray-300">URL</span>
+                        <span className="text-gray-700 dark:text-gray-300">
+                          URL
+                        </span>
                       )}
                     </td>
                     <td className="py-3 px-4">{formatDate(item.created_at)}</td>
                     <td className="py-3 px-4">
-                      <span className={`px-3 py-1 rounded-full text-sm ${item.status === 'finished'
-                        ? 'bg-green-100 dark:bg-green-900 text-green-900 dark:text-green-300'
-                        : 'bg-yellow-100 dark:bg-yellow-900 text-yellow-900 dark:text-yellow-300'
-                        }`}>
-                        {item.status === 'finished' ? t.status.finished : t.status.processing}
+                      <span
+                        className={`px-3 py-1 rounded-full text-sm ${
+                          item.status === "finished"
+                            ? "bg-green-100 dark:bg-green-900 text-green-900 dark:text-green-300"
+                            : "bg-yellow-100 dark:bg-yellow-900 text-yellow-900 dark:text-yellow-300"
+                        }`}
+                      >
+                        {item.status === "finished"
+                          ? t.status.finished
+                          : t.status.processing}
                       </span>
                     </td>
                     <td className="py-3 px-4">
-                      {item.status === 'finished' ? (
+                      {item.status === "finished" ? (
                         <div className="flex items-center space-x-3">
                           <button
                             onClick={() => handleViewFile(item)}
@@ -868,61 +1022,216 @@ export default function KnowledgePage() {
             </table>
 
             {dataItems.length === 0 && (
-              <p className="text-gray-600 dark:text-gray-400 text-center py-4">
+              <p className="text-gray-600 dark:text-gray-400 text-center py-8">
                 {t.noData}
               </p>
+            )}
+          </div>
+
+          {/* Mobile Card View */}
+          <div className="lg:hidden space-y-4">
+            {dataItems.map((item) => (
+              <div
+                key={item.id}
+                className="bg-white dark:bg-gray-700 rounded-lg p-4 shadow-sm border border-gray-200 dark:border-gray-600"
+              >
+                {/* Header with icon, title and status */}
+                <div className="flex items-start justify-between mb-3">
+                  <div className="flex items-start flex-1 min-w-0">
+                    <span className="mr-2 text-lg flex-shrink-0">
+                      {item.type === "file" ? "📁" : "🔗"}
+                    </span>
+                    <div className="min-w-0 flex-1">
+                      <h3 className="font-medium text-gray-900 dark:text-white break-words">
+                        {item.file_name}
+                      </h3>
+                      <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                        {item.type === "file" ? (
+                          <span>
+                            {item.file_name?.split(".").pop()?.toUpperCase() ||
+                              "FILE"}
+                          </span>
+                        ) : (
+                          <span>URL</span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                  <span
+                    className={`px-2 py-1 rounded-full text-xs whitespace-nowrap ml-2 ${
+                      item.status === "finished"
+                        ? "bg-green-100 dark:bg-green-900 text-green-900 dark:text-green-300"
+                        : "bg-yellow-100 dark:bg-yellow-900 text-yellow-900 dark:text-yellow-300"
+                    }`}
+                  >
+                    {item.status === "finished"
+                      ? t.status.finished
+                      : t.status.processing}
+                  </span>
+                </div>
+
+                {/* URL/Path */}
+                {item.url && (
+                  <div className="mb-3">
+                    <div className="text-xs text-gray-500 dark:text-gray-400 mb-1">
+                      {t.table.pathUrl || "Path/URL"}
+                    </div>
+                    <a
+                      href={item.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-blue-600 dark:text-blue-400 hover:text-blue-500 dark:hover:text-blue-300 text-sm break-all"
+                    >
+                      {item.url}
+                    </a>
+                  </div>
+                )}
+
+                {/* Upload time */}
+                <div className="mb-3">
+                  <div className="text-xs text-gray-500 dark:text-gray-400 mb-1">
+                    {t.table.uploadTime}
+                  </div>
+                  <div className="text-sm text-gray-700 dark:text-gray-300">
+                    {formatDate(item.created_at)}
+                  </div>
+                </div>
+
+                {/* Actions */}
+                {item.status === "finished" ? (
+                  <div className="flex flex-col sm:flex-row gap-2">
+                    <button
+                      onClick={() => handleViewFile(item)}
+                      className="flex-1 bg-blue-600 dark:bg-blue-500 text-white px-3 py-2 rounded text-sm hover:bg-blue-700 dark:hover:bg-blue-600 transition-colors"
+                    >
+                      {t.actions.view}
+                    </button>
+                    <button
+                      onClick={() => handleDeleteItem(item.id)}
+                      className="flex-1 bg-red-600 dark:bg-red-500 text-white px-3 py-2 rounded text-sm hover:bg-red-700 dark:hover:bg-red-600 transition-colors"
+                    >
+                      {t.actions.delete}
+                    </button>
+                  </div>
+                ) : (
+                  <div className="text-gray-400 dark:text-gray-600 text-sm italic text-center py-2">
+                    {t.status.processing}
+                  </div>
+                )}
+              </div>
+            ))}
+
+            {dataItems.length === 0 && (
+              <div className="text-center py-8">
+                <div className="text-gray-400 dark:text-gray-600 text-6xl mb-4">
+                  📄
+                </div>
+                <p className="text-gray-600 dark:text-gray-400">{t.noData}</p>
+              </div>
             )}
           </div>
         </div>
 
         {showNotification && (
-          <div className="fixed bottom-4 right-4 max-w-md w-80 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-blue-200 dark:border-blue-800 overflow-hidden transition-all duration-300 transform">
+          <div className="fixed bottom-4 right-4 max-w-sm sm:max-w-md w-80 sm:w-auto bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-blue-200 dark:border-blue-800 overflow-hidden transition-all duration-300 transform z-50">
             {/* Header with toggle button */}
-            <div className="bg-blue-600 dark:bg-blue-700 text-white px-4 py-3 flex justify-between items-center">
+            <div className="bg-blue-600 dark:bg-blue-700 text-white px-3 sm:px-4 py-2 sm:py-3 flex justify-between items-center">
               <h3 className="font-medium text-sm flex items-center">
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-2" viewBox="0 0 20 20" fill="currentColor">
-                  <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zm-4 4a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  className="h-4 w-4 mr-2 flex-shrink-0"
+                  viewBox="0 0 20 20"
+                  fill="currentColor"
+                >
+                  <path
+                    fillRule="evenodd"
+                    d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zm-4 4a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z"
+                    clipRule="evenodd"
+                  />
                 </svg>
-                {t.notification?.title || "Processing Status"}
+                <span className="truncate">
+                  {t.notification?.title || "Processing Status"}
+                </span>
               </h3>
               <div className="flex items-center space-x-2">
                 <button
                   onClick={toggleNotificationCollapse}
-                  className="text-white hover:bg-blue-700 dark:hover:bg-blue-600 p-1 rounded"
+                  className="text-white hover:bg-blue-700 dark:hover:bg-blue-600 p-1 rounded flex-shrink-0"
                   aria-label={isNotificationCollapsed ? "Expand" : "Collapse"}
                 >
-                  <svg xmlns="http://www.w3.org/2000/svg" className={`h-4 w-4 transform transition-transform duration-200 ${isNotificationCollapsed ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    className={`h-4 w-4 transform transition-transform duration-200 ${
+                      isNotificationCollapsed ? "rotate-180" : ""
+                    }`}
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M19 9l-7 7-7-7"
+                    />
                   </svg>
                 </button>
               </div>
             </div>
 
             {/* Content - shown when not collapsed */}
-            <div className={`overflow-hidden transition-all duration-300 ${isNotificationCollapsed ? 'max-h-0' : 'max-h-64'}`}>
-              <div className="p-4 text-gray-700 dark:text-gray-300">
+            <div
+              className={`overflow-hidden transition-all duration-300 ${
+                isNotificationCollapsed ? "max-h-0" : "max-h-64"
+              }`}
+            >
+              <div className="p-3 sm:p-4 text-gray-700 dark:text-gray-300">
                 {/* Processing items indicator */}
                 {processingItems.length > 0 && (
                   <div>
                     <div className="flex items-center text-amber-600 dark:text-amber-400 font-medium mb-2">
-                      <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2 animate-spin" fill="none" viewBox="0 0 24 24">
-                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        className="h-4 w-4 sm:h-5 sm:w-5 mr-2 animate-spin flex-shrink-0"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                      >
+                        <circle
+                          className="opacity-25"
+                          cx="12"
+                          cy="12"
+                          r="10"
+                          stroke="currentColor"
+                          strokeWidth="4"
+                        ></circle>
+                        <path
+                          className="opacity-75"
+                          fill="currentColor"
+                          d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                        ></path>
                       </svg>
-                      {processingItems.length === 1
-                        ? t.processing?.single || "Processing 1 file..."
-                        : messageFormatter(t.processing?.multiple || "Processing {count} files...", { count: processingItems.length })}
+                      <span className="text-sm truncate">
+                        {processingItems.length === 1
+                          ? t.processing?.single || "Processing 1 file..."
+                          : messageFormatter(
+                              t.processing?.multiple ||
+                                "Processing {count} files...",
+                              { count: processingItems.length }
+                            )}
+                      </span>
                     </div>
                     {processingItems.length > 0 && (
-                      <div className="ml-7 text-sm mt-1 max-h-24 overflow-y-auto bg-gray-50 dark:bg-gray-700 rounded p-2">
+                      <div className="ml-6 sm:ml-7 text-xs sm:text-sm mt-1 max-h-20 sm:max-h-24 overflow-y-auto bg-gray-50 dark:bg-gray-700 rounded p-2">
                         {dataItems
-                          .filter(item => processingItems.includes(item.id))
-                          .map(item => (
-                            <div key={item.id} className="truncate text-gray-600 dark:text-gray-400 py-1">
-                              {item.type === 'file' ? item.file_name : item.url}
+                          .filter((item) => processingItems.includes(item.id))
+                          .map((item) => (
+                            <div
+                              key={item.id}
+                              className="truncate text-gray-600 dark:text-gray-400 py-1"
+                            >
+                              {item.type === "file" ? item.file_name : item.url}
                             </div>
-                          ))
-                        }
+                          ))}
                       </div>
                     )}
                   </div>
@@ -931,10 +1240,21 @@ export default function KnowledgePage() {
                 {/* Show when nothing is processing */}
                 {processingItems.length === 0 && (
                   <div className="flex items-center justify-center text-gray-500 dark:text-gray-400 py-2">
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
-                      <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      className="h-4 w-4 sm:h-5 sm:w-5 mr-2 flex-shrink-0"
+                      viewBox="0 0 20 20"
+                      fill="currentColor"
+                    >
+                      <path
+                        fillRule="evenodd"
+                        d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
+                        clipRule="evenodd"
+                      />
                     </svg>
-                    {t.notification?.noTasks || "No tasks in progress"}
+                    <span className="text-sm">
+                      {t.notification?.noTasks || "No tasks in progress"}
+                    </span>
                   </div>
                 )}
               </div>
@@ -952,17 +1272,21 @@ export default function KnowledgePage() {
         <FileInfoModal
           isOpen={!!selectedFile}
           onClose={() => setSelectedFile(null)}
-          fileData={selectedFile ? {
-            name: selectedFile.file_name,
-            size: selectedFile.file_size,
-            value: selectedFile.url,
-            type: selectedFile.type,
-            uploadTime: selectedFile.created_at,
-            id: selectedFile.id,
-            content: selectedFileContent,
-            isLoading: isContentLoading,
-            error: contentError
-          } : null}
+          fileData={
+            selectedFile
+              ? {
+                  name: selectedFile.file_name,
+                  size: selectedFile.file_size,
+                  value: selectedFile.url,
+                  type: selectedFile.type,
+                  uploadTime: selectedFile.created_at,
+                  id: selectedFile.id,
+                  content: selectedFileContent,
+                  isLoading: isContentLoading,
+                  error: contentError,
+                }
+              : null
+          }
         />
 
         <ConfirmDeleteModal
@@ -970,41 +1294,87 @@ export default function KnowledgePage() {
           onClose={() => setIsDeleteModalOpen(false)}
           onConfirm={confirmDelete}
           title={t.confirmDeleteTitle || "Confirm Delete"}
-          message={t.confirmDeleteMessage || "Are you sure you want to delete this document? This action cannot be undone."}
+          message={
+            t.confirmDeleteMessage ||
+            "Are you sure you want to delete this document? This action cannot be undone."
+          }
         />
 
         {/* Toast notification for duplicate files/URLs */}
         {toast.visible && (
           <div
-            className={`fixed top-4 left-1/2 transform -translate-x-1/2 z-50 px-6 py-3 rounded-lg shadow-lg flex items-center transition-all duration-300 ${toast.type === 'error' ? 'bg-red-500 text-white' :
-              toast.type === 'warning' ? 'bg-yellow-500 text-white' :
-                'bg-green-500 text-white'
-              }`}
+            className={`fixed top-4 left-4 right-4 sm:left-1/2 sm:right-auto sm:transform sm:-translate-x-1/2 sm:max-w-md z-50 px-4 sm:px-6 py-3 rounded-lg shadow-lg flex items-start transition-all duration-300 ${
+              toast.type === "error"
+                ? "bg-red-500 text-white"
+                : toast.type === "warning"
+                ? "bg-yellow-500 text-white"
+                : "bg-green-500 text-white"
+            }`}
             role="alert"
           >
-            <div className="mr-3 flex-shrink-0">
-              {toast.type === 'error' ? (
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+            <div className="mr-3 flex-shrink-0 pt-0.5">
+              {toast.type === "error" ? (
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  className="h-5 w-5"
+                  viewBox="0 0 20 20"
+                  fill="currentColor"
+                >
+                  <path
+                    fillRule="evenodd"
+                    d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
+                    clipRule="evenodd"
+                  />
                 </svg>
-              ) : toast.type === 'warning' ? (
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                  <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+              ) : toast.type === "warning" ? (
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  className="h-5 w-5"
+                  viewBox="0 0 20 20"
+                  fill="currentColor"
+                >
+                  <path
+                    fillRule="evenodd"
+                    d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z"
+                    clipRule="evenodd"
+                  />
                 </svg>
               ) : (
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  className="h-5 w-5"
+                  viewBox="0 0 20 20"
+                  fill="currentColor"
+                >
+                  <path
+                    fillRule="evenodd"
+                    d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
+                    clipRule="evenodd"
+                  />
                 </svg>
               )}
             </div>
-            <div>{toast.message}</div>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm sm:text-base break-words">
+                {toast.message}
+              </p>
+            </div>
             <button
-              onClick={() => setToast(prev => ({ ...prev, visible: false }))}
-              className="ml-4 text-white opacity-70 hover:opacity-100"
+              onClick={() => setToast((prev) => ({ ...prev, visible: false }))}
+              className="ml-4 text-white opacity-70 hover:opacity-100 flex-shrink-0"
               aria-label="Close"
             >
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
-                <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                className="h-4 w-4"
+                viewBox="0 0 20 20"
+                fill="currentColor"
+              >
+                <path
+                  fillRule="evenodd"
+                  d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"
+                  clipRule="evenodd"
+                />
               </svg>
             </button>
           </div>

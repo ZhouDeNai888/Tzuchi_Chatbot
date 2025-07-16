@@ -1,11 +1,16 @@
-'use client';
+"use client";
 
-import { useState, useEffect } from 'react';
-import { useLanguage } from '@/context/LanguageContext';
-import { translations } from '@/utils/translations';
-import { getDepartments, createDepartment, updateDepartment, deleteDepartment } from '@/utils/apiService';
-import { useRouter } from 'next/navigation';
-import ConfirmDeleteModal from '@/components/ConfirmDeleteModal';
+import { useState, useEffect } from "react";
+import { useLanguage } from "@/context/LanguageContext";
+import { translations } from "@/utils/translations";
+import {
+  getDepartments,
+  createDepartment,
+  updateDepartment,
+  deleteDepartment,
+} from "@/utils/apiService";
+import { useRouter } from "next/navigation";
+import ConfirmDeleteModal from "@/components/ConfirmDeleteModal";
 
 // Define an interface for API response
 interface DepartmentApiResponse {
@@ -34,7 +39,9 @@ export default function DepartmentsPage() {
   const [departments, setDepartments] = useState<Department[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
-  const [editingDepartment, setEditingDepartment] = useState<Department | null>(null);
+  const [editingDepartment, setEditingDepartment] = useState<Department | null>(
+    null
+  );
 
   // Pagination state
   const [currentPage, setCurrentPage] = useState<number>(1);
@@ -42,21 +49,25 @@ export default function DepartmentsPage() {
   const [totalPages, setTotalPages] = useState<number>(1);
 
   // Search state
-  const [searchQuery, setSearchQuery] = useState<string>('');
-  const [filteredDepartments, setFilteredDepartments] = useState<Department[]>([]);
+  const [searchQuery, setSearchQuery] = useState<string>("");
+  const [filteredDepartments, setFilteredDepartments] = useState<Department[]>(
+    []
+  );
 
   // Form modal state
   const [showFormModal, setShowFormModal] = useState<boolean>(false);
-  const [formMode, setFormMode] = useState<'create' | 'edit'>('create');
+  const [formMode, setFormMode] = useState<"create" | "edit">("create");
   const [formData, setFormData] = useState({
-    id: '',
-    name: '',
-    description: '',
+    id: "",
+    name: "",
+    description: "",
   });
 
   // Delete modal state
   const [showDeleteModal, setShowDeleteModal] = useState<boolean>(false);
-  const [departmentToDelete, setDepartmentToDelete] = useState<string | null>(null);
+  const [departmentToDelete, setDepartmentToDelete] = useState<string | null>(
+    null
+  );
 
   // Get paginated departments
   const getPaginatedDepartments = () => {
@@ -66,9 +77,10 @@ export default function DepartmentsPage() {
   };
 
   const isDuplicateName = (name: string, excludeId?: string): boolean => {
-    return departments.some(dept =>
-      dept.name.toLowerCase() === name.toLowerCase() &&
-      (!excludeId || dept.id !== excludeId)
+    return departments.some(
+      (dept) =>
+        dept.name.toLowerCase() === name.toLowerCase() &&
+        (!excludeId || dept.id !== excludeId)
     );
   };
 
@@ -80,7 +92,12 @@ export default function DepartmentsPage() {
       return;
     }
 
-    if (isDuplicateName(formData.name, formMode === 'edit' ? formData.id : undefined)) {
+    if (
+      isDuplicateName(
+        formData.name,
+        formMode === "edit" ? formData.id : undefined
+      )
+    ) {
       alert(t.errors.duplicate);
       return;
     }
@@ -88,46 +105,52 @@ export default function DepartmentsPage() {
     try {
       setLoading(true);
 
-      if (formMode === 'create') {
+      if (formMode === "create") {
         // Create department via API
         const response: any = await createDepartment({
           name: formData.name,
-          description: formData.description
+          description: formData.description,
         });
 
         if (response) {
           // Convert API response to our Department format
           const createdDepartment: Department = {
-            id: response.department_id?.toString() || response.id?.toString() || '',
+            id:
+              response.department_id?.toString() ||
+              response.id?.toString() ||
+              "",
             name: response.name,
-            description: response.description || '',
-            userCount: typeof response.user_count !== 'undefined' ? response.user_count : 0,
-            kbCount: typeof response.knowledgebase_count !== 'undefined' ? response.knowledgebase_count : 0,
-            createdAt: response.created_at || new Date().toISOString()
+            description: response.description || "",
+            userCount:
+              typeof response.user_count !== "undefined"
+                ? response.user_count
+                : 0,
+            kbCount:
+              typeof response.knowledgebase_count !== "undefined"
+                ? response.knowledgebase_count
+                : 0,
+            createdAt: response.created_at || new Date().toISOString(),
           };
 
           setDepartments([...departments, createdDepartment]);
         } else {
-          setError('Failed to create department');
+          setError("Failed to create department");
         }
       } else {
         // Update department via API
-        const updatedDepartment = await updateDepartment(
-          formData.id,
-          {
-            name: formData.name,
-            description: formData.description
-          }
-        );
+        const updatedDepartment = await updateDepartment(formData.id, {
+          name: formData.name,
+          description: formData.description,
+        });
 
         if (updatedDepartment) {
           // Update the departments list
-          const updatedDepartments = departments.map(dept => {
+          const updatedDepartments = departments.map((dept) => {
             if (dept.id === formData.id) {
               return {
                 ...dept,
                 name: updatedDepartment.name,
-                description: updatedDepartment.description || ''
+                description: updatedDepartment.description || "",
               };
             }
             return dept;
@@ -135,33 +158,38 @@ export default function DepartmentsPage() {
 
           setDepartments(updatedDepartments);
         } else {
-          setError('Failed to update department');
+          setError("Failed to update department");
         }
       }
 
       // Reset form and close modal
       setShowFormModal(false);
-      setFormData({ id: '', name: '', description: '' });
+      setFormData({ id: "", name: "", description: "" });
     } catch (err) {
-      console.error(`Error ${formMode === 'create' ? 'creating' : 'updating'} department:`, err);
-      setError(`Failed to ${formMode === 'create' ? 'create' : 'update'} department`);
+      console.error(
+        `Error ${formMode === "create" ? "creating" : "updating"} department:`,
+        err
+      );
+      setError(
+        `Failed to ${formMode === "create" ? "create" : "update"} department`
+      );
     } finally {
       setLoading(false);
     }
   };
 
   const openCreateForm = () => {
-    setFormMode('create');
-    setFormData({ id: '', name: '', description: '' });
+    setFormMode("create");
+    setFormData({ id: "", name: "", description: "" });
     setShowFormModal(true);
   };
 
   const openEditForm = (department: Department) => {
-    setFormMode('edit');
+    setFormMode("edit");
     setFormData({
       id: department.id,
       name: department.name,
-      description: department.description
+      description: department.description,
     });
     setShowFormModal(true);
   };
@@ -181,14 +209,16 @@ export default function DepartmentsPage() {
       const success = await deleteDepartment(departmentToDelete);
 
       if (success) {
-        const updatedDepartments = departments.filter(dept => dept.id !== departmentToDelete);
+        const updatedDepartments = departments.filter(
+          (dept) => dept.id !== departmentToDelete
+        );
         setDepartments(updatedDepartments);
       } else {
-        setError('Failed to delete department');
+        setError("Failed to delete department");
       }
     } catch (err) {
-      console.error('Error deleting department:', err);
-      setError('Failed to delete department');
+      console.error("Error deleting department:", err);
+      setError("Failed to delete department");
     } finally {
       setLoading(false);
       setShowDeleteModal(false);
@@ -201,7 +231,9 @@ export default function DepartmentsPage() {
   };
 
   // Change items per page
-  const handleItemsPerPageChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+  const handleItemsPerPageChange = (
+    e: React.ChangeEvent<HTMLSelectElement>
+  ) => {
     setItemsPerPage(Number(e.target.value));
     setCurrentPage(1); // Reset to first page
   };
@@ -228,10 +260,10 @@ export default function DepartmentsPage() {
 
         if (data && Array.isArray(data) && data.length > 0) {
           // Transform API data to match our interface
-          const formattedDepts = data.map(dept => ({
-            id: dept.department_id?.toString() || '',
+          const formattedDepts = data.map((dept) => ({
+            id: dept.department_id?.toString() || "",
             name: dept.name,
-            description: dept.description || '',
+            description: dept.description || "",
             userCount: dept.user_count || 0,
             kbCount: dept.knowledgebase_count || 0,
             createdAt: dept.created_at || new Date().toISOString(),
@@ -244,8 +276,8 @@ export default function DepartmentsPage() {
           setDepartments([]);
         }
       } catch (err) {
-        console.error('Error fetching departments:', err);
-        setError('Failed to load departments');
+        console.error("Error fetching departments:", err);
+        setError("Failed to load departments");
         setDepartments([]);
       } finally {
         setLoading(false);
@@ -262,13 +294,14 @@ export default function DepartmentsPage() {
 
   // Filter departments based on search query
   useEffect(() => {
-    if (searchQuery.trim() === '') {
+    if (searchQuery.trim() === "") {
       setFilteredDepartments(departments);
     } else {
       const lowerCaseQuery = searchQuery.toLowerCase();
-      const filtered = departments.filter(dept =>
-        dept.name.toLowerCase().includes(lowerCaseQuery) ||
-        dept.description.toLowerCase().includes(lowerCaseQuery)
+      const filtered = departments.filter(
+        (dept) =>
+          dept.name.toLowerCase().includes(lowerCaseQuery) ||
+          dept.description.toLowerCase().includes(lowerCaseQuery)
       );
       setFilteredDepartments(filtered);
     }
@@ -278,152 +311,397 @@ export default function DepartmentsPage() {
   return (
     <div className="min-h-screen bg-white dark:bg-gray-900 text-gray-900 dark:text-white mt-15">
       {/* Header with title and actions */}
-      <div className="sticky top-0 z-10 bg-white dark:bg-gray-900 px-6 py-4 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
-        <h1 className="text-2xl font-bold">{t.title}</h1>
+      <div className="sticky top-0 z-10 bg-white dark:bg-gray-900 px-4 sm:px-6 py-4 border-b border-gray-200 dark:border-gray-700">
+        <div className="flex flex-col space-y-4 sm:flex-row sm:items-center sm:justify-between sm:space-y-0">
+          <h1 className="text-xl sm:text-2xl font-bold">{t.title}</h1>
 
-        <div className="flex items-center gap-4">
-          {/* Search input */}
-          <div className="relative">
-            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-              <svg className="w-5 h-5 text-gray-500 dark:text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-              </svg>
+          <div className="flex flex-col space-y-3 sm:flex-row sm:items-center sm:space-y-0 sm:space-x-4">
+            {/* Search input */}
+            <div className="relative">
+              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                <svg
+                  className="w-4 h-4 sm:w-5 sm:h-5 text-gray-500 dark:text-gray-400"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                  xmlns="http://www.w3.org/2000/svg"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+                  />
+                </svg>
+              </div>
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder={t.search.placeholder}
+                className="pl-9 sm:pl-10 pr-4 py-2 sm:py-3 w-full sm:w-64 bg-gray-50 dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 text-sm sm:text-base"
+              />
             </div>
-            <input
-              type="text"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder={t.search.placeholder}
-              className="pl-10 pr-4 py-2 w-64 bg-gray-50 dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400"
-            />
-          </div>
 
-          {/* Add department button */}
-          <button
-            onClick={openCreateForm}
-            className="bg-blue-600 dark:bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-700 dark:hover:bg-blue-600 transition-colors flex items-center gap-2"
-          >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-            </svg>
-            {t.addNew}
-          </button>
+            {/* Add department button */}
+            <button
+              onClick={openCreateForm}
+              className="w-full sm:w-auto bg-blue-600 dark:bg-blue-500 text-white px-4 py-2 sm:py-3 rounded-lg hover:bg-blue-700 dark:hover:bg-blue-600 transition-colors flex items-center justify-center gap-2 text-sm sm:text-base"
+            >
+              <svg
+                className="w-4 h-4 sm:w-5 sm:h-5"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M12 6v6m0 0v6m0-6h6m-6 0H6"
+                />
+              </svg>
+              {t.addNew}
+            </button>
+          </div>
         </div>
       </div>
 
       {/* Main content */}
-      <div className="p-6">
+      <div className="p-4 sm:p-6">
         {error && (
-          <div className="bg-red-100 dark:bg-red-900/50 text-red-800 dark:text-red-200 p-4 rounded-lg mb-6 flex justify-between items-center">
-            <div className="flex items-center">
-              <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+          <div className="bg-red-100 dark:bg-red-900/50 text-red-800 dark:text-red-200 p-3 sm:p-4 rounded-lg mb-4 sm:mb-6 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 sm:gap-0">
+            <div className="flex items-start sm:items-center">
+              <svg
+                className="w-5 h-5 mr-2 flex-shrink-0 mt-0.5 sm:mt-0"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                />
               </svg>
-              {error}
+              <span className="text-sm sm:text-base">{error}</span>
             </div>
             <button
               onClick={() => setError(null)}
-              className="text-red-600 dark:text-red-400 hover:text-red-800 dark:hover:text-red-300"
+              className="text-red-600 dark:text-red-400 hover:text-red-800 dark:hover:text-red-300 self-end sm:self-auto"
             >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              <svg
+                className="w-5 h-5"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M6 18L18 6M6 6l12 12"
+                />
               </svg>
             </button>
           </div>
         )}
 
         {loading && departments.length === 0 ? (
-          <div className="flex justify-center items-center p-12">
-            <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
+          <div className="flex justify-center items-center p-8 sm:p-12">
+            <div className="animate-spin rounded-full h-10 w-10 sm:h-12 sm:w-12 border-t-2 border-b-2 border-blue-500"></div>
           </div>
         ) : filteredDepartments.length === 0 ? (
-          <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-8 text-center">
-            <svg className="w-16 h-16 mx-auto text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+          <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-6 sm:p-8 text-center">
+            <svg
+              className="w-12 h-12 sm:w-16 sm:h-16 mx-auto text-gray-400"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={1.5}
+                d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"
+              />
             </svg>
-            <h3 className="mt-4 text-lg font-medium text-gray-900 dark:text-gray-100">{t.noDepartments}</h3>
-            <p className="mt-2 text-gray-500 dark:text-gray-400">{t.search.placeholder ? 'No departments match your search criteria.' : 'Create your first department to get started.'}</p>
+            <h3 className="mt-4 text-base sm:text-lg font-medium text-gray-900 dark:text-gray-100">
+              {t.noDepartments}
+            </h3>
+            <p className="mt-2 text-sm sm:text-base text-gray-500 dark:text-gray-400">
+              {t.search.placeholder
+                ? "No departments match your search criteria."
+                : "Create your first department to get started."}
+            </p>
             <button
               onClick={openCreateForm}
-              className="mt-4 bg-blue-600 dark:bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-700 dark:hover:bg-blue-600 transition-colors"
+              className="mt-4 w-full sm:w-auto bg-blue-600 dark:bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-700 dark:hover:bg-blue-600 transition-colors text-sm sm:text-base"
             >
               {t.addNew}
             </button>
           </div>
         ) : (
           <div className="bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden">
-            {/* Table header */}
-            <div className="grid grid-cols-12 bg-gray-50 dark:bg-gray-700 p-4 font-medium text-gray-700 dark:text-gray-200 border-b border-gray-200 dark:border-gray-600">
-              <div className="col-span-5 sm:col-span-4">{t.form.name}</div>
-              <div className="col-span-5 sm:col-span-4 hidden sm:block">{t.form.description}</div>
-              <div className="col-span-4 sm:col-span-2 text-center hidden sm:block">{t.stats?.users ? t.stats.users : 'Stats'}</div>
-              <div className="col-span-7 sm:col-span-2 text-right">{t.form.actions || 'Actions'}</div>
+            {/* Desktop Table header */}
+            <div className="hidden md:grid grid-cols-12 bg-gray-50 dark:bg-gray-700 p-4 font-medium text-gray-700 dark:text-gray-200 border-b border-gray-200 dark:border-gray-600">
+              <div className="col-span-4">{t.form.name}</div>
+              <div className="col-span-4">{t.form.description}</div>
+              <div className="col-span-2 text-center">
+                {t.stats?.users ? t.stats.users : "Stats"}
+              </div>
+              <div className="col-span-2 text-right">
+                {t.form.actions || "Actions"}
+              </div>
             </div>
 
-            {/* Table rows */}
+            {/* Department rows */}
             <div className="divide-y divide-gray-200 dark:divide-gray-700">
               {getPaginatedDepartments().map((department) => (
-                <div
-                  key={department.id}
-                  className="grid grid-cols-12 p-4 hover:bg-gray-50 dark:hover:bg-gray-750 dark:hover:text-black transition-colors items-center"
-                >
-                  <div
-                    className="col-span-5 sm:col-span-4 font-medium cursor-pointer"
-                    onClick={() => handleDepartmentClick(department.id)}
-                  >
-                    {department.name}
+                <div key={department.id}>
+                  {/* Mobile Card View */}
+                  <div className="md:hidden p-4 hover:bg-gray-50 dark:hover:bg-gray-750 transition-colors">
+                    <div className="space-y-3">
+                      <div className="flex justify-between items-start">
+                        <div
+                          className="flex-1 cursor-pointer"
+                          onClick={() => handleDepartmentClick(department.id)}
+                        >
+                          <h3 className="font-medium text-gray-900 dark:text-white break-words">
+                            {department.name}
+                          </h3>
+                          {department.description && (
+                            <p className="text-sm text-gray-600 dark:text-gray-400 mt-1 break-words">
+                              {department.description}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+
+                      <div className="flex justify-between items-center">
+                        <div className="flex gap-2">
+                          <span className="bg-blue-100 dark:bg-blue-900/50 text-blue-800 dark:text-blue-200 px-2 py-1 rounded text-xs flex items-center">
+                            <svg
+                              className="w-3 h-3 mr-1"
+                              fill="none"
+                              stroke="currentColor"
+                              viewBox="0 0 24 24"
+                              xmlns="http://www.w3.org/2000/svg"
+                            >
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth={2}
+                                d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
+                              />
+                            </svg>
+                            {department.userCount}
+                          </span>
+                          <span className="bg-green-100 dark:bg-green-900/50 text-green-800 dark:text-green-200 px-2 py-1 rounded text-xs flex items-center">
+                            <svg
+                              className="w-3 h-3 mr-1"
+                              fill="none"
+                              stroke="currentColor"
+                              viewBox="0 0 24 24"
+                              xmlns="http://www.w3.org/2000/svg"
+                            >
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth={2}
+                                d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                              />
+                            </svg>
+                            {department.kbCount}
+                          </span>
+                        </div>
+
+                        <div className="flex gap-2">
+                          <button
+                            onClick={() => openEditForm(department)}
+                            className="p-2 bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 rounded-md hover:bg-blue-200 dark:hover:bg-blue-800/50 transition-colors"
+                            title={t.actions.edit}
+                          >
+                            <svg
+                              className="w-4 h-4"
+                              fill="none"
+                              stroke="currentColor"
+                              viewBox="0 0 24 24"
+                              xmlns="http://www.w3.org/2000/svg"
+                            >
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth={2}
+                                d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
+                              />
+                            </svg>
+                          </button>
+                          <button
+                            onClick={() => handleDelete(department.id)}
+                            className="p-2 bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 rounded-md hover:bg-red-200 dark:hover:bg-red-800/50 transition-colors"
+                            title={t.actions.delete}
+                          >
+                            <svg
+                              className="w-4 h-4"
+                              fill="none"
+                              stroke="currentColor"
+                              viewBox="0 0 24 24"
+                              xmlns="http://www.w3.org/2000/svg"
+                            >
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth={2}
+                                d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                              />
+                            </svg>
+                          </button>
+                          <button
+                            onClick={() => handleDepartmentClick(department.id)}
+                            className="p-2 bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 rounded-md hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
+                            title={t.actions.view || "View"}
+                          >
+                            <svg
+                              className="w-4 h-4"
+                              fill="none"
+                              stroke="currentColor"
+                              viewBox="0 0 24 24"
+                              xmlns="http://www.w3.org/2000/svg"
+                            >
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth={2}
+                                d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"
+                              />
+                            </svg>
+                          </button>
+                        </div>
+                      </div>
+                    </div>
                   </div>
 
-                  <div
-                    className="col-span-5 sm:col-span-4 text-gray-600 dark:text-gray-400 hidden sm:block truncate cursor-pointer"
-                    onClick={() => handleDepartmentClick(department.id)}
-                  >
-                    {department.description || '—'}
-                  </div>
-
-                  <div className="col-span-4 sm:col-span-2 flex gap-2 justify-center hidden sm:flex">
-                    <span className="bg-blue-100 dark:bg-blue-900/50 text-blue-800 dark:text-blue-200 px-2 py-1 rounded text-xs flex items-center">
-                      <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                      </svg>
-                      {department.userCount}
-                    </span>
-                    <span className="bg-green-100 dark:bg-green-900/50 text-green-800 dark:text-green-200 px-2 py-1 rounded text-xs flex items-center">
-                      <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                      </svg>
-                      {department.kbCount}
-                    </span>
-                  </div>
-
-                  <div className="col-span-7 sm:col-span-2 flex justify-end gap-2">
-                    <button
-                      onClick={() => openEditForm(department)}
-                      className="p-2 bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 rounded-md hover:bg-blue-200 dark:hover:bg-blue-800/50 transition-colors"
-                      title={t.actions.edit}
-                    >
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                      </svg>
-                    </button>
-                    <button
-                      onClick={() => handleDelete(department.id)}
-                      className="p-2 bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 rounded-md hover:bg-red-200 dark:hover:bg-red-800/50 transition-colors"
-                      title={t.actions.delete}
-                    >
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                      </svg>
-                    </button>
-                    <button
+                  {/* Desktop Table View */}
+                  <div className="hidden md:grid grid-cols-12 p-4 hover:bg-gray-50 dark:hover:bg-gray-750 dark:hover:text-black transition-colors items-center">
+                    <div
+                      className="col-span-4 font-medium cursor-pointer break-words"
                       onClick={() => handleDepartmentClick(department.id)}
-                      className="p-2 bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 rounded-md hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
-                      title={t.actions.view || "View"}
                     >
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-                      </svg>
-                    </button>
+                      {department.name}
+                    </div>
+
+                    <div
+                      className="col-span-4 text-gray-600 dark:text-gray-400 truncate cursor-pointer"
+                      onClick={() => handleDepartmentClick(department.id)}
+                    >
+                      {department.description || "—"}
+                    </div>
+
+                    <div className="col-span-2 flex gap-2 justify-center">
+                      <span className="bg-blue-100 dark:bg-blue-900/50 text-blue-800 dark:text-blue-200 px-2 py-1 rounded text-xs flex items-center">
+                        <svg
+                          className="w-3 h-3 mr-1"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                          xmlns="http://www.w3.org/2000/svg"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
+                          />
+                        </svg>
+                        {department.userCount}
+                      </span>
+                      <span className="bg-green-100 dark:bg-green-900/50 text-green-800 dark:text-green-200 px-2 py-1 rounded text-xs flex items-center">
+                        <svg
+                          className="w-3 h-3 mr-1"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                          xmlns="http://www.w3.org/2000/svg"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                          />
+                        </svg>
+                        {department.kbCount}
+                      </span>
+                    </div>
+
+                    <div className="col-span-2 flex justify-end gap-2">
+                      <button
+                        onClick={() => openEditForm(department)}
+                        className="p-2 bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 rounded-md hover:bg-blue-200 dark:hover:bg-blue-800/50 transition-colors"
+                        title={t.actions.edit}
+                      >
+                        <svg
+                          className="w-4 h-4"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                          xmlns="http://www.w3.org/2000/svg"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
+                          />
+                        </svg>
+                      </button>
+                      <button
+                        onClick={() => handleDelete(department.id)}
+                        className="p-2 bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 rounded-md hover:bg-red-200 dark:hover:bg-red-800/50 transition-colors"
+                        title={t.actions.delete}
+                      >
+                        <svg
+                          className="w-4 h-4"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                          xmlns="http://www.w3.org/2000/svg"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                          />
+                        </svg>
+                      </button>
+                      <button
+                        onClick={() => handleDepartmentClick(department.id)}
+                        className="p-2 bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 rounded-md hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
+                        title={t.actions.view || "View"}
+                      >
+                        <svg
+                          className="w-4 h-4"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                          xmlns="http://www.w3.org/2000/svg"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"
+                          />
+                        </svg>
+                      </button>
+                    </div>
                   </div>
                 </div>
               ))}
@@ -433,70 +711,131 @@ export default function DepartmentsPage() {
 
         {/* Pagination controls */}
         {filteredDepartments.length > itemsPerPage && (
-          <div className="mt-6 bg-white dark:bg-gray-800 p-4 rounded-lg shadow flex justify-between items-center">
-            <div className="flex gap-2">
-              <button
-                onClick={handlePrevPage}
-                disabled={currentPage === 1}
-                className="bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-white p-2 rounded hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center"
-              >
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-                </svg>
-              </button>
+          <div className="mt-6 bg-white dark:bg-gray-800 p-4 rounded-lg shadow">
+            <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
+              {/* Navigation buttons */}
+              <div className="flex gap-2 order-2 sm:order-1">
+                <button
+                  onClick={handlePrevPage}
+                  disabled={currentPage === 1}
+                  className="bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-white p-2 sm:p-3 rounded hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center min-h-[44px]"
+                >
+                  <svg
+                    className="w-4 h-4 sm:w-5 sm:h-5"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                    xmlns="http://www.w3.org/2000/svg"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M15 19l-7-7 7-7"
+                    />
+                  </svg>
+                  <span className="hidden sm:inline ml-1">Previous</span>
+                </button>
 
-              <div className="flex items-center gap-1">
-                {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
-                  // Show pagination numbers intelligently
-                  let pageNum;
-                  if (totalPages <= 5) {
-                    pageNum = i + 1;
-                  } else if (currentPage <= 3) {
-                    pageNum = i + 1;
-                  } else if (currentPage >= totalPages - 2) {
-                    pageNum = totalPages - 4 + i;
-                  } else {
-                    pageNum = currentPage - 2 + i;
-                  }
+                {/* Page numbers - responsive display */}
+                <div className="flex items-center gap-1">
+                  {Array.from(
+                    {
+                      length: Math.min(
+                        totalPages <= 5 ? totalPages : 3,
+                        totalPages
+                      ),
+                    },
+                    (_, i) => {
+                      // Show pagination numbers intelligently
+                      let pageNum;
+                      if (totalPages <= 5) {
+                        pageNum = i + 1;
+                      } else if (currentPage <= 2) {
+                        pageNum = i + 1;
+                      } else if (currentPage >= totalPages - 1) {
+                        pageNum = totalPages - 2 + i;
+                      } else {
+                        pageNum = currentPage - 1 + i;
+                      }
 
-                  return (
-                    <button
-                      key={i}
-                      onClick={() => setCurrentPage(pageNum)}
-                      className={`w-8 h-8 flex items-center justify-center rounded-md ${currentPage === pageNum
-                        ? 'bg-blue-600 dark:bg-blue-500 text-white'
-                        : 'bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-white hover:bg-gray-200 dark:hover:bg-gray-600'
+                      return (
+                        <button
+                          key={i}
+                          onClick={() => setCurrentPage(pageNum)}
+                          className={`w-10 h-10 sm:w-12 sm:h-12 flex items-center justify-center rounded-md text-sm sm:text-base ${
+                            currentPage === pageNum
+                              ? "bg-blue-600 dark:bg-blue-500 text-white"
+                              : "bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-white hover:bg-gray-200 dark:hover:bg-gray-600"
+                          }`}
+                        >
+                          {pageNum}
+                        </button>
+                      );
+                    }
+                  )}
+                  {totalPages > 5 && currentPage < totalPages - 2 && (
+                    <>
+                      <span className="text-gray-500 px-1">...</span>
+                      <button
+                        onClick={() => setCurrentPage(totalPages)}
+                        className={`w-10 h-10 sm:w-12 sm:h-12 flex items-center justify-center rounded-md text-sm sm:text-base ${
+                          currentPage === totalPages
+                            ? "bg-blue-600 dark:bg-blue-500 text-white"
+                            : "bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-white hover:bg-gray-200 dark:hover:bg-gray-600"
                         }`}
-                    >
-                      {pageNum}
-                    </button>
-                  );
-                })}
+                      >
+                        {totalPages}
+                      </button>
+                    </>
+                  )}
+                </div>
+
+                <button
+                  onClick={handleNextPage}
+                  disabled={currentPage === totalPages}
+                  className="bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-white p-2 sm:p-3 rounded hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center min-h-[44px]"
+                >
+                  <span className="hidden sm:inline mr-1">Next</span>
+                  <svg
+                    className="w-4 h-4 sm:w-5 sm:h-5"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                    xmlns="http://www.w3.org/2000/svg"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M9 5l7 7-7 7"
+                    />
+                  </svg>
+                </button>
               </div>
 
-              <button
-                onClick={handleNextPage}
-                disabled={currentPage === totalPages}
-                className="bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-white p-2 rounded hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center"
-              >
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                </svg>
-              </button>
-            </div>
+              {/* Items per page selector */}
+              <div className="text-gray-700 dark:text-gray-300 flex flex-col sm:flex-row items-center gap-2 order-1 sm:order-2">
+                <span className="text-sm sm:text-base">
+                  {t.pagination?.itemsPerPage || "Items per page"}:
+                </span>
+                <select
+                  value={itemsPerPage}
+                  onChange={handleItemsPerPageChange}
+                  className="bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white p-2 rounded text-sm sm:text-base min-h-[44px]"
+                >
+                  <option value={5}>5</option>
+                  <option value={10}>10</option>
+                  <option value={25}>25</option>
+                  <option value={50}>50</option>
+                </select>
+              </div>
 
-            <div className="text-gray-700 dark:text-gray-300 flex items-center">
-              <span className="mr-2">{t.pagination.itemsPerPage}:</span>
-              <select
-                value={itemsPerPage}
-                onChange={handleItemsPerPageChange}
-                className="bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white p-2 rounded"
-              >
-                <option value={5}>5</option>
-                <option value={10}>10</option>
-                <option value={25}>25</option>
-                <option value={50}>50</option>
-              </select>
+              {/* Page info */}
+              <div className="text-sm text-gray-500 dark:text-gray-400 order-3 text-center sm:text-left">
+                Page {currentPage} of {totalPages} ({filteredDepartments.length}{" "}
+                items)
+              </div>
             </div>
           </div>
         )}
@@ -508,14 +847,25 @@ export default function DepartmentsPage() {
           <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full max-w-md mx-auto overflow-hidden">
             <div className="p-4 bg-gray-50 dark:bg-gray-700 border-b border-gray-200 dark:border-gray-600 flex justify-between items-center">
               <h2 className="text-lg font-medium text-gray-900 dark:text-white">
-                {formMode === 'create' ? t.addNew : t.actions.edit}
+                {formMode === "create" ? t.addNew : t.actions.edit}
               </h2>
               <button
                 onClick={() => setShowFormModal(false)}
                 className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
               >
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                <svg
+                  className="w-5 h-5"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                  xmlns="http://www.w3.org/2000/svg"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M6 18L18 6M6 6l12 12"
+                  />
                 </svg>
               </button>
             </div>
@@ -523,14 +873,19 @@ export default function DepartmentsPage() {
             <form onSubmit={handleFormSubmit} className="p-6">
               <div className="space-y-4">
                 <div>
-                  <label htmlFor="name" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  <label
+                    htmlFor="name"
+                    className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
+                  >
                     {t.form.name} <span className="text-red-500">*</span>
                   </label>
                   <input
                     id="name"
                     type="text"
                     value={formData.name}
-                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                    onChange={(e) =>
+                      setFormData({ ...formData, name: e.target.value })
+                    }
                     placeholder={t.form.name}
                     className="w-full bg-white dark:bg-gray-700 text-gray-900 dark:text-white p-2 rounded border border-gray-300 dark:border-gray-600 focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 transition-colors"
                     required
@@ -538,13 +893,18 @@ export default function DepartmentsPage() {
                 </div>
 
                 <div>
-                  <label htmlFor="description" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  <label
+                    htmlFor="description"
+                    className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
+                  >
                     {t.form.description}
                   </label>
                   <textarea
                     id="description"
                     value={formData.description}
-                    onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                    onChange={(e) =>
+                      setFormData({ ...formData, description: e.target.value })
+                    }
                     placeholder={t.form.description}
                     rows={3}
                     className="w-full bg-white dark:bg-gray-700 text-gray-900 dark:text-white p-2 rounded border border-gray-300 dark:border-gray-600 focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 transition-colors"
@@ -567,13 +927,33 @@ export default function DepartmentsPage() {
                 >
                   {loading ? (
                     <>
-                      <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                      <svg
+                        className="animate-spin -ml-1 mr-2 h-4 w-4 text-white"
+                        xmlns="http://www.w3.org/2000/svg"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                      >
+                        <circle
+                          className="opacity-25"
+                          cx="12"
+                          cy="12"
+                          r="10"
+                          stroke="currentColor"
+                          strokeWidth="4"
+                        ></circle>
+                        <path
+                          className="opacity-75"
+                          fill="currentColor"
+                          d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                        ></path>
                       </svg>
                       {t.loading}
                     </>
-                  ) : formMode === 'create' ? t.form.addButton : t.actions.save}
+                  ) : formMode === "create" ? (
+                    t.form.addButton
+                  ) : (
+                    t.actions.save
+                  )}
                 </button>
               </div>
             </form>
@@ -587,7 +967,10 @@ export default function DepartmentsPage() {
         onClose={() => setShowDeleteModal(false)}
         onConfirm={confirmDelete}
         title={t.actions.delete || "Confirm Delete"}
-        message={t.actions.confirmDelete || 'Are you sure you want to delete this department? This action cannot be undone.'}
+        message={
+          t.actions.confirmDelete ||
+          "Are you sure you want to delete this department? This action cannot be undone."
+        }
       />
     </div>
   );

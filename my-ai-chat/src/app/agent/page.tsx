@@ -1,10 +1,10 @@
-'use client';
+"use client";
 
-import { useState, useEffect } from 'react';
-import { useLanguage } from '@/context/LanguageContext';
-import { useAuth } from '@/context/AuthContext';
-import { translations } from '@/utils/translations';
-import { getUserInfo } from '@/utils/authService';
+import { useState, useEffect } from "react";
+import { useLanguage } from "@/context/LanguageContext";
+import { useAuth } from "@/context/AuthContext";
+import { translations } from "@/utils/translations";
+import { getUserInfo } from "@/utils/authService";
 import {
   getAgents,
   createAgent,
@@ -13,12 +13,12 @@ import {
   getKnowledgeBases,
   getAllModels,
   getDepartments,
-  Agent
-} from '@/utils/apiService';
-import { toast } from 'react-hot-toast';
+  Agent,
+} from "@/utils/apiService";
+import { toast } from "react-hot-toast";
 
-import { useRouter } from 'next/navigation';
-import ConfirmDeleteModal from '@/components/ConfirmDeleteModal';
+import { useRouter } from "next/navigation";
+import ConfirmDeleteModal from "@/components/ConfirmDeleteModal";
 
 interface KnowledgeBase {
   id: number;
@@ -43,16 +43,16 @@ export default function AgentPage() {
     nftext: string;
     description: string;
   }>({
-    name: '',
-    agent_key: '',
-    model: 'gpt-4o-mini',
+    name: "",
+    agent_key: "",
+    model: "gpt-4o-mini",
     temperature: 0.7,
     max_tokens: 2000,
-    system_prompt: '',
+    system_prompt: "",
     knowledge_base_ids: [],
     department_id: 0,
-    nftext: '',
-    description: ''
+    nftext: "",
+    description: "",
   });
   // Add validation errors state
   const [validationErrors, setValidationErrors] = useState<{
@@ -66,9 +66,13 @@ export default function AgentPage() {
     department_id?: string;
   }>({});
   const [knowledgeBases, setKnowledgeBases] = useState<KnowledgeBase[]>([]);
-  const [departments, setDepartments] = useState<Array<{ id: number; name: string }>>([]);
+  const [departments, setDepartments] = useState<
+    Array<{ id: number; name: string }>
+  >([]);
   const [loading, setLoading] = useState(true);
-  const [availableModels, setAvailableModels] = useState<string[]>(['gpt-4o-mini']);
+  const [availableModels, setAvailableModels] = useState<string[]>([
+    "gpt-4o-mini",
+  ]);
   const [fullModelData, setFullModelData] = useState<any[]>([]);
   const { language } = useLanguage();
   const t = translations[language].agent;
@@ -79,13 +83,17 @@ export default function AgentPage() {
   const [permissionError, setPermissionError] = useState<string | null>(null);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [agentToDelete, setAgentToDelete] = useState<number | null>(null);
-  const [searchQuery, setSearchQuery] = useState('');
+  const [searchQuery, setSearchQuery] = useState("");
   const [filteredAgents, setFilteredAgents] = useState<Agent[]>([]);
   // Add search states for departments and knowledge bases
-  const [departmentSearchQuery, setDepartmentSearchQuery] = useState('');
-  const [kbSearchQuery, setKbSearchQuery] = useState('');
-  const [filteredDepartments, setFilteredDepartments] = useState<Array<{ id: number; name: string }>>([]);
-  const [filteredKnowledgeBases, setFilteredKnowledgeBases] = useState<KnowledgeBase[]>([]);
+  const [departmentSearchQuery, setDepartmentSearchQuery] = useState("");
+  const [kbSearchQuery, setKbSearchQuery] = useState("");
+  const [filteredDepartments, setFilteredDepartments] = useState<
+    Array<{ id: number; name: string }>
+  >([]);
+  const [filteredKnowledgeBases, setFilteredKnowledgeBases] = useState<
+    KnowledgeBase[]
+  >([]);
   const [summaryError, setSummaryError] = useState<string | null>(null); // Add summary error state
 
   useEffect(() => {
@@ -100,7 +108,8 @@ export default function AgentPage() {
           const userInfo = await getUserInfo();
           console.log("User info loaded:", userInfo);
 
-          const isAdmin = userInfo?.UserRole === 'admin' || userInfo?.role === 'admin';
+          const isAdmin =
+            userInfo?.UserRole === "admin" || userInfo?.role === "admin";
           setIsAdmin(isAdmin);
           console.log("Admin status:", isAdmin);
 
@@ -116,7 +125,6 @@ export default function AgentPage() {
           // If API returns authentication errors, they will be handled accordingly
           setUseAgent(true);
           setPermissionLoading(false);
-
         } catch (error) {
           console.error("Error loading user data:", error);
           // หากไม่สามารถตรวจสอบข้อมูลผู้ใช้ได้ ให้อนุญาตการเข้าถึงชั่วคราว
@@ -124,7 +132,6 @@ export default function AgentPage() {
           setIsAdmin(true);
           setUseAgent(true);
         }
-
       } catch (error) {
         console.error("Permission check error:", error);
         setPermissionError("Failed to check permissions");
@@ -141,18 +148,19 @@ export default function AgentPage() {
       const fetchData = async () => {
         try {
           setLoading(true);
-          const [agentsData, kbData, modelsData, departmentsData] = await Promise.all([
-            getAgents(),
-            getKnowledgeBases(),
-            getAllModels(),
-            getDepartments()
-          ]);
+          const [agentsData, kbData, modelsData, departmentsData] =
+            await Promise.all([
+              getAgents(),
+              getKnowledgeBases(),
+              getAllModels(),
+              getDepartments(),
+            ]);
 
           setAgents(agentsData);
           setKnowledgeBases(kbData);
-          const transformedDepartments = departmentsData.map(dept => ({
+          const transformedDepartments = departmentsData.map((dept) => ({
             id: Number(dept.department_id) || 0,
-            name: dept.name
+            name: dept.name,
           }));
           console.log("Transformed departments:", transformedDepartments);
           setDepartments(transformedDepartments);
@@ -160,16 +168,16 @@ export default function AgentPage() {
           if (modelsData && modelsData.length > 0) {
             // Store the full model data array for reference
             setFullModelData(modelsData);
-            setAvailableModels(modelsData.map(model => model.ModelName));
+            setAvailableModels(modelsData.map((model) => model.ModelName));
             // Set initial model to first available model
-            setSettings(prev => ({
+            setSettings((prev) => ({
               ...prev,
-              model: modelsData[0].ModelName
+              model: modelsData[0].ModelName,
             }));
           }
         } catch (error) {
-          console.error('Error fetching data:', error);
-          toast.error('Failed to load data');
+          console.error("Error fetching data:", error);
+          toast.error("Failed to load data");
         } finally {
           setLoading(false);
         }
@@ -181,18 +189,23 @@ export default function AgentPage() {
 
   useEffect(() => {
     if (user && user.departments && user.departments.length > 0) {
-      setSettings(prev => ({
+      setSettings((prev) => ({
         ...prev,
-        department_id: user.departments[0].id
+        department_id: user.departments[0].id,
       }));
     }
   }, [user]);
 
   useEffect(() => {
-    if (!selectedAgent && user && user.departments && user.departments.length > 0) {
-      setSettings(prev => ({
+    if (
+      !selectedAgent &&
+      user &&
+      user.departments &&
+      user.departments.length > 0
+    ) {
+      setSettings((prev) => ({
         ...prev,
-        department_id: user.departments[0].id
+        department_id: user.departments[0].id,
       }));
     }
   }, [selectedAgent, user]);
@@ -200,14 +213,19 @@ export default function AgentPage() {
   const hasNoAgents = agents.length === 0 || (agents as any).noAgentsFound;
 
   const isDuplicateName = (name: string, currentId?: number): boolean => {
-    return agents.some(agent =>
-      agent.name.toLowerCase() === name.toLowerCase() && agent.id !== currentId
+    return agents.some(
+      (agent) =>
+        agent.name.toLowerCase() === name.toLowerCase() &&
+        agent.id !== currentId
     );
   };
 
-  const isDuplicateAgentKey = (agent_key: string, currentId?: number): boolean => {
-    return agents.some(agent =>
-      agent.agent_key === agent_key && agent.id !== currentId
+  const isDuplicateAgentKey = (
+    agent_key: string,
+    currentId?: number
+  ): boolean => {
+    return agents.some(
+      (agent) => agent.agent_key === agent_key && agent.id !== currentId
     );
   };
 
@@ -220,8 +238,8 @@ export default function AgentPage() {
   const generateUniqueAgentKey = (baseName: string): string => {
     let key = baseName
       .toLowerCase()
-      .replace(/\s+/g, '-')
-      .replace(/[^a-z0-9-]/g, '')
+      .replace(/\s+/g, "-")
+      .replace(/[^a-z0-9-]/g, "")
       .substring(0, 30);
 
     if (!isDuplicateAgentKey(key)) {
@@ -255,20 +273,20 @@ export default function AgentPage() {
       // Reset form and selection after refresh
       setSelectedAgent(null);
       setSettings({
-        name: '',
-        agent_key: '',
-        model: availableModels.length > 0 ? availableModels[0] : 'gpt-4o-mini',
+        name: "",
+        agent_key: "",
+        model: availableModels.length > 0 ? availableModels[0] : "gpt-4o-mini",
         temperature: 0.7,
         max_tokens: 2000,
-        system_prompt: '',
+        system_prompt: "",
         knowledge_base_ids: [],
         department_id: defaultDepartmentId,
-        nftext: '',
-        description: ''
+        nftext: "",
+        description: "",
       });
     } catch (error) {
-      console.error('Error refreshing data:', error);
-      toast.error('Failed to refresh data');
+      console.error("Error refreshing data:", error);
+      toast.error("Failed to refresh data");
     } finally {
       setLoading(false);
     }
@@ -285,36 +303,60 @@ export default function AgentPage() {
 
     // Check required fields one by one
     if (!settings.name.trim()) {
-      setValidationErrors(prev => ({ ...prev, name: t.nameRequired || 'Agent name is required' }));
-      missingFields.push(t.form?.name || 'Agent Name');
+      setValidationErrors((prev) => ({
+        ...prev,
+        name: t.nameRequired || "Agent name is required",
+      }));
+      missingFields.push(t.form?.name || "Agent Name");
     }
 
     if (!settings.model) {
-      setValidationErrors(prev => ({ ...prev, model: t.form?.modelRequired || 'Model selection is required' }));
-      missingFields.push(t.form?.model || 'Model');
+      setValidationErrors((prev) => ({
+        ...prev,
+        model: t.form?.modelRequired || "Model selection is required",
+      }));
+      missingFields.push(t.form?.model || "Model");
     }
 
     if (!settings.department_id) {
-      setValidationErrors(prev => ({ ...prev, department_id: t.form?.departmentRequired || 'Department selection is required' }));
-      missingFields.push(t.form?.department || 'Department');
+      setValidationErrors((prev) => ({
+        ...prev,
+        department_id:
+          t.form?.departmentRequired || "Department selection is required",
+      }));
+      missingFields.push(t.form?.department || "Department");
     }
 
     // Check if at least one knowledge base is selected
     if (settings.knowledge_base_ids.length === 0) {
-      setValidationErrors(prev => ({ ...prev, knowledge_base_ids: t.form?.knowledgeBaseRequired || 'At least one knowledge base must be selected' }));
-      missingFields.push(t.form?.knowledgeBase || 'Knowledge Base');
+      setValidationErrors((prev) => ({
+        ...prev,
+        knowledge_base_ids:
+          t.form?.knowledgeBaseRequired ||
+          "At least one knowledge base must be selected",
+      }));
+      missingFields.push(t.form?.knowledgeBase || "Knowledge Base");
     }
 
     // If any required fields are missing, show detailed error message and return
     if (missingFields.length > 0) {
       // Create a summary error message at the top of the form
-      setSummaryError(`${t.form?.requiredFieldsError || 'Please fill in all required fields'}: ${missingFields.join(', ')}`);
+      setSummaryError(
+        `${
+          t.form?.requiredFieldsError || "Please fill in all required fields"
+        }: ${missingFields.join(", ")}`
+      );
 
       // Also show toast with the same message
-      toast.error(`${t.form?.requiredFieldsError || 'Please fill in all required fields'}: ${missingFields.join(', ')}`, {
-        duration: 5000,
-        position: 'top-center',
-      });
+      toast.error(
+        `${
+          t.form?.requiredFieldsError || "Please fill in all required fields"
+        }: ${missingFields.join(", ")}`,
+        {
+          duration: 5000,
+          position: "top-center",
+        }
+      );
       return;
     }
 
@@ -323,22 +365,41 @@ export default function AgentPage() {
 
     // Continue with other validations
     if (!isEnglishOnly(settings.name)) {
-      setValidationErrors(prev => ({ ...prev, name: t.englishNameOnly || 'Agent name must contain only English characters' }));
-      toast.error(t.englishNameOnly || 'Agent name must contain only English characters');
+      setValidationErrors((prev) => ({
+        ...prev,
+        name:
+          t.englishNameOnly ||
+          "Agent name must contain only English characters",
+      }));
+      toast.error(
+        t.englishNameOnly || "Agent name must contain only English characters"
+      );
       return;
     }
 
     // Validate max tokens
     if (settings.max_tokens <= 0 || settings.max_tokens > 32000) {
-      setValidationErrors(prev => ({ ...prev, max_tokens: t.form?.invalidMaxTokens || 'Max tokens must be between 1 and 32000' }));
-      toast.error(t.form?.invalidMaxTokens || 'Max tokens must be between 1 and 32000');
+      setValidationErrors((prev) => ({
+        ...prev,
+        max_tokens:
+          t.form?.invalidMaxTokens || "Max tokens must be between 1 and 32000",
+      }));
+      toast.error(
+        t.form?.invalidMaxTokens || "Max tokens must be between 1 and 32000"
+      );
       return;
     }
 
     // Validate temperature
     if (settings.temperature < 0 || settings.temperature > 1) {
-      setValidationErrors(prev => ({ ...prev, temperature: t.form?.invalidTemperature || 'Temperature must be between 0 and 1' }));
-      toast.error(t.form?.invalidTemperature || 'Temperature must be between 0 and 1');
+      setValidationErrors((prev) => ({
+        ...prev,
+        temperature:
+          t.form?.invalidTemperature || "Temperature must be between 0 and 1",
+      }));
+      toast.error(
+        t.form?.invalidTemperature || "Temperature must be between 0 and 1"
+      );
       return;
     }
 
@@ -346,16 +407,21 @@ export default function AgentPage() {
       setLoading(true);
       if (selectedAgent) {
         if (isDuplicateName(settings.name, selectedAgent.id)) {
-          setValidationErrors(prev => ({ ...prev, name: t.duplicateError }));
+          setValidationErrors((prev) => ({ ...prev, name: t.duplicateError }));
           toast.error(t.duplicateError);
           return;
         }
 
-        if (settings.agent_key &&
+        if (
+          settings.agent_key &&
           settings.agent_key !== selectedAgent.agent_key &&
-          isDuplicateAgentKey(settings.agent_key, selectedAgent.id)) {
-          setValidationErrors(prev => ({ ...prev, agent_key: t.duplicateKeyError || 'Agent key already exists' }));
-          toast.error(t.duplicateKeyError || 'Agent key already exists');
+          isDuplicateAgentKey(settings.agent_key, selectedAgent.id)
+        ) {
+          setValidationErrors((prev) => ({
+            ...prev,
+            agent_key: t.duplicateKeyError || "Agent key already exists",
+          }));
+          toast.error(t.duplicateKeyError || "Agent key already exists");
           return;
         }
 
@@ -366,15 +432,18 @@ export default function AgentPage() {
         await refreshData();
       } else {
         if (isDuplicateName(settings.name)) {
-          setValidationErrors(prev => ({ ...prev, name: t.duplicateError }));
+          setValidationErrors((prev) => ({ ...prev, name: t.duplicateError }));
           toast.error(t.duplicateError);
           return;
         }
 
         if (settings.agent_key) {
           if (isDuplicateAgentKey(settings.agent_key)) {
-            setValidationErrors(prev => ({ ...prev, agent_key: t.duplicateKeyError || 'Agent key already exists' }));
-            toast.error(t.duplicateKeyError || 'Agent key already exists');
+            setValidationErrors((prev) => ({
+              ...prev,
+              agent_key: t.duplicateKeyError || "Agent key already exists",
+            }));
+            toast.error(t.duplicateKeyError || "Agent key already exists");
             return;
           }
         } else {
@@ -388,36 +457,41 @@ export default function AgentPage() {
         await refreshData();
       }
     } catch (error) {
-      console.error('Error saving agent:', error);
+      console.error("Error saving agent:", error);
       if (error instanceof Error) {
-        toast.error(error.message || 'Failed to save agent');
+        toast.error(error.message || "Failed to save agent");
       } else {
-        toast.error('Failed to save agent');
+        toast.error("Failed to save agent");
       }
     } finally {
       setLoading(false);
     }
   };
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
+  const handleChange = (
+    e: React.ChangeEvent<
+      HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement
+    >
+  ) => {
     const { name, value } = e.target;
-    setSettings(prev => ({
+    setSettings((prev) => ({
       ...prev,
-      [name]: name === 'temperature' || name === 'max_tokens' ? Number(value) : value
+      [name]:
+        name === "temperature" || name === "max_tokens" ? Number(value) : value,
     }));
   };
 
   const handleKnowledgeBaseChange = (knowledgeBaseIds: number[]) => {
-    setSettings(prev => ({
+    setSettings((prev) => ({
       ...prev,
-      knowledge_base_ids: knowledgeBaseIds
+      knowledge_base_ids: knowledgeBaseIds,
     }));
   };
 
   const handleDepartmentChange = (departmentId: number) => {
-    setSettings(prev => ({
+    setSettings((prev) => ({
       ...prev,
-      department_id: departmentId
+      department_id: departmentId,
     }));
   };
 
@@ -425,33 +499,35 @@ export default function AgentPage() {
     setSelectedAgent(agent);
     setSettings({
       name: agent.name,
-      agent_key: agent.agent_key || '',
+      agent_key: agent.agent_key || "",
       model: agent.model,
       temperature: agent.temperature,
       max_tokens: agent.max_tokens,
       system_prompt: agent.system_prompt,
       knowledge_base_ids: Array.isArray(agent.knowledge_base_ids)
         ? agent.knowledge_base_ids.filter((id): id is number => id !== null)
-        : agent.knowledge_base_ids ? [agent.knowledge_base_ids] : [],
+        : agent.knowledge_base_ids
+        ? [agent.knowledge_base_ids]
+        : [],
       department_id: agent.department_id || 0,
-      nftext: agent.nftext || '',
-      description: agent.description || ''
+      nftext: agent.nftext || "",
+      description: agent.description || "",
     });
   };
 
   const handleCreateNew = () => {
     setSelectedAgent(null);
     setSettings({
-      name: '',
-      agent_key: '',
-      model: 'gpt-4o-mini',
+      name: "",
+      agent_key: "",
+      model: "gpt-4o-mini",
       temperature: 0.7,
       max_tokens: 2000,
-      system_prompt: '',
+      system_prompt: "",
       knowledge_base_ids: [],
       department_id: 0,
-      nftext: '',
-      description: ''
+      nftext: "",
+      description: "",
     });
   };
 
@@ -473,28 +549,28 @@ export default function AgentPage() {
     try {
       setLoading(true);
       await deleteAgent(agentToDelete);
-      setAgents(agents.filter(agent => agent.id !== agentToDelete));
+      setAgents(agents.filter((agent) => agent.id !== agentToDelete));
 
       if (selectedAgent?.id === agentToDelete) {
         setSelectedAgent(null);
         setSettings({
-          name: '',
-          agent_key: '',
-          model: 'gpt-4o-mini',
+          name: "",
+          agent_key: "",
+          model: "gpt-4o-mini",
           temperature: 0.7,
           max_tokens: 2000,
-          system_prompt: '',
+          system_prompt: "",
           knowledge_base_ids: [],
           department_id: 0,
-          nftext: '',
-          description: ''
+          nftext: "",
+          description: "",
         });
       }
 
       toast.success(t.agentDeleted);
     } catch (error) {
-      console.error('Error deleting agent:', error);
-      toast.error('Failed to delete agent');
+      console.error("Error deleting agent:", error);
+      toast.error("Failed to delete agent");
     } finally {
       setLoading(false);
     }
@@ -507,12 +583,16 @@ export default function AgentPage() {
 
   useEffect(() => {
     if (agents.length > 0) {
-      if (searchQuery.trim() === '') {
+      if (searchQuery.trim() === "") {
         setFilteredAgents(agents);
       } else {
-        const filtered = agents.filter(agent =>
-          agent.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          (agent.description && agent.description.toLowerCase().includes(searchQuery.toLowerCase()))
+        const filtered = agents.filter(
+          (agent) =>
+            agent.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            (agent.description &&
+              agent.description
+                .toLowerCase()
+                .includes(searchQuery.toLowerCase()))
         );
         setFilteredAgents(filtered);
       }
@@ -523,11 +603,11 @@ export default function AgentPage() {
     console.log(departments.length, "departments length");
     if (departments.length > 0) {
       console.log("Filtering departments with query:", departmentSearchQuery);
-      if (departmentSearchQuery.trim() == '') {
+      if (departmentSearchQuery.trim() == "") {
         console.log(departments, "departments without filter");
         setFilteredDepartments(departments);
       } else {
-        const filtered = departments.filter(dept =>
+        const filtered = departments.filter((dept) =>
           dept.name.toLowerCase().includes(departmentSearchQuery.toLowerCase())
         );
         setFilteredDepartments(filtered);
@@ -537,17 +617,20 @@ export default function AgentPage() {
       setFilteredDepartments([]);
     }
     console.log("Filtered departments:", filteredDepartments);
-
   }, [departmentSearchQuery, departments]);
 
   useEffect(() => {
     if (knowledgeBases.length > 0) {
-      if (kbSearchQuery.trim() === '') {
+      if (kbSearchQuery.trim() === "") {
         setFilteredKnowledgeBases(knowledgeBases);
       } else {
-        const filtered = knowledgeBases.filter(kb =>
-          kb.title.toLowerCase().includes(kbSearchQuery.toLowerCase()) ||
-          (kb.description && kb.description.toLowerCase().includes(kbSearchQuery.toLowerCase()))
+        const filtered = knowledgeBases.filter(
+          (kb) =>
+            kb.title.toLowerCase().includes(kbSearchQuery.toLowerCase()) ||
+            (kb.description &&
+              kb.description
+                .toLowerCase()
+                .includes(kbSearchQuery.toLowerCase()))
         );
         setFilteredKnowledgeBases(filtered);
       }
@@ -560,7 +643,7 @@ export default function AgentPage() {
   const getModelsByPlatform = () => {
     const platformGroups: Record<string, any[]> = {};
 
-    fullModelData.forEach(model => {
+    fullModelData.forEach((model) => {
       if (!platformGroups[model.Platform]) {
         platformGroups[model.Platform] = [];
       }
@@ -585,7 +668,7 @@ export default function AgentPage() {
           <h1 className="text-2xl font-bold mb-4">Error</h1>
           <p className="mb-4">{permissionError}</p>
           <button
-            onClick={() => window.location.href = '/'}
+            onClick={() => (window.location.href = "/")}
             className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
           >
             Go to Homepage
@@ -602,7 +685,7 @@ export default function AgentPage() {
           <h1 className="text-2xl font-bold mb-4">Access Denied</h1>
           <p className="mb-4">You don't have permission to access this page.</p>
           <button
-            onClick={() => window.location.href = '/'}
+            onClick={() => (window.location.href = "/")}
             className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
           >
             Go to Homepage
@@ -613,9 +696,11 @@ export default function AgentPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white p-8 pt-16 transition-colors duration-200">
-      <div className="max-w-6xl mx-auto">
-        <h1 className="text-3xl font-bold mb-8">{t.title}</h1>
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white p-4 sm:p-6 lg:p-8 pt-16 transition-colors duration-200 mt-15">
+      <div className="max-w-7xl mx-auto">
+        <h1 className="text-2xl sm:text-3xl font-bold mb-6 sm:mb-8">
+          {t.title}
+        </h1>
 
         {loading && (
           <div className="flex justify-center items-center py-8">
@@ -624,18 +709,29 @@ export default function AgentPage() {
         )}
 
         {!loading && (
-          <div className="grid grid-cols-12 gap-6">
-            <div className="col-span-4">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 lg:gap-6">
+            <div className="lg:col-span-4">
               <div className="bg-white dark:bg-gray-800 rounded-lg p-4 shadow-sm border border-gray-200 dark:border-gray-700">
-                <div className="flex justify-between items-center mb-4">
-                  <h2 className="text-xl font-semibold">{t.yourAgents}</h2>
+                <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center mb-4 gap-3">
+                  <h2 className="text-lg sm:text-xl font-semibold">
+                    {t.yourAgents}
+                  </h2>
                   <button
                     onClick={handleCreateNew}
-                    className="p-2 bg-green-600 text-white rounded-full hover:bg-green-700 transition-colors"
+                    className="w-fit self-start sm:self-auto p-2 bg-green-600 text-white rounded-full hover:bg-green-700 transition-colors"
                     title={t.createNew}
                   >
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                      <path fillRule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clipRule="evenodd" />
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      className="h-5 w-5"
+                      viewBox="0 0 20 20"
+                      fill="currentColor"
+                    >
+                      <path
+                        fillRule="evenodd"
+                        d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z"
+                        clipRule="evenodd"
+                      />
                     </svg>
                   </button>
                 </div>
@@ -644,37 +740,61 @@ export default function AgentPage() {
                     type="text"
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    className="w-full px-3 py-2 bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
-                    placeholder={translations[language].knowledge?.searchPlaceholder || "Search agents..."}
+                    className="w-full px-3 py-2 bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors text-sm sm:text-base"
+                    placeholder={
+                      translations[language].knowledge?.searchPlaceholder ||
+                      "Search agents..."
+                    }
                   />
                 </div>
                 {hasNoAgents ? (
-                  <p className="text-gray-400">{t.noAgents}</p>
+                  <div className="text-center py-8">
+                    <div className="text-gray-400 text-4xl sm:text-6xl mb-4">
+                      🤖
+                    </div>
+                    <p className="text-gray-400 text-sm sm:text-base">
+                      {t.noAgents}
+                    </p>
+                  </div>
                 ) : (
-                  <div className="space-y-2 max-h-[350px] overflow-y-auto pr-2">
-                    {filteredAgents.map(agent => (
+                  <div className="space-y-2 max-h-[300px] sm:max-h-[350px] overflow-y-auto pr-2">
+                    {filteredAgents.map((agent) => (
                       <div
                         key={agent.id}
-                        className={`group relative flex items-center w-full text-left p-3 rounded-md transition-colors ${selectedAgent?.id === agent.id
-                          ? 'bg-gradient-to-r from-purple-600 via-pink-500 to-orange-400 text-white'
-                          : 'bg-gradient-to-r from-purple-100 via-pink-100 to-orange-100 dark:from-purple-900/40 dark:via-pink-900/40 dark:to-orange-900/40 hover:from-purple-200 hover:via-pink-200 hover:to-orange-200 dark:hover:from-purple-900/60 dark:hover:via-pink-900/60 dark:hover:to-orange-900/60'
-                          }`}
+                        className={`group relative flex items-center w-full text-left p-3 rounded-md transition-colors ${
+                          selectedAgent?.id === agent.id
+                            ? "bg-gradient-to-r from-purple-600 via-pink-500 to-orange-400 text-white"
+                            : "bg-gradient-to-r from-purple-100 via-pink-100 to-orange-100 dark:from-purple-900/40 dark:via-pink-900/40 dark:to-orange-900/40 hover:from-purple-200 hover:via-pink-200 hover:to-orange-200 dark:hover:from-purple-900/60 dark:hover:via-pink-900/60 dark:hover:to-orange-900/60"
+                        }`}
                       >
                         <button
                           onClick={() => handleSelectAgent(agent)}
-                          className="flex-1 text-left"
+                          className="flex-1 text-left min-w-0"
                           title={agent.name}
                         >
-                          <div className="font-medium">{agent.name}</div>
-                          <div className="text-sm text-gray-600 dark:text-gray-300">{agent.model}</div>
+                          <div className="font-medium text-sm sm:text-base truncate">
+                            {agent.name}
+                          </div>
+                          <div className="text-xs sm:text-sm text-gray-600 dark:text-gray-300 truncate">
+                            {agent.model}
+                          </div>
                         </button>
                         <button
                           onClick={(e) => handleDeleteAgent(agent.id, e)}
-                          className="opacity-0 group-hover:opacity-100 p-2 text-gray-400 hover:text-red-500 transition-opacity absolute right-2"
+                          className="opacity-0 group-hover:opacity-100 p-2 text-gray-400 hover:text-red-500 transition-opacity absolute right-2 flex-shrink-0"
                           title="Delete"
                         >
-                          <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                            <path fillRule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clipRule="evenodd" />
+                          <svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            className="h-4 w-4 sm:h-5 sm:w-5"
+                            viewBox="0 0 20 20"
+                            fill="currentColor"
+                          >
+                            <path
+                              fillRule="evenodd"
+                              d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z"
+                              clipRule="evenodd"
+                            />
                           </svg>
                         </button>
                       </div>
@@ -684,21 +804,27 @@ export default function AgentPage() {
               </div>
             </div>
 
-            <div className="col-span-8">
-              <div className="bg-white dark:bg-gray-800 rounded-lg p-6 shadow-sm border border-gray-200 dark:border-gray-700">
-                <h2 className="text-xl font-semibold mb-6">
+            <div className="lg:col-span-8 mt-6 lg:mt-0">
+              <div className="bg-white dark:bg-gray-800 rounded-lg p-4 sm:p-6 shadow-sm border border-gray-200 dark:border-gray-700">
+                <h2 className="text-lg sm:text-xl font-semibold mb-4 sm:mb-6">
                   {selectedAgent ? t.editAgent : t.createNew}
                 </h2>
 
                 {summaryError && (
-                  <div className="mb-4 p-3 rounded-md bg-red-50 text-red-800 border border-red-300">
+                  <div className="mb-4 p-3 rounded-md bg-red-50 text-red-800 border border-red-300 text-sm">
                     {summaryError}
                   </div>
                 )}
 
-                <form onSubmit={handleSubmit} className="space-y-6">
+                <form
+                  onSubmit={handleSubmit}
+                  className="space-y-4 sm:space-y-6"
+                >
                   <div>
-                    <label htmlFor="name" className="block text-sm font-medium mb-2">
+                    <label
+                      htmlFor="name"
+                      className="block text-sm font-medium mb-2"
+                    >
                       {t.form.name}
                     </label>
                     <input
@@ -707,11 +833,17 @@ export default function AgentPage() {
                       name="name"
                       value={settings.name}
                       onChange={handleChange}
-                      className={`w-full px-3 py-2 bg-gray-50 dark:bg-gray-700 border ${validationErrors.name ? 'border-red-500' : 'border-gray-300'} dark:border-gray-600 rounded-md text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors`}
+                      className={`w-full px-3 py-2 text-sm sm:text-base bg-gray-50 dark:bg-gray-700 border ${
+                        validationErrors.name
+                          ? "border-red-500"
+                          : "border-gray-300"
+                      } dark:border-gray-600 rounded-md text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors`}
                       placeholder={t.form.namePlaceholder}
                     />
                     {validationErrors.name && (
-                      <p className="mt-1 text-sm text-red-500">{validationErrors.name}</p>
+                      <p className="mt-1 text-sm text-red-500">
+                        {validationErrors.name}
+                      </p>
                     )}
                   </div>
 
@@ -737,7 +869,10 @@ export default function AgentPage() {
                   </div> */}
 
                   <div>
-                    <label htmlFor="model" className="block text-sm font-medium mb-2">
+                    <label
+                      htmlFor="model"
+                      className="block text-sm font-medium mb-2"
+                    >
                       {t.form.model}
                     </label>
                     <select
@@ -745,25 +880,39 @@ export default function AgentPage() {
                       name="model"
                       value={settings.model}
                       onChange={handleChange}
-                      className={`w-full px-3 py-2 bg-gray-50 dark:bg-gray-700 border ${validationErrors.model ? 'border-red-500' : 'border-gray-300'} dark:border-gray-600 rounded-md text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors`}
+                      className={`w-full px-3 py-2 text-sm sm:text-base bg-gray-50 dark:bg-gray-700 border ${
+                        validationErrors.model
+                          ? "border-red-500"
+                          : "border-gray-300"
+                      } dark:border-gray-600 rounded-md text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors`}
                     >
-                      {Object.entries(getModelsByPlatform()).map(([platform, models]) => (
-                        <optgroup key={platform} label={platform}>
-                          {models.map(model => (
-                            <option key={model.ModelID} value={model.ModelName}>
-                              {model.ModelName}
-                            </option>
-                          ))}
-                        </optgroup>
-                      ))}
+                      {Object.entries(getModelsByPlatform()).map(
+                        ([platform, models]) => (
+                          <optgroup key={platform} label={platform}>
+                            {models.map((model) => (
+                              <option
+                                key={model.ModelID}
+                                value={model.ModelName}
+                              >
+                                {model.ModelName}
+                              </option>
+                            ))}
+                          </optgroup>
+                        )
+                      )}
                     </select>
                     {validationErrors.model && (
-                      <p className="mt-1 text-sm text-red-500">{validationErrors.model}</p>
+                      <p className="mt-1 text-sm text-red-500">
+                        {validationErrors.model}
+                      </p>
                     )}
                   </div>
 
                   <div>
-                    <label htmlFor="temperature" className="block text-sm font-medium mb-2">
+                    <label
+                      htmlFor="temperature"
+                      className="block text-sm font-medium mb-2"
+                    >
                       {t.form.temperature} ({settings.temperature})
                     </label>
                     <input
@@ -775,15 +924,22 @@ export default function AgentPage() {
                       step="0.01"
                       value={settings.temperature}
                       onChange={handleChange}
-                      className={`w-full ${validationErrors.temperature ? 'border-red-500' : ''}`}
+                      className={`w-full ${
+                        validationErrors.temperature ? "border-red-500" : ""
+                      }`}
                     />
                     {validationErrors.temperature && (
-                      <p className="mt-1 text-sm text-red-500">{validationErrors.temperature}</p>
+                      <p className="mt-1 text-sm text-red-500">
+                        {validationErrors.temperature}
+                      </p>
                     )}
                   </div>
 
                   <div>
-                    <label htmlFor="max_tokens" className="block text-sm font-medium mb-2">
+                    <label
+                      htmlFor="max_tokens"
+                      className="block text-sm font-medium mb-2"
+                    >
                       {t.form.maxTokens}
                     </label>
                     <input
@@ -792,17 +948,23 @@ export default function AgentPage() {
                       name="max_tokens"
                       value={settings.max_tokens}
                       onChange={handleChange}
-                      className={`w-full px-3 py-2 bg-gray-50 dark:bg-gray-700 border ${validationErrors.max_tokens ? 'border-red-500' : 'border-gray-300'} dark:border-gray-600 rounded-md text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors`}
+                      className={`w-full px-3 py-2 text-sm sm:text-base bg-gray-50 dark:bg-gray-700 border ${
+                        validationErrors.max_tokens
+                          ? "border-red-500"
+                          : "border-gray-300"
+                      } dark:border-gray-600 rounded-md text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors`}
                       min="1"
                       max="32000"
                     />
                     {validationErrors.max_tokens && (
-                      <p className="mt-1 text-sm text-red-500">{validationErrors.max_tokens}</p>
+                      <p className="mt-1 text-sm text-red-500">
+                        {validationErrors.max_tokens}
+                      </p>
                     )}
                   </div>
 
                   <div>
-                    <div className="flex justify-between items-center mb-2">
+                    <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center mb-2 gap-2">
                       <label className="block text-sm font-medium">
                         {t.form.knowledgeBase}
                       </label>
@@ -810,37 +972,60 @@ export default function AgentPage() {
                         type="text"
                         value={kbSearchQuery}
                         onChange={(e) => setKbSearchQuery(e.target.value)}
-                        className="w-48 px-3 py-1 bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors text-sm"
-                        placeholder={`${translations[language].knowledge.searchPlaceholder} / ${translations[language === 'en' ? 'zh-TW' : 'en'].knowledge.searchPlaceholder}`}
+                        className="w-full sm:w-48 px-3 py-1 text-sm bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
+                        placeholder={`${
+                          translations[language].knowledge.searchPlaceholder
+                        } / ${
+                          translations[language === "en" ? "zh-TW" : "en"]
+                            .knowledge.searchPlaceholder
+                        }`}
                       />
                     </div>
-                    <div className="space-y-2 max-h-48 overflow-y-auto pr-2">
+                    <div className="space-y-2 max-h-32 sm:max-h-48 overflow-y-auto pr-2">
                       {knowledgeBases.length === 0 ? (
-                        <p className="text-gray-400">{t.noKnowledgeBases}</p>
+                        <div className="text-center py-4">
+                          <div className="text-gray-400 text-3xl sm:text-4xl mb-2">
+                            📚
+                          </div>
+                          <p className="text-gray-400 text-sm">
+                            {t.noKnowledgeBases}
+                          </p>
+                        </div>
                       ) : (
                         <>
                           {filteredKnowledgeBases.map((kb) => (
                             <label
                               key={kb.id}
                               htmlFor={`kb-${kb.id}`}
-                              className="flex items-center space-x-2 p-2 bg-gray-100 dark:bg-gray-700 rounded-md hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors cursor-pointer"
+                              className="flex items-start space-x-2 p-2 sm:p-3 bg-gray-100 dark:bg-gray-700 rounded-md hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors cursor-pointer"
                             >
                               <input
                                 type="checkbox"
                                 id={`kb-${kb.id}`}
                                 name="knowledgeBase"
-                                checked={settings.knowledge_base_ids.includes(kb.id)}
+                                checked={settings.knowledge_base_ids.includes(
+                                  kb.id
+                                )}
                                 onChange={() => {
-                                  const updatedKnowledgeBaseIds = settings.knowledge_base_ids.includes(kb.id)
-                                    ? settings.knowledge_base_ids.filter(id => id !== kb.id)
-                                    : [...settings.knowledge_base_ids, kb.id];
-                                  handleKnowledgeBaseChange(updatedKnowledgeBaseIds);
+                                  const updatedKnowledgeBaseIds =
+                                    settings.knowledge_base_ids.includes(kb.id)
+                                      ? settings.knowledge_base_ids.filter(
+                                          (id) => id !== kb.id
+                                        )
+                                      : [...settings.knowledge_base_ids, kb.id];
+                                  handleKnowledgeBaseChange(
+                                    updatedKnowledgeBaseIds
+                                  );
                                 }}
-                                className="text-blue-600 focus:ring-blue-500 bg-gray-100 dark:bg-gray-700 border-gray-300 dark:border-gray-600"
+                                className="mt-1 text-blue-600 focus:ring-blue-500 bg-gray-100 dark:bg-gray-700 border-gray-300 dark:border-gray-600 flex-shrink-0"
                               />
-                              <div>
-                                <div className="font-medium">{kb.title}</div>
-                                <div className="text-sm text-gray-400">{kb.description}</div>
+                              <div className="min-w-0 flex-1">
+                                <div className="font-medium text-sm sm:text-base">
+                                  {kb.title}
+                                </div>
+                                <div className="text-xs sm:text-sm text-gray-400 mt-1 break-words">
+                                  {kb.description}
+                                </div>
                               </div>
                             </label>
                           ))}
@@ -851,51 +1036,83 @@ export default function AgentPage() {
 
                   {(isAdmin || fullAdmin || useAgent) && (
                     <div>
-                      <div className="flex justify-between items-center mb-2">
+                      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center mb-2 gap-2">
                         <label className="block text-sm font-medium">
-                          {t.form?.department || 'Department'}
+                          {t.form?.department || "Department"}
                         </label>
                         <input
                           type="text"
                           value={departmentSearchQuery}
-                          onChange={(e) => setDepartmentSearchQuery(e.target.value)}
-                          className="w-48 px-3 py-1 bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors text-sm"
-                          placeholder={`${translations[language].departments?.search?.placeholder?.replace('...', '') || 'Search Department'} / ${translations[language === 'en' ? 'zh-TW' : 'en'].departments?.search?.placeholder?.replace('...', '') || '搜尋部門'}`}
+                          onChange={(e) =>
+                            setDepartmentSearchQuery(e.target.value)
+                          }
+                          className="w-full sm:w-48 px-3 py-1 text-sm bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
+                          placeholder={`${
+                            translations[
+                              language
+                            ].departments?.search?.placeholder?.replace(
+                              "...",
+                              ""
+                            ) || "Search Department"
+                          } / ${
+                            translations[
+                              language === "en" ? "zh-TW" : "en"
+                            ].departments?.search?.placeholder?.replace(
+                              "...",
+                              ""
+                            ) || "搜尋部門"
+                          }`}
                         />
                       </div>
-                      <div className="space-y-2 max-h-48 overflow-y-auto pr-2">
+                      <div className="space-y-2 max-h-32 sm:max-h-48 overflow-y-auto pr-2">
                         {/* Check if no departments are available to show proper message */}
                         {filteredDepartments.length === 0 ? (
-                          <p className="text-gray-400">{translations[language].departments?.noDepartments || 'No departments available'}</p>
+                          <div className="text-center py-4">
+                            <div className="text-gray-400 text-3xl sm:text-4xl mb-2">
+                              🏢
+                            </div>
+                            <p className="text-gray-400 text-sm">
+                              {translations[language].departments
+                                ?.noDepartments || "No departments available"}
+                            </p>
+                          </div>
                         ) : (
                           <>
                             {/* Only filter departments if user is not admin - admins can see all */}
                             {filteredDepartments
-                              .filter(dept =>
-                                isAdmin || fullAdmin ||
-                                !user?.departments || // If user.departments is undefined or null, show all departments
-                                user.departments.length === 0 || // If user has no departments assigned, show all departments
-                                user.departments.some(userDept => {
-                                  // Use type assertion to access either property safely
-                                  const deptId = (userDept as any).DepartmentID || userDept.id;
-                                  return deptId === dept.id;
-                                })
+                              .filter(
+                                (dept) =>
+                                  isAdmin ||
+                                  fullAdmin ||
+                                  !user?.departments || // If user.departments is undefined or null, show all departments
+                                  user.departments.length === 0 || // If user has no departments assigned, show all departments
+                                  user.departments.some((userDept) => {
+                                    // Use type assertion to access either property safely
+                                    const deptId =
+                                      (userDept as any).DepartmentID ||
+                                      userDept.id;
+                                    return deptId === dept.id;
+                                  })
                               )
                               .map((dept) => (
                                 <label
                                   key={dept.id}
                                   htmlFor={`dept-${dept.id}`}
-                                  className="flex items-center space-x-2 p-2 bg-gray-100 dark:bg-gray-700 rounded-md hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors cursor-pointer"
+                                  className="flex items-center space-x-2 p-2 sm:p-3 bg-gray-100 dark:bg-gray-700 rounded-md hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors cursor-pointer"
                                 >
                                   <input
                                     type="radio"
                                     id={`dept-${dept.id}`}
                                     name="department"
                                     checked={settings.department_id === dept.id}
-                                    onChange={() => handleDepartmentChange(dept.id)}
-                                    className="text-blue-600 focus:ring-blue-500 bg-gray-100 dark:bg-gray-700 border-gray-300 dark:border-gray-600"
+                                    onChange={() =>
+                                      handleDepartmentChange(dept.id)
+                                    }
+                                    className="text-blue-600 focus:ring-blue-500 bg-gray-100 dark:bg-gray-700 border-gray-300 dark:border-gray-600 flex-shrink-0"
                                   />
-                                  <div className="font-medium">{dept.name}</div>
+                                  <div className="font-medium text-sm sm:text-base min-w-0 flex-1">
+                                    {dept.name}
+                                  </div>
                                 </label>
                               ))}
                           </>
@@ -905,7 +1122,10 @@ export default function AgentPage() {
                   )}
 
                   <div>
-                    <label htmlFor="system_prompt" className="block text-sm font-medium mb-2">
+                    <label
+                      htmlFor="system_prompt"
+                      className="block text-sm font-medium mb-2"
+                    >
                       {t.form.systemPrompt}
                     </label>
                     <textarea
@@ -914,13 +1134,16 @@ export default function AgentPage() {
                       value={settings.system_prompt}
                       onChange={handleChange}
                       rows={4}
-                      className="w-full px-3 py-2 bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
+                      className="w-full px-3 py-2 text-sm sm:text-base bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors resize-none"
                       placeholder={t.form.systemPromptPlaceholder}
                     />
                   </div>
 
                   <div>
-                    <label htmlFor="nftext" className="block text-sm font-medium mb-2">
+                    <label
+                      htmlFor="nftext"
+                      className="block text-sm font-medium mb-2"
+                    >
                       {t.form.fallbackMessage}
                     </label>
                     <textarea
@@ -929,17 +1152,20 @@ export default function AgentPage() {
                       value={settings.nftext}
                       onChange={handleChange}
                       rows={3}
-                      className="w-full px-3 py-2 bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
+                      className="w-full px-3 py-2 text-sm sm:text-base bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors resize-none"
                       placeholder={t.form.fallbackMessagePlaceholder}
                     />
-                    <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+                    <p className="mt-1 text-xs sm:text-sm text-gray-500 dark:text-gray-400">
                       {t.form.fallbackMessageHelp}
                     </p>
                   </div>
 
                   <div>
-                    <label htmlFor="description" className="block text-sm font-medium mb-2">
-                      {t.form.description || 'Description'}
+                    <label
+                      htmlFor="description"
+                      className="block text-sm font-medium mb-2"
+                    >
+                      {t.form.description || "Description"}
                     </label>
                     <textarea
                       id="description"
@@ -947,26 +1173,32 @@ export default function AgentPage() {
                       value={settings.description}
                       onChange={handleChange}
                       rows={3}
-                      className="w-full px-3 py-2 bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
-                      placeholder={t.form.descriptionPlaceholder || 'Enter agent description...'}
+                      className="w-full px-3 py-2 text-sm sm:text-base bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors resize-none"
+                      placeholder={
+                        t.form.descriptionPlaceholder ||
+                        "Enter agent description..."
+                      }
                     />
-                    <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-                      {t.form.descriptionHelp || 'Describe what this agent is used for.'}
+                    <p className="mt-1 text-xs sm:text-sm text-gray-500 dark:text-gray-400">
+                      {t.form.descriptionHelp ||
+                        "Describe what this agent is used for."}
                     </p>
                   </div>
 
                   <button
                     type="submit"
-                    className="w-full px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
+                    className="w-full px-4 py-3 text-sm sm:text-base bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                     disabled={loading}
                   >
                     {loading ? (
                       <span className="flex items-center justify-center">
-                        <div className="animate-spin rounded-full h-5 w-5 border-t-2 border-b-2 border-white mr-2"></div>
+                        <div className="animate-spin rounded-full h-4 w-4 sm:h-5 sm:w-5 border-t-2 border-b-2 border-white mr-2"></div>
                         {t.form.savingLoading}
                       </span>
+                    ) : selectedAgent ? (
+                      t.form.saveChanges
                     ) : (
-                      selectedAgent ? t.form.saveChanges : t.form.createAgent
+                      t.form.createAgent
                     )}
                   </button>
                 </form>

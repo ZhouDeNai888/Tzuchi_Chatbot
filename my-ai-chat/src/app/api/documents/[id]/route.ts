@@ -1,21 +1,24 @@
-import { NextResponse, NextRequest } from 'next/server';
+import { NextResponse, NextRequest } from "next/server";
 
-const API_BASE_URL = 'http://ai_server:8000';
+const API_BASE_URL = "http://ai_server:8000";
 
 export async function GET(request: NextRequest) {
   try {
-    const token = request.cookies.get('access_token')?.value;
+    const token = request.cookies.get("access_token")?.value;
 
     if (!token) {
-      return NextResponse.json({ error: 'No authentication token' }, { status: 401 });
+      return NextResponse.json(
+        { error: "No authentication token" },
+        { status: 401 }
+      );
     }
 
-    const id = request.nextUrl.pathname.split('/').pop();
+    const id = request.nextUrl.pathname.split("/").pop();
     const response = await fetch(`${API_BASE_URL}/api/documents/${id}`, {
-      method: 'GET',
+      method: "GET",
       headers: {
-        'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
       },
     });
 
@@ -23,16 +26,16 @@ export async function GET(request: NextRequest) {
 
     if (!response.ok) {
       return NextResponse.json(
-        { error: data.detail || 'Failed to get document' },
+        { error: data.detail || "Failed to get document" },
         { status: response.status }
       );
     }
 
     return NextResponse.json(data);
   } catch (error) {
-    console.error('Get document error:', error);
+    console.error("Get document error:", error);
     return NextResponse.json(
-      { error: 'Internal server error' },
+      { error: "Internal server error" },
       { status: 500 }
     );
   }
@@ -40,20 +43,23 @@ export async function GET(request: NextRequest) {
 
 export async function PUT(request: NextRequest) {
   try {
-    const token = request.cookies.get('access_token')?.value;
+    const token = request.cookies.get("access_token")?.value;
 
     if (!token) {
-      return NextResponse.json({ error: 'No authentication token' }, { status: 401 });
+      return NextResponse.json(
+        { error: "No authentication token" },
+        { status: 401 }
+      );
     }
 
     const body = await request.json();
-    const id = request.nextUrl.pathname.split('/').pop();
+    const id = request.nextUrl.pathname.split("/").pop();
 
     const response = await fetch(`${API_BASE_URL}/api/documents/${id}`, {
-      method: 'PUT',
+      method: "PUT",
       headers: {
-        'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
       },
       body: JSON.stringify(body),
     });
@@ -62,16 +68,16 @@ export async function PUT(request: NextRequest) {
 
     if (!response.ok) {
       return NextResponse.json(
-        { error: data.detail || 'Failed to update document' },
+        { error: data.detail || "Failed to update document" },
         { status: response.status }
       );
     }
 
     return NextResponse.json(data);
   } catch (error) {
-    console.error('Update document error:', error);
+    console.error("Update document error:", error);
     return NextResponse.json(
-      { error: 'Internal server error' },
+      { error: "Internal server error" },
       { status: 500 }
     );
   }
@@ -79,18 +85,21 @@ export async function PUT(request: NextRequest) {
 
 export async function DELETE(request: NextRequest) {
   try {
-    const token = request.cookies.get('access_token')?.value;
+    const token = request.cookies.get("access_token")?.value;
 
     if (!token) {
-      return NextResponse.json({ error: 'No authentication token' }, { status: 401 });
+      return NextResponse.json(
+        { error: "No authentication token" },
+        { status: 401 }
+      );
     }
 
-    const id = request.nextUrl.pathname.split('/').pop();
+    const id = request.nextUrl.pathname.split("/").pop();
     const response = await fetch(`${API_BASE_URL}/api/documents/${id}`, {
-      method: 'DELETE',
+      method: "DELETE",
       headers: {
-        'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
       },
     });
 
@@ -98,16 +107,16 @@ export async function DELETE(request: NextRequest) {
 
     if (!response.ok) {
       return NextResponse.json(
-        { error: data.detail || 'Failed to delete document' },
+        { error: data.detail || "Failed to delete document" },
         { status: response.status }
       );
     }
 
     return NextResponse.json(data);
   } catch (error) {
-    console.error('Delete document error:', error);
+    console.error("Delete document error:", error);
     return NextResponse.json(
-      { error: 'Internal server error' },
+      { error: "Internal server error" },
       { status: 500 }
     );
   }

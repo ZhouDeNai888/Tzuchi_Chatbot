@@ -1,22 +1,25 @@
-import { NextResponse, NextRequest } from 'next/server';
+import { NextResponse, NextRequest } from "next/server";
 
-const API_BASE_URL = 'http://ai_server:8000';
+const API_BASE_URL = "http://ai_server:8000";
 
 export async function POST(request: NextRequest) {
   try {
-    const token = request.cookies.get('access_token')?.value;
+    const token = request.cookies.get("access_token")?.value;
 
     if (!token) {
-      return NextResponse.json({ error: 'No authentication token' }, { status: 401 });
+      return NextResponse.json(
+        { error: "No authentication token" },
+        { status: 401 }
+      );
     }
 
     const body = await request.json();
 
     const response = await fetch(`${API_BASE_URL}/api/permissions/user`, {
-      method: 'POST',
+      method: "POST",
       headers: {
-        'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
       },
       body: JSON.stringify(body),
     });
@@ -25,16 +28,16 @@ export async function POST(request: NextRequest) {
 
     if (!response.ok) {
       return NextResponse.json(
-        { error: data.detail || 'Failed to add permission to user' },
+        { error: data.detail || "Failed to add permission to user" },
         { status: response.status }
       );
     }
 
     return NextResponse.json(data);
   } catch (error) {
-    console.error('Add permission to user error:', error);
+    console.error("Add permission to user error:", error);
     return NextResponse.json(
-      { error: 'Internal server error' },
+      { error: "Internal server error" },
       { status: 500 }
     );
   }
@@ -42,19 +45,22 @@ export async function POST(request: NextRequest) {
 
 export async function DELETE(request: NextRequest) {
   try {
-    const token = request.cookies.get('access_token')?.value;
+    const token = request.cookies.get("access_token")?.value;
 
     if (!token) {
-      return NextResponse.json({ error: 'No authentication token' }, { status: 401 });
+      return NextResponse.json(
+        { error: "No authentication token" },
+        { status: 401 }
+      );
     }
 
     const body = await request.json();
 
     const response = await fetch(`${API_BASE_URL}/api/permissions/user`, {
-      method: 'DELETE',
+      method: "DELETE",
       headers: {
-        'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
       },
       body: JSON.stringify(body),
     });
@@ -63,16 +69,16 @@ export async function DELETE(request: NextRequest) {
 
     if (!response.ok) {
       return NextResponse.json(
-        { error: data.detail || 'Failed to remove permission from user' },
+        { error: data.detail || "Failed to remove permission from user" },
         { status: response.status }
       );
     }
 
     return NextResponse.json(data);
   } catch (error) {
-    console.error('Remove permission from user error:', error);
+    console.error("Remove permission from user error:", error);
     return NextResponse.json(
-      { error: 'Internal server error' },
+      { error: "Internal server error" },
       { status: 500 }
     );
   }

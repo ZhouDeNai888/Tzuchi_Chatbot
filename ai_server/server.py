@@ -79,6 +79,7 @@ db = Database()
 models = db.get_all_ai_models_name()
 
 
+
 async def get_cached_model(model_name: str, dept_id: int, knowledge_base: str, agent_key: str) -> Optional[Any]:
     """Get a model and its retrieval chain from the cache"""
     try:
@@ -1510,9 +1511,11 @@ async def create_conversation(
         title=request.title or f"Chat {time.strftime('%Y-%m-%d %H:%M:%S')}",
         department_id=request.department_id
     )
+
+    print(f'Creating conversation: {request.title} for user: {user["user_id"]} in department: {request.department_id}')
     
-    if not conversation_id:
-        raise HTTPException(status_code=500, detail="Failed to create conversation")
+    # if not conversation_id:
+    #     raise HTTPException(status_code=500, detail="Failed to create conversation server-side")
     
     return {"conversation_id": conversation_id}
 
@@ -1765,7 +1768,7 @@ async def revoke_shared_agent(request: Request, user = Depends(get_current_user)
             raise HTTPException(status_code=404, detail="Shared agent not found")
         
         # Verify the user owns this shared agent or is an admin
-        if shared_agent.SharedByUserID != user["user_id"] and user["user_role"].lower() != "admin":
+        if shared_agent.SharedByUserID != user["user_id"] and user["role"].lower() != "admin":
             raise HTTPException(status_code=403, detail="You don't have permission to revoke this shared agent")
         
         # Delete the shared agent

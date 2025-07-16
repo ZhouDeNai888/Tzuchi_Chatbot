@@ -1118,7 +1118,7 @@ export const createConversation = async (title: string, department_id: number): 
     });
 
     if (!response.ok) {
-      throw new Error('Failed to create conversation');
+      throw new Error('Failed to create conversation next api3 ');
     }
 
     return await response.json();

@@ -83,41 +83,41 @@ services:
   #     - LT_API_KEYS= # สามารถปล่อยว่างไว้ (ถ้าไม่ต้องการ API Key)
   #     - LT_DEBUG=true
 
-  # # GPU Version
-  # ollama:
-  #   volumes:
-  #     - ./ollama/ollama:/root/.ollama
-  #   container_name: ollama
-  #   pull_policy: always
-  #   tty: true
-  #   restart: unless-stopped
-  #   image: ollama/ollama:latest
-  #   ports:
-  #     - 11434:11434
-  #   networks:
-  #     - app_network
-  #   deploy:
-  #     resources:
-  #       reservations:
-  #         devices:
-  #           - driver: nvidia
-  #             count: all
-  #             capabilities: [gpu]
-
-  # cpu version
+  # GPU Version
   ollama:
-    image: ollama/ollama:latest
-    ports:
-      - 11434:11434
     volumes:
-      - .:/code
       - ./ollama/ollama:/root/.ollama
     container_name: ollama
     pull_policy: always
     tty: true
-    restart: always
+    restart: unless-stopped
+    image: ollama/ollama:latest
+    ports:
+      - 11434:11434
     networks:
       - app_network
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+
+  # # cpu version
+  # ollama:
+  #   image: ollama/ollama:latest
+  #   ports:
+  #     - 11434:11434
+  #   volumes:
+  #     - .:/code
+  #     - ./ollama/ollama:/root/.ollama
+  #   container_name: ollama
+  #   pull_policy: always
+  #   tty: true
+  #   restart: always
+  #   networks:
+  #     - app_network
 
 networks:
   app_network:

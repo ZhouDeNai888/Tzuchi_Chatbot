@@ -1,39 +1,41 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from "next/server";
 
-const API_BASE_URL = 'http://ai_server:8000';
+const API_BASE_URL = "http://ai_server:8000";
 
 export async function GET(request: NextRequest) {
   try {
-    const token = request.cookies.get('access_token')?.value;
+    const token = request.cookies.get("access_token")?.value;
 
     if (!token) {
-      return NextResponse.json({ error: 'No authentication token' }, { status: 401 });
+      return NextResponse.json(
+        { error: "No authentication token" },
+        { status: 401 }
+      );
     }
 
     // Make request to backend API
     const response = await fetch(`${API_BASE_URL}/api/agents/shared`, {
-      method: 'GET',
+      method: "GET",
       headers: {
-        'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
       },
     });
-
 
     const data = await response.json();
 
     if (!response.ok) {
       return NextResponse.json(
-        { error: data.detail || 'Failed to get shared agents' },
+        { error: data.detail || "Failed to get shared agents" },
         { status: response.status }
       );
     }
 
     return NextResponse.json(data);
   } catch (error) {
-    console.error('Get shared agents error:', error);
+    console.error("Get shared agents error:", error);
     return NextResponse.json(
-      { error: 'Internal server error' },
+      { error: "Internal server error" },
       { status: 500 }
     );
   }

@@ -1,66 +1,70 @@
 (async function () {
   // Get the script element that loaded this script
   const script = document.currentScript;
-  const theme = script.getAttribute('data-theme') || 'light';
+  const theme = script.getAttribute("data-theme") || "light";
   // Get API key from script attribute or use default
-  const apiKey = script.getAttribute('data-api-key') || '';
-  const chatUrl = script.getAttribute('data-api-url') || 'api/chat';
-  const configUrl = script.getAttribute('data-config-url') || 'api/agents/config';
-  const base = 'https://tcubot.tcu.edu.tw/';
+  const apiKey = script.getAttribute("data-api-key") || "";
+  const chatUrl = script.getAttribute("data-api-url") || "api/chat";
+  const configUrl =
+    script.getAttribute("data-config-url") || "api/agents/config";
+  const base = "https://tcuaibot.tcu.edu.tw/";
 
   const currentOrigin = window.location.origin;
   console.log(`[AI Widget] Current origin: ${currentOrigin}`);
 
-
   // ตรวจสอบ origin กับ backend
 
   const response = await fetch(`${base}${configUrl}/${apiKey}`, {
-    method: 'GET',
+    method: "GET",
     headers: {
-      'Content-Type': 'application/json',
-      'x-api-key': apiKey
-    }
+      "Content-Type": "application/json",
+      "x-api-key": apiKey,
+    },
   });
 
   if (!response.ok) {
-    throw new Error('Config not found');
+    throw new Error("Config not found");
   }
 
   const config = await response.json();
-  const allowed = (config.allowed_origins || '*')
-    .split(',')
-    .map(o => o.trim());
+  const allowed = (config.allowed_origins || "*")
+    .split(",")
+    .map((o) => o.trim());
 
-  if (!(allowed.includes('*') || allowed.includes(currentOrigin))) {
-    console.warn(`[AI Widget] Origin ${currentOrigin} not allowed for this ShareAgent`);
+  if (!(allowed.includes("*") || allowed.includes(currentOrigin))) {
+    console.warn(
+      `[AI Widget] Origin ${currentOrigin} not allowed for this ShareAgent`
+    );
     // แสดงข้อความบนเว็บแทนที่จะโหลด widget
-    const blockedMsg = document.createElement('div');
-    blockedMsg.textContent = '⚠️ This widget is not authorized for this website.';
-    blockedMsg.style.position = 'fixed';
-    blockedMsg.style.bottom = '10px';
-    blockedMsg.style.right = '10px';
-    blockedMsg.style.padding = '10px';
-    blockedMsg.style.background = '#ffcdd2';
-    blockedMsg.style.color = '#b71c1c';
-    blockedMsg.style.borderRadius = '6px';
+    const blockedMsg = document.createElement("div");
+    blockedMsg.textContent =
+      "⚠️ This widget is not authorized for this website.";
+    blockedMsg.style.position = "fixed";
+    blockedMsg.style.bottom = "10px";
+    blockedMsg.style.right = "10px";
+    blockedMsg.style.padding = "10px";
+    blockedMsg.style.background = "#ffcdd2";
+    blockedMsg.style.color = "#b71c1c";
+    blockedMsg.style.borderRadius = "6px";
     blockedMsg.style.zIndex = 9999;
     document.body.appendChild(blockedMsg);
     return;
   }
 
   // Add Font Awesome - update to the latest version
-  const fontAwesomeLink = document.createElement('link');
-  fontAwesomeLink.rel = 'stylesheet';
-  fontAwesomeLink.href = 'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css';
+  const fontAwesomeLink = document.createElement("link");
+  fontAwesomeLink.rel = "stylesheet";
+  fontAwesomeLink.href =
+    "https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css";
   document.head.appendChild(fontAwesomeLink);
 
   // Add Marked.js for markdown rendering
-  const markedScript = document.createElement('script');
-  markedScript.src = 'https://cdn.jsdelivr.net/npm/marked@12.0.0/marked.min.js';
+  const markedScript = document.createElement("script");
+  markedScript.src = "https://cdn.jsdelivr.net/npm/marked@12.0.0/marked.min.js";
   document.head.appendChild(markedScript);
 
   // Create and append the chat widget styles
-  const style = document.createElement('style');
+  const style = document.createElement("style");
   style.textContent = `
     #ai-chat-widget-container {
       position: fixed;
@@ -76,13 +80,15 @@
       width: 50px;
       height: 50px;
       border-radius: 50%;
-      background: ${theme === 'dark' ? '#333333' : '#ffffff'};
+      background: ${theme === "dark" ? "#333333" : "#ffffff"};
       color: white;
       display: flex;
       justify-content: center;
       align-items: center;
       cursor: pointer;
-      box-shadow: 0 4px 12px rgba(0, 0, 0, ${theme === 'dark' ? '0.25' : '0.15'});
+      box-shadow: 0 4px 12px rgba(0, 0, 0, ${
+        theme === "dark" ? "0.25" : "0.15"
+      });
       align-self: flex-end;
       transition: all 0.2s ease;
       border: none;
@@ -92,8 +98,8 @@
     
     #ai-chat-widget-button:hover {
       transform: scale(1.05);
-      box-shadow: 0 6px 16px rgba(0, 0, 0, ${theme === 'dark' ? '0.3' : '0.2'});
-      background: ${theme === 'dark' ? '#444444' : '#f5f5f5'};
+      box-shadow: 0 6px 16px rgba(0, 0, 0, ${theme === "dark" ? "0.3" : "0.2"});
+      background: ${theme === "dark" ? "#444444" : "#f5f5f5"};
     }
     
     #ai-chat-widget-popup {
@@ -102,13 +108,15 @@
       right: 0;
       width: 360px;
       height: 580px;
-      background-color: ${theme === 'dark' ? '#171717' : '#ffffff'};
+      background-color: ${theme === "dark" ? "#171717" : "#ffffff"};
       border-radius: 16px;
-      box-shadow: 0 10px 30px rgba(0, 0, 0, ${theme === 'dark' ? '0.4' : '0.1'});
+      box-shadow: 0 10px 30px rgba(0, 0, 0, ${
+        theme === "dark" ? "0.4" : "0.1"
+      });
       display: none;
       flex-direction: column;
       overflow: hidden;
-      border: 1px solid ${theme === 'dark' ? '#333333' : '#eeeeee'};
+      border: 1px solid ${theme === "dark" ? "#333333" : "#eeeeee"};
       transition: all 0.3s ease;
     }
     
@@ -124,19 +132,19 @@
     
     #ai-chat-widget-header {
       padding: 16px;
-      background: ${theme === 'dark' ? '#1f1f1f' : '#f8f8f8'};
-      color: ${theme === 'dark' ? '#ffffff' : '#000000'};
+      background: ${theme === "dark" ? "#1f1f1f" : "#f8f8f8"};
+      color: ${theme === "dark" ? "#ffffff" : "#000000"};
       display: flex;
       justify-content: space-between;
       align-items: center;
-      border-bottom: 1px solid ${theme === 'dark' ? '#333333' : '#eeeeee'};
+      border-bottom: 1px solid ${theme === "dark" ? "#333333" : "#eeeeee"};
     }
     
     #ai-chat-widget-title {
       margin: 0;
       font-size: 15px;
       font-weight: 500;
-      color: ${theme === 'dark' ? '#ffffff' : '#000000'};
+      color: ${theme === "dark" ? "#ffffff" : "#000000"};
       display: flex;
       align-items: center;
       gap: 8px;
@@ -146,7 +154,7 @@
       background: transparent;
       border: none;
       cursor: pointer;
-      color: ${theme === 'dark' ? '#999999' : '#666666'};
+      color: ${theme === "dark" ? "#999999" : "#666666"};
       font-size: 16px;
       padding: 4px;
       display: flex;
@@ -158,7 +166,7 @@
     }
     
     #ai-chat-widget-close:hover {
-      color: ${theme === 'dark' ? '#ffffff' : '#000000'};
+      color: ${theme === "dark" ? "#ffffff" : "#000000"};
     }
     
     #ai-chat-widget-messages {
@@ -168,9 +176,11 @@
       display: flex;
       flex-direction: column;
       gap: 14px;
-      background-color: ${theme === 'dark' ? '#171717' : '#ffffff'};
+      background-color: ${theme === "dark" ? "#171717" : "#ffffff"};
       scrollbar-width: thin;
-      scrollbar-color: ${theme === 'dark' ? '#444444 #171717' : '#dddddd #ffffff'};
+      scrollbar-color: ${
+        theme === "dark" ? "#444444 #171717" : "#dddddd #ffffff"
+      };
     }
     
     #ai-chat-widget-messages::-webkit-scrollbar {
@@ -178,11 +188,11 @@
     }
     
     #ai-chat-widget-messages::-webkit-scrollbar-track {
-      background: ${theme === 'dark' ? '#171717' : '#ffffff'};
+      background: ${theme === "dark" ? "#171717" : "#ffffff"};
     }
     
     #ai-chat-widget-messages::-webkit-scrollbar-thumb {
-      background-color: ${theme === 'dark' ? '#444444' : '#dddddd'};
+      background-color: ${theme === "dark" ? "#444444" : "#dddddd"};
       border-radius: 4px;
     }
     
@@ -223,15 +233,15 @@
     }
     
     .ai-chat-widget-message-container.user .ai-chat-widget-message {
-      background: ${theme === 'dark' ? '#333333' : '#000000'};
+      background: rgb(17, 201, 0);
       color: white;
       border-bottom-right-radius: 4px;
       margin-left: auto;
     }
     
     .ai-chat-widget-message-container.bot .ai-chat-widget-message {
-      background-color: ${theme === 'dark' ? '#2a2a2a' : '#f5f5f5'};
-      color: ${theme === 'dark' ? '#ffffff' : '#000000'};
+      background-color: ${theme === "dark" ? "#2a2a2a" : "#f5f5f5"};
+      color: ${theme === "dark" ? "#ffffff" : "#000000"};
       border-bottom-left-radius: 4px;
       margin-right: auto;
     }
@@ -246,7 +256,7 @@
       justify-content: center;
       font-size: 14px;
       margin-right: 8px;
-      background: ${theme === 'dark' ? '#333333' : '#000000'};
+      background: ${theme === "dark" ? "#333333" : "#000000"};
       flex-shrink: 0;
     }
     
@@ -277,20 +287,20 @@
       border-collapse: collapse;
       border-radius: 6px;
       overflow: hidden;
-      border: 1px solid ${theme === 'dark' ? '#333333' : '#eeeeee'};
+      border: 1px solid ${theme === "dark" ? "#333333" : "#eeeeee"};
     }
     
     .ai-chat-widget-message th {
-      background: ${theme === 'dark' ? '#2a2a2a' : '#f5f5f5'};
+      background: ${theme === "dark" ? "#2a2a2a" : "#f5f5f5"};
       padding: 8px 12px;
       text-align: left;
       font-weight: 500;
-      border-bottom: 1px solid ${theme === 'dark' ? '#333333' : '#eeeeee'};
+      border-bottom: 1px solid ${theme === "dark" ? "#333333" : "#eeeeee"};
     }
     
     .ai-chat-widget-message td {
       padding: 8px 12px;
-      border-bottom: 1px solid ${theme === 'dark' ? '#333333' : '#eeeeee'};
+      border-bottom: 1px solid ${theme === "dark" ? "#333333" : "#eeeeee"};
     }
     
     .ai-chat-widget-message tr:last-child td {
@@ -310,7 +320,9 @@
     
     .ai-chat-widget-feedback-button {
       border: none;
-      background: ${theme === 'dark' ? 'rgba(42, 42, 42, 0.7)' : 'rgba(245, 245, 245, 0.7)'};
+      background: ${
+        theme === "dark" ? "rgba(42, 42, 42, 0.7)" : "rgba(245, 245, 245, 0.7)"
+      };
       cursor: pointer;
       padding: 4px;
       border-radius: 50%;
@@ -320,24 +332,34 @@
       justify-content: center;
       width: 24px;
       height: 24px;
-      color: ${theme === 'dark' ? '#999999' : '#666666'};
+      color: ${theme === "dark" ? "#999999" : "#666666"};
       flex-shrink: 0;
     }
     
     .ai-chat-widget-feedback-button:hover {
-      background-color: ${theme === 'dark' ? 'rgba(42, 42, 42, 1)' : 'rgba(245, 245, 245, 1)'};
+      background-color: ${
+        theme === "dark" ? "rgba(42, 42, 42, 1)" : "rgba(245, 245, 245, 1)"
+      };
       transform: translateY(-1px);
     }
     
-    .ai-chat-widget-feedback-button.active {
-      background-color: ${theme === 'dark' ? '#000000' : '#000000'};
+    .ai-chat-widget-feedback-button .like .active {
+      background-color: rgb(52, 182, 0);
+      color: white;
+      transform: translateY(-1px);
+    }
+
+    .ai-chat-widget-feedback-button .dislike .active {
+      background-color: rgb(182, 0, 0);
       color: white;
       transform: translateY(-1px);
     }
     
     .ai-chat-widget-copy-button {
       border: none;
-      background: ${theme === 'dark' ? 'rgba(42, 42, 42, 0.7)' : 'rgba(245, 245, 245, 0.7)'};
+      background: ${
+        theme === "dark" ? "rgba(42, 42, 42, 0.7)" : "rgba(245, 245, 245, 0.7)"
+      };
       cursor: pointer;
       padding: 4px 8px;
       border-radius: 12px;
@@ -347,12 +369,14 @@
       justify-content: center;
       gap: 4px;
       font-size: 12px;
-      color: ${theme === 'dark' ? '#999999' : '#666666'};
+      color: ${theme === "dark" ? "#999999" : "#666666"};
       white-space: nowrap;
     }
     
     .ai-chat-widget-copy-button:hover {
-      background-color: ${theme === 'dark' ? 'rgba(42, 42, 42, 1)' : 'rgba(245, 245, 245, 1)'};
+      background-color: ${
+        theme === "dark" ? "rgba(42, 42, 42, 1)" : "rgba(245, 245, 245, 1)"
+      };
       transform: translateY(-1px);
     }
     
@@ -364,10 +388,10 @@
     /* Input area styling improvements */
     #ai-chat-widget-input-container {
       padding: 12px 16px;
-      border-top: 1px solid ${theme === 'dark' ? '#333333' : '#eeeeee'};
+      border-top: 1px solid ${theme === "dark" ? "#333333" : "#eeeeee"};
       display: flex;
       gap: 10px;
-      background-color: ${theme === 'dark' ? '#1f1f1f' : '#f8f8f8'};
+      background-color: ${theme === "dark" ? "#1f1f1f" : "#f8f8f8"};
       align-items: center;
     }
     
@@ -375,25 +399,27 @@
       flex: 1;
       padding: 10px 14px;
       border-radius: 20px;
-      border: 1px solid ${theme === 'dark' ? '#333333' : '#dddddd'};
-      background-color: ${theme === 'dark' ? '#2a2a2a' : '#ffffff'};
-      color: ${theme === 'dark' ? '#ffffff' : '#000000'};
+      border: 1px solid ${theme === "dark" ? "#333333" : "#dddddd"};
+      background-color: ${theme === "dark" ? "#2a2a2a" : "#ffffff"};
+      color: ${theme === "dark" ? "#ffffff" : "#000000"};
       outline: none;
       font-size: 14px;
       transition: all 0.2s;
     }
     
     #ai-chat-widget-input:focus {
-      border-color: ${theme === 'dark' ? '#555555' : '#bbbbbb'};
-      box-shadow: 0 0 0 1px ${theme === 'dark' ? 'rgba(85, 85, 85, 0.4)' : 'rgba(187, 187, 187, 0.4)'};
+      border-color: ${theme === "dark" ? "#555555" : "#bbbbbb"};
+      box-shadow: 0 0 0 1px ${
+        theme === "dark" ? "rgba(85, 85, 85, 0.4)" : "rgba(187, 187, 187, 0.4)"
+      };
     }
     
     #ai-chat-widget-input::placeholder {
-      color: ${theme === 'dark' ? '#999999' : '#999999'};
+      color: ${theme === "dark" ? "#999999" : "#999999"};
     }
     
     #ai-chat-widget-send {
-      background: #000000;
+      background:rgb(17, 201, 0);
       color: white;
       border: none;
       border-radius: 50%;
@@ -413,7 +439,7 @@
     }
     
     #ai-chat-widget-send:disabled {
-      background: ${theme === 'dark' ? '#444444' : '#dddddd'};
+      background: ${theme === "dark" ? "#444444" : "#dddddd"};
       cursor: not-allowed;
       transform: scale(1);
     }
@@ -425,8 +451,8 @@
       gap: 6px;
       padding: 12px;
       border-radius: 16px;
-      background-color: ${theme === 'dark' ? '#2a2a2a' : '#f5f5f5'};
-      color: ${theme === 'dark' ? '#ffffff' : '#000000'};
+      background-color: ${theme === "dark" ? "#2a2a2a" : "#f5f5f5"};
+      color: ${theme === "dark" ? "#ffffff" : "#000000"};
       align-self: flex-start;
       max-width: 80%;
       margin-bottom: 10px;
@@ -436,7 +462,7 @@
       width: 6px;
       height: 6px;
       border-radius: 50%;
-      background-color: ${theme === 'dark' ? '#999999' : '#666666'};
+      background-color: ${theme === "dark" ? "#999999" : "#666666"};
       animation: ai-chat-widget-dot-pulse 1.5s infinite;
     }
     
@@ -481,11 +507,13 @@
     .ai-chat-widget-sources {
       margin-top: 10px;
       padding-top: 10px;
-      border-top: 1px solid ${theme === 'dark' ? '#333333' : '#eeeeee'};
+      border-top: 1px solid ${theme === "dark" ? "#333333" : "#eeeeee"};
       font-size: 12px;
       padding: 10px;
       margin-bottom: 4px;
-      background-color: ${theme === 'dark' ? 'rgba(42, 42, 42, 0.5)' : 'rgba(245, 245, 245, 0.5)'};
+      background-color: ${
+        theme === "dark" ? "rgba(42, 42, 42, 0.5)" : "rgba(245, 245, 245, 0.5)"
+      };
       border-radius: 12px;
     }
     
@@ -493,7 +521,7 @@
       font-weight: 600;
       margin-bottom: 8px;
       font-size: 12px;
-      color: ${theme === 'dark' ? '#cccccc' : '#555555'};
+      color: ${theme === "dark" ? "#cccccc" : "#555555"};
       display: flex;
       align-items: center;
       gap: 4px;
@@ -511,16 +539,20 @@
       padding: 8px 10px;
       margin-bottom: 5px;
       border-radius: 8px;
-      background-color: ${theme === 'dark' ? 'rgba(42, 42, 42, 0.7)' : 'rgba(255, 255, 255, 0.7)'};
+      background-color: ${
+        theme === "dark" ? "rgba(42, 42, 42, 0.7)" : "rgba(255, 255, 255, 0.7)"
+      };
       transition: all 0.2s;
-      border: 1px solid ${theme === 'dark' ? '#333333' : '#eeeeee'};
+      border: 1px solid ${theme === "dark" ? "#333333" : "#eeeeee"};
       text-decoration: none;
-      color: ${theme === 'dark' ? '#ffffff' : '#000000'};
+      color: ${theme === "dark" ? "#ffffff" : "#000000"};
       font-size: 11px;
     }
     
     .ai-chat-widget-sources a:hover {
-      background-color: ${theme === 'dark' ? 'rgba(42, 42, 42, 1)' : 'rgba(255, 255, 255, 1)'};
+      background-color: ${
+        theme === "dark" ? "rgba(42, 42, 42, 1)" : "rgba(255, 255, 255, 1)"
+      };
       transform: translateY(-1px);
     }
     
@@ -556,12 +588,12 @@
   function setMessageContent(element, text) {
     // For empty or very short responses, display them directly
     if (!text || text.length < 50) {
-      element.textContent = text || '';
+      element.textContent = text || "";
       return;
     }
 
     // Check if marked library is loaded and use it for markdown rendering
-    if (window.marked && typeof window.marked === 'function') {
+    if (window.marked && typeof window.marked === "function") {
       try {
         // Configure marked options similar to ReactMarkdown in page.tsx
         window.marked.use({
@@ -573,7 +605,10 @@
           renderer: {
             // Custom renderers for different markdown elements - similar to page.tsx components prop
             heading(text, level) {
-              const className = level <= 3 ? 'text-xl font-bold my-3' : 'text-lg font-semibold my-2';
+              const className =
+                level <= 3
+                  ? "text-xl font-bold my-3"
+                  : "text-lg font-semibold my-2";
               return `<h${level} class="${className}">${text}</h${level}>`;
             },
             paragraph(text) {
@@ -583,8 +618,10 @@
               return `<a class="text-blue-300 hover:underline cursor-pointer" href="${href}" target="_blank" rel="noopener noreferrer" onclick="event.preventDefault(); window.open('${href}', '_blank', 'noopener,noreferrer');">${text}</a>`;
             },
             list(body, ordered) {
-              const listType = ordered ? 'ol' : 'ul';
-              const className = ordered ? 'list-decimal list-inside my-2' : 'list-disc list-inside my-2';
+              const listType = ordered ? "ol" : "ul";
+              const className = ordered
+                ? "list-decimal list-inside my-2"
+                : "list-disc list-inside my-2";
               return `<${listType} class="${className}">${body}</${listType}>`;
             },
             code(code, language) {
@@ -600,20 +637,30 @@
               }
 
               // Improved table structure with better styling for dark/light modes
-              return '<table class="border-collapse my-4 w-full border border-gray-300 dark:border-gray-600">' +
-                '<thead class="bg-gray-100 dark:bg-gray-700">' + header + '</thead>' +
-                '<tbody class="divide-y divide-gray-200 dark:divide-gray-700">' + body + '</tbody>' +
-                '</table>';
+              return (
+                '<table class="border-collapse my-4 w-full border border-gray-300 dark:border-gray-600">' +
+                '<thead class="bg-gray-100 dark:bg-gray-700">' +
+                header +
+                "</thead>" +
+                '<tbody class="divide-y divide-gray-200 dark:divide-gray-700">' +
+                body +
+                "</tbody>" +
+                "</table>"
+              );
             },
             tablerow(content) {
-              return '<tr class="divide-x divide-gray-200 dark:divide-gray-700">' + content + '</tr>';
+              return (
+                '<tr class="divide-x divide-gray-200 dark:divide-gray-700">' +
+                content +
+                "</tr>"
+              );
             },
             tablecell(content, { header, align }) {
-              const type = header ? 'th' : 'td';
-              const alignStyle = align ? ` style="text-align:${align}"` : '';
+              const type = header ? "th" : "td";
+              const alignStyle = align ? ` style="text-align:${align}"` : "";
               const className = header
-                ? 'border border-gray-300 dark:border-gray-600 px-4 py-2 font-bold text-left bg-gray-50 dark:bg-gray-800'
-                : 'border border-gray-300 dark:border-gray-600 px-4 py-2';
+                ? "border border-gray-300 dark:border-gray-600 px-4 py-2 font-bold text-left bg-gray-50 dark:bg-gray-800"
+                : "border border-gray-300 dark:border-gray-600 px-4 py-2";
               return `<${type} class="${className}"${alignStyle}>${content}</${type}>`;
             },
             blockquote(quote) {
@@ -623,36 +670,38 @@
               return '<hr class="my-4 border-gray-300 dark:border-gray-700">';
             },
             image(href, title, text) {
-              return `<img src="${href}" alt="${text}" title="${title || ''}" class="max-w-full my-2 rounded">`;
+              return `<img src="${href}" alt="${text}" title="${
+                title || ""
+              }" class="max-w-full my-2 rounded">`;
             },
             strong(text) {
               return `<strong class="font-bold">${text}</strong>`;
             },
             em(text) {
               return `<em class="italic">${text}</em>`;
-            }
-          }
+            },
+          },
         });
 
         // Use marked.js to render markdown
         element.innerHTML = window.marked.parse(text);
         return;
       } catch (error) {
-        console.error('Error using marked.js:', error);
+        console.error("Error using marked.js:", error);
         // Fall back to original method if marked fails
       }
     }
 
     // If marked.js is not available or fails, fall back to basic rendering
     // Clear existing content
-    element.innerHTML = '';
+    element.innerHTML = "";
 
     // Simple markdown-like processing - this is the fallback method
-    const lines = text.split('\n');
+    const lines = text.split("\n");
     let currentParagraph = null;
     let inCodeBlock = false;
-    let codeBlockContent = '';
-    let codeBlockLanguage = '';
+    let codeBlockContent = "";
+    let codeBlockLanguage = "";
     let inOrderedList = false;
     let inUnorderedList = false;
     let currentList = null;
@@ -661,13 +710,13 @@
 
     lines.forEach((line, lineIndex) => {
       // Handle code blocks
-      if (line.startsWith('```')) {
+      if (line.startsWith("```")) {
         if (!inCodeBlock) {
           // Starting a code block
           inCodeBlock = true;
           // Extract language if specified
           codeBlockLanguage = line.slice(3).trim();
-          codeBlockContent = '';
+          codeBlockContent = "";
 
           if (currentParagraph) {
             element.appendChild(currentParagraph);
@@ -677,30 +726,32 @@
         } else {
           // Ending a code block
           inCodeBlock = false;
-          const preElement = document.createElement('pre');
-          preElement.className = 'bg-gray-900 p-2 rounded my-2';
+          const preElement = document.createElement("pre");
+          preElement.className = "bg-gray-900 p-2 rounded my-2";
 
-          const codeElement = document.createElement('code');
+          const codeElement = document.createElement("code");
           codeElement.textContent = codeBlockContent;
-          codeElement.className = codeBlockLanguage ? `language-${codeBlockLanguage}` : '';
+          codeElement.className = codeBlockLanguage
+            ? `language-${codeBlockLanguage}`
+            : "";
 
           preElement.appendChild(codeElement);
           element.appendChild(preElement);
-          codeBlockContent = '';
-          codeBlockLanguage = '';
+          codeBlockContent = "";
+          codeBlockLanguage = "";
           return;
         }
       }
 
       // Collect content inside code block
       if (inCodeBlock) {
-        codeBlockContent += line + '\n';
+        codeBlockContent += line + "\n";
         return;
       }
 
       // Handle tables
-      if (line.includes('|')) {
-        const cells = line.split('|').filter(cell => cell.trim() !== '');
+      if (line.includes("|")) {
+        const cells = line.split("|").filter((cell) => cell.trim() !== "");
 
         // Check if this is a table header separator line (e.g., |---|---|)
         // More flexible pattern matching for separator rows with dashes, colons
@@ -709,19 +760,20 @@
 
           // If we already have a table with rows, the row immediately before this
           // separator should be treated as the header
-          if (currentTable && currentTable.querySelector('tbody tr')) {
-            const firstRow = currentTable.querySelector('tbody tr:first-child');
+          if (currentTable && currentTable.querySelector("tbody tr")) {
+            const firstRow = currentTable.querySelector("tbody tr:first-child");
             if (firstRow) {
               // Convert td to th elements
-              Array.from(firstRow.children).forEach(td => {
-                const th = document.createElement('th');
-                th.className = 'border border-gray-300 dark:border-gray-600 px-4 py-2 font-bold text-left bg-gray-50 dark:bg-gray-800';
+              Array.from(firstRow.children).forEach((td) => {
+                const th = document.createElement("th");
+                th.className =
+                  "border border-gray-300 dark:border-gray-600 px-4 py-2 font-bold text-left bg-gray-50 dark:bg-gray-800";
                 th.textContent = td.textContent;
                 td.replaceWith(th);
               });
 
               // Move to header
-              currentTable.querySelector('thead').appendChild(firstRow);
+              currentTable.querySelector("thead").appendChild(firstRow);
             }
           }
           return;
@@ -729,8 +781,9 @@
 
         if (!currentTable) {
           // Start a new table
-          currentTable = document.createElement('table');
-          currentTable.className = 'border-collapse my-4 w-full border border-gray-300 dark:border-gray-600';
+          currentTable = document.createElement("table");
+          currentTable.className =
+            "border-collapse my-4 w-full border border-gray-300 dark:border-gray-600";
 
           if (currentParagraph) {
             element.appendChild(currentParagraph);
@@ -738,79 +791,86 @@
           }
 
           // Create table header
-          const thead = document.createElement('thead');
-          thead.className = 'bg-gray-100 dark:bg-gray-700';
+          const thead = document.createElement("thead");
+          thead.className = "bg-gray-100 dark:bg-gray-700";
           currentTable.appendChild(thead);
 
           // Create table body
-          const tbody = document.createElement('tbody');
-          tbody.className = 'divide-y divide-gray-200 dark:divide-gray-700';
+          const tbody = document.createElement("tbody");
+          tbody.className = "divide-y divide-gray-200 dark:divide-gray-700";
           currentTable.appendChild(tbody);
 
           element.appendChild(currentTable);
 
           // Set a flag to indicate this is the first row (potentially a header)
-          currentTable.setAttribute('data-first-row', 'true');
+          currentTable.setAttribute("data-first-row", "true");
         }
 
         // Create a new row
-        const tr = document.createElement('tr');
-        tr.className = 'divide-x divide-gray-200 dark:divide-gray-700';
+        const tr = document.createElement("tr");
+        tr.className = "divide-x divide-gray-200 dark:divide-gray-700";
 
         // Determine if this is a header row
         // A row is a header if:
         // 1. We've seen a separator line right before this row, OR
         // 2. This is the first row of the table and will be promoted to header when we see a separator next
-        const isFirstRow = currentTable.getAttribute('data-first-row') === 'true';
-        currentTable.removeAttribute('data-first-row');
+        const isFirstRow =
+          currentTable.getAttribute("data-first-row") === "true";
+        currentTable.removeAttribute("data-first-row");
 
         // Mark as header if we've seen a separator line
         const isHeader = inTableHeader;
 
         // Keep track of the first row so we can move it to header later if needed
         if (isFirstRow && !inTableHeader) {
-          tr.setAttribute('data-potential-header', 'true');
+          tr.setAttribute("data-potential-header", "true");
         }
 
-        cells.forEach(cell => {
-          const cellElement = document.createElement(isHeader ? 'th' : 'td');
+        cells.forEach((cell) => {
+          const cellElement = document.createElement(isHeader ? "th" : "td");
           cellElement.className = isHeader
-            ? 'border border-gray-300 dark:border-gray-600 px-4 py-2 font-bold text-left bg-gray-50 dark:bg-gray-800'
-            : 'border border-gray-300 dark:border-gray-600 px-4 py-2';
+            ? "border border-gray-300 dark:border-gray-600 px-4 py-2 font-bold text-left bg-gray-50 dark:bg-gray-800"
+            : "border border-gray-300 dark:border-gray-600 px-4 py-2";
           cellElement.textContent = cell.trim();
           tr.appendChild(cellElement);
         });
 
         if (isHeader) {
-          currentTable.querySelector('thead').appendChild(tr);
+          currentTable.querySelector("thead").appendChild(tr);
           inTableHeader = false; // Reset after adding header
         } else {
-          currentTable.querySelector('tbody').appendChild(tr);
+          currentTable.querySelector("tbody").appendChild(tr);
 
           // If this is the first row and we haven't seen a separator yet, save it as potential header
           if (isFirstRow) {
-            tr.setAttribute('data-potential-header', 'true');
+            tr.setAttribute("data-potential-header", "true");
           }
         }
 
         // If we encounter a separator line and have a first row already rendered in the body,
         // move it to the header section
-        if (inTableHeader && currentTable.querySelector('tbody tr[data-potential-header="true"]')) {
-          const potentialHeader = currentTable.querySelector('tbody tr[data-potential-header="true"]');
+        if (
+          inTableHeader &&
+          currentTable.querySelector('tbody tr[data-potential-header="true"]')
+        ) {
+          const potentialHeader = currentTable.querySelector(
+            'tbody tr[data-potential-header="true"]'
+          );
           if (potentialHeader) {
             // Remove from body
-            potentialHeader.removeAttribute('data-potential-header');
+            potentialHeader.removeAttribute("data-potential-header");
 
             // Convert td to th elements
-            Array.from(potentialHeader.children).forEach(td => {
-              const th = document.createElement('th');
-              th.className = 'border border-gray-300 dark:border-gray-600 px-4 py-2 font-bold text-left bg-gray-50 dark:bg-gray-800';
+            Array.from(potentialHeader.children).forEach((td) => {
+              const th = document.createElement("th");
+              th.className =
+                "border border-gray-300 dark:border-gray-600 px-4 py-2 font-bold text-left bg-gray-50 dark:bg-gray-800";
               th.textContent = td.textContent;
               td.replaceWith(th);
             });
 
             // Move to header
-            currentTable.querySelector('thead').appendChild(potentialHeader);
+            currentTable.querySelector("thead").appendChild(potentialHeader);
 
             // Reset header flag
             inTableHeader = false;
@@ -843,7 +903,8 @@
 
         const header = document.createElement(`h${level}`);
         header.textContent = content;
-        header.className = level <= 3 ? 'text-xl font-bold my-3' : 'text-lg font-semibold my-2';
+        header.className =
+          level <= 3 ? "text-xl font-bold my-3" : "text-lg font-semibold my-2";
         element.appendChild(header);
         return;
       }
@@ -855,16 +916,16 @@
           currentParagraph = null;
         }
 
-        const content = line.trim().replace(/^[*\-•]\s+/, '');
+        const content = line.trim().replace(/^[*\-•]\s+/, "");
 
         if (!inUnorderedList) {
           inUnorderedList = true;
           inOrderedList = false;
-          currentList = document.createElement('ul');
-          currentList.className = 'list-disc list-inside my-2';
+          currentList = document.createElement("ul");
+          currentList.className = "list-disc list-inside my-2";
         }
 
-        const li = document.createElement('li');
+        const li = document.createElement("li");
         li.textContent = content;
         currentList.appendChild(li);
         return;
@@ -877,23 +938,23 @@
           currentParagraph = null;
         }
 
-        const content = line.trim().replace(/^\d+\.\s+/, '');
+        const content = line.trim().replace(/^\d+\.\s+/, "");
 
         if (!inOrderedList) {
           inOrderedList = true;
           inUnorderedList = false;
-          currentList = document.createElement('ol');
-          currentList.className = 'list-decimal list-inside my-2';
+          currentList = document.createElement("ol");
+          currentList.className = "list-decimal list-inside my-2";
         }
 
-        const li = document.createElement('li');
+        const li = document.createElement("li");
         li.textContent = content;
         currentList.appendChild(li);
         return;
       }
 
       // Handle line breaks and paragraphs
-      if (line.trim() === '') {
+      if (line.trim() === "") {
         if (currentParagraph) {
           element.appendChild(currentParagraph);
           currentParagraph = null;
@@ -910,18 +971,18 @@
 
       // Process regular text with inline formatting
       if (!currentParagraph) {
-        currentParagraph = document.createElement('p');
-        currentParagraph.className = 'm-0';
+        currentParagraph = document.createElement("p");
+        currentParagraph.className = "m-0";
       } else if (currentList) {
         // Not a list item anymore
         element.appendChild(currentList);
         currentList = null;
         inOrderedList = false;
         inUnorderedList = false;
-        currentParagraph = document.createElement('p');
-        currentParagraph.className = 'm-0';
+        currentParagraph = document.createElement("p");
+        currentParagraph.className = "m-0";
       } else {
-        currentParagraph.appendChild(document.createElement('br'));
+        currentParagraph.appendChild(document.createElement("br"));
       }
 
       // Process inline formatting (bold, italic, code, links)
@@ -934,17 +995,21 @@
         if (match) {
           // Add text before the match
           if (match.index > 0) {
-            currentParagraph.appendChild(document.createTextNode(remainingText.substring(0, match.index)));
+            currentParagraph.appendChild(
+              document.createTextNode(remainingText.substring(0, match.index))
+            );
           }
 
           // Create code element
-          const codeElement = document.createElement('code');
-          codeElement.className = 'bg-gray-900 px-1 rounded';
+          const codeElement = document.createElement("code");
+          codeElement.className = "bg-gray-900 px-1 rounded";
           codeElement.textContent = match[1];
           currentParagraph.appendChild(codeElement);
 
           // Update remaining text
-          remainingText = remainingText.substring(match.index + match[0].length);
+          remainingText = remainingText.substring(
+            match.index + match[0].length
+          );
           continue;
         }
 
@@ -953,16 +1018,20 @@
         if (match) {
           // Add text before the match
           if (match.index > 0) {
-            currentParagraph.appendChild(document.createTextNode(remainingText.substring(0, match.index)));
+            currentParagraph.appendChild(
+              document.createTextNode(remainingText.substring(0, match.index))
+            );
           }
 
           // Create strong element
-          const strongElement = document.createElement('strong');
+          const strongElement = document.createElement("strong");
           strongElement.textContent = match[1];
           currentParagraph.appendChild(strongElement);
 
           // Update remaining text
-          remainingText = remainingText.substring(match.index + match[0].length);
+          remainingText = remainingText.substring(
+            match.index + match[0].length
+          );
           continue;
         }
 
@@ -971,16 +1040,20 @@
         if (match) {
           // Add text before the match
           if (match.index > 0) {
-            currentParagraph.appendChild(document.createTextNode(remainingText.substring(0, match.index)));
+            currentParagraph.appendChild(
+              document.createTextNode(remainingText.substring(0, match.index))
+            );
           }
 
           // Create italic element
-          const italicElement = document.createElement('em');
+          const italicElement = document.createElement("em");
           italicElement.textContent = match[1];
           currentParagraph.appendChild(italicElement);
 
           // Update remaining text
-          remainingText = remainingText.substring(match.index + match[0].length);
+          remainingText = remainingText.substring(
+            match.index + match[0].length
+          );
           continue;
         }
 
@@ -989,27 +1062,32 @@
         if (match) {
           // Add text before the match
           if (match.index > 0) {
-            currentParagraph.appendChild(document.createTextNode(remainingText.substring(0, match.index)));
+            currentParagraph.appendChild(
+              document.createTextNode(remainingText.substring(0, match.index))
+            );
           }
 
           // Create link element
-          const linkElement = document.createElement('a');
+          const linkElement = document.createElement("a");
           linkElement.textContent = match[1];
           linkElement.href = match[2];
-          linkElement.className = 'text-blue-300 hover:underline cursor-pointer';
-          linkElement.target = '_blank';
-          linkElement.rel = 'noopener noreferrer';
+          linkElement.className =
+            "text-blue-300 hover:underline cursor-pointer";
+          linkElement.target = "_blank";
+          linkElement.rel = "noopener noreferrer";
 
           // Add click handler
-          linkElement.addEventListener('click', (e) => {
+          linkElement.addEventListener("click", (e) => {
             e.preventDefault();
-            window.open(linkElement.href, '_blank', 'noopener,noreferrer');
+            window.open(linkElement.href, "_blank", "noopener,noreferrer");
           });
 
           currentParagraph.appendChild(linkElement);
 
           // Update remaining text
-          remainingText = remainingText.substring(match.index + match[0].length);
+          remainingText = remainingText.substring(
+            match.index + match[0].length
+          );
           continue;
         }
 
@@ -1031,7 +1109,7 @@
 
     // Fallback if no content was added
     if (!element.hasChildNodes() && text.trim()) {
-      const p = document.createElement('p');
+      const p = document.createElement("p");
       p.textContent = text;
       element.appendChild(p);
     }
@@ -1039,30 +1117,36 @@
 
   // Function to display sources below the bot message
   function displaySources(messageElementOrContainer, sources) {
-    console.log('Attempting to display sources:', sources);
+    console.log("Attempting to display sources:", sources);
 
     // Find the message container - either it's passed directly or we need to get its parent
     let messageContainer = messageElementOrContainer;
     // Check if this is a message element instead of a container
-    if (messageElementOrContainer.classList.contains('ai-chat-widget-message')) {
+    if (
+      messageElementOrContainer.classList.contains("ai-chat-widget-message")
+    ) {
       // Get the parent container
-      messageContainer = messageElementOrContainer.closest('.ai-chat-widget-message-container');
+      messageContainer = messageElementOrContainer.closest(
+        ".ai-chat-widget-message-container"
+      );
       if (!messageContainer) {
-        console.error('Could not find message container');
+        console.error("Could not find message container");
         return;
       }
     }
 
     // Check if sources container already exists
-    if (messageContainer.querySelector('.ai-chat-widget-sources')) {
-      console.log('Sources container already exists, not adding again');
+    if (messageContainer.querySelector(".ai-chat-widget-sources")) {
+      console.log("Sources container already exists, not adding again");
       return;
     }
 
     // Find the message element within the container
-    const messageElement = messageContainer.querySelector('.ai-chat-widget-message');
+    const messageElement = messageContainer.querySelector(
+      ".ai-chat-widget-message"
+    );
     if (!messageElement) {
-      console.error('Could not find message element to attach sources to');
+      console.error("Could not find message element to attach sources to");
       return;
     }
 
@@ -1073,7 +1157,7 @@
       if (Array.isArray(sources)) {
         // If sources is already an array, use it
         sourcesArray = sources;
-      } else if (typeof sources === 'object' && sources !== null) {
+      } else if (typeof sources === "object" && sources !== null) {
         // If it's a single object with sources array property
         if (Array.isArray(sources.sources)) {
           sourcesArray = sources.sources;
@@ -1086,80 +1170,91 @@
 
     // If sourcesArray is empty after all the conversions, don't add anything
     if (sourcesArray.length === 0) {
-      console.log('No valid sources to display after processing');
+      console.log("No valid sources to display after processing");
       return;
     }
 
-    console.log('Processing sources array:', sourcesArray);
+    console.log("Processing sources array:", sourcesArray);
 
     // Create a container for sources
-    const sourcesContainer = document.createElement('div');
-    sourcesContainer.classList.add('ai-chat-widget-sources');
+    const sourcesContainer = document.createElement("div");
+    sourcesContainer.classList.add("ai-chat-widget-sources");
 
     // Add sources title
-    const sourcesTitle = document.createElement('div');
-    sourcesTitle.textContent = 'References';
+    const sourcesTitle = document.createElement("div");
+    sourcesTitle.textContent = "References";
     sourcesContainer.appendChild(sourcesTitle);
 
     // Process each source
-    sourcesArray.forEach(source => {
+    sourcesArray.forEach((source) => {
       // Skip empty sources
       if (!source) return;
 
       // Create a new paragraph for this source
-      const sourcePara = document.createElement('div');
+      const sourcePara = document.createElement("div");
 
       // Check if source has the expected format
-      if (typeof source === 'object' && source.unique_title) {
+      if (typeof source === "object" && source.unique_title) {
         const title = source.unique_title;
         const sourceUrl = source.unique_source;
 
         // Check if unique_source is a URL
-        const isUrl = sourceUrl && (
-          sourceUrl.startsWith('http://') ||
-          sourceUrl.startsWith('https://') ||
-          sourceUrl.startsWith('www.')
-        );
+        const isUrl =
+          sourceUrl &&
+          (sourceUrl.startsWith("http://") ||
+            sourceUrl.startsWith("https://") ||
+            sourceUrl.startsWith("www."));
 
         if (isUrl) {
           // Create a link if it's a URL
-          const sourceLink = document.createElement('a');
+          const sourceLink = document.createElement("a");
           sourceLink.href = sourceUrl;
           sourceLink.textContent = title;
-          sourceLink.target = '_blank';
-          sourceLink.rel = 'noopener noreferrer';
+          sourceLink.target = "_blank";
+          sourceLink.rel = "noopener noreferrer";
 
           sourcePara.appendChild(sourceLink);
         } else {
           // Just display the title if not a URL
-          const titleElement = document.createElement('p');
+          const titleElement = document.createElement("p");
           titleElement.textContent = title;
-          titleElement.style.margin = '0';
-          titleElement.style.padding = '8px 10px';
-          titleElement.style.borderRadius = '8px';
-          titleElement.style.backgroundColor = theme === 'dark' ? 'rgba(42, 42, 42, 0.7)' : 'rgba(255, 255, 255, 0.7)';
-          titleElement.style.border = `1px solid ${theme === 'dark' ? '#333333' : '#eeeeee'}`;
-          titleElement.style.fontSize = '11px';
+          titleElement.style.margin = "0";
+          titleElement.style.padding = "8px 10px";
+          titleElement.style.borderRadius = "8px";
+          titleElement.style.backgroundColor =
+            theme === "dark"
+              ? "rgba(42, 42, 42, 0.7)"
+              : "rgba(255, 255, 255, 0.7)";
+          titleElement.style.border = `1px solid ${
+            theme === "dark" ? "#333333" : "#eeeeee"
+          }`;
+          titleElement.style.fontSize = "11px";
           sourcePara.appendChild(titleElement);
         }
       } else {
         // Fallback for other source formats
-        let sourceText = '';
+        let sourceText = "";
         try {
-          sourceText = typeof source === 'string' ? source : JSON.stringify(source);
+          sourceText =
+            typeof source === "string" ? source : JSON.stringify(source);
         } catch (e) {
-          console.error('Error stringifying source:', e);
-          sourceText = 'Unknown source';
+          console.error("Error stringifying source:", e);
+          sourceText = "Unknown source";
         }
 
-        const textElement = document.createElement('p');
+        const textElement = document.createElement("p");
         textElement.textContent = sourceText;
-        textElement.style.margin = '0';
-        textElement.style.padding = '8px 10px';
-        textElement.style.borderRadius = '8px';
-        textElement.style.backgroundColor = theme === 'dark' ? 'rgba(42, 42, 42, 0.7)' : 'rgba(255, 255, 255, 0.7)';
-        textElement.style.border = `1px solid ${theme === 'dark' ? '#333333' : '#eeeeee'}`;
-        textElement.style.fontSize = '11px';
+        textElement.style.margin = "0";
+        textElement.style.padding = "8px 10px";
+        textElement.style.borderRadius = "8px";
+        textElement.style.backgroundColor =
+          theme === "dark"
+            ? "rgba(42, 42, 42, 0.7)"
+            : "rgba(255, 255, 255, 0.7)";
+        textElement.style.border = `1px solid ${
+          theme === "dark" ? "#333333" : "#eeeeee"
+        }`;
+        textElement.style.fontSize = "11px";
         sourcePara.appendChild(textElement);
       }
 
@@ -1167,39 +1262,42 @@
     });
 
     // Only add the sources container if we actually added any sources
-    if (sourcesContainer.children.length > 1) { // More than just the title
+    if (sourcesContainer.children.length > 1) {
+      // More than just the title
       // Attach sources directly to the message element
       messageElement.appendChild(sourcesContainer);
-      console.log('Successfully added sources');
+      console.log("Successfully added sources");
 
       // Force scroll to latest message to ensure sources are visible
-      const messagesContainer = document.getElementById('ai-chat-widget-messages');
+      const messagesContainer = document.getElementById(
+        "ai-chat-widget-messages"
+      );
       if (messagesContainer) {
         messagesContainer.scrollTop = messagesContainer.scrollHeight;
       }
     } else {
-      console.log('No sources were added to the message');
+      console.log("No sources were added to the message");
     }
   }
 
   // Fetch agent configuration first, then initialize the chat widget
   async function initializeChatWidget() {
     let agentConfig = {
-      title: 'Chat Assistant',
+      title: "Chat Assistant",
       welcomeMessage: "Hello! How can I help you today?",
-      model: '',
-      department_id: '',
-      agent_key: ''
+      model: "",
+      department_id: "",
+      agent_key: "",
     };
 
     if (apiKey) {
       try {
         const response = await fetch(`${base + configUrl}/${apiKey}`, {
-          method: 'GET',
+          method: "GET",
           headers: {
-            'Content-Type': 'application/json',
-            'x-api-key': apiKey
-          }
+            "Content-Type": "application/json",
+            "x-api-key": apiKey,
+          },
         });
 
         if (response.ok) {
@@ -1209,86 +1307,94 @@
               ...agentConfig,
               ...configData,
               // Extract specific fields from the config response
-              model: configData.model || '',
-              department_id: configData.department_id || '',
-              agent_key: configData.agent_key || '',
-              title: configData.shared_agent_name || 'Chat Assistant',
+              model: configData.model || "",
+              department_id: configData.department_id || "",
+              agent_key: configData.agent_key || "",
+              title: configData.shared_agent_name || "Chat Assistant",
             };
           }
         } else {
-          console.warn('Could not fetch agent configuration, using defaults');
+          console.warn("Could not fetch agent configuration, using defaults");
         }
       } catch (error) {
-        console.error('Error fetching agent configuration:', error);
+        console.error("Error fetching agent configuration:", error);
       }
     }
 
     // Create chat widget elements
-    const container = document.createElement('div');
-    container.id = 'ai-chat-widget-container';
+    const container = document.createElement("div");
+    container.id = "ai-chat-widget-container";
 
     // Create and style button with improved logo visibility
-    const chatButton = document.createElement('button');
-    chatButton.id = 'ai-chat-widget-button';
-    chatButton.style.overflow = 'visible'; // Ensure the logo isn't cropped
-    chatButton.style.padding = '0'; // Remove default padding
-    chatButton.style.backgroundColor = theme === 'dark' ? '#333333' : '#000000'; // Match theme colorseme, dark gray for dark theme
+    const chatButton = document.createElement("button");
+    chatButton.id = "ai-chat-widget-button";
+    chatButton.style.overflow = "visible"; // Ensure the logo isn't cropped
+    chatButton.style.padding = "0"; // Remove default padding
+    // Set button background to match theme
+    chatButton.style.backgroundColor = theme === "dark" ? "#333333" : "#ffffff";
 
     // Replace Font Awesome icon with properly sized and positioned logo
-    const logoImg = document.createElement('img');
+    const logoImg = document.createElement("img");
     logoImg.src = `${base}logo.png`;
-    logoImg.alt = 'Chat logo';
-    logoImg.style.width = '40px'; // Reduced from 60px to 40px
-    logoImg.style.height = '40px'; // Reduced from 60px to 40px
-    logoImg.style.objectFit = 'contain'; // Prevent squishing
-    logoImg.style.position = 'absolute';
-    logoImg.style.top = '0';
-    logoImg.style.left = '0';
-    logoImg.style.right = '0';
-    logoImg.style.bottom = '0';
-    logoImg.style.margin = 'auto'; // Center the logo
+    logoImg.alt = "Chat logo";
+    logoImg.style.width = "40px";
+    logoImg.style.height = "40px";
+    logoImg.style.objectFit = "contain";
+    logoImg.style.position = "absolute";
+    logoImg.style.top = "0";
+    logoImg.style.left = "0";
+    logoImg.style.right = "0";
+    logoImg.style.bottom = "0";
+    logoImg.style.margin = "auto";
+    // Set logo background to white for light theme, dark gray for dark theme
+    logoImg.style.backgroundColor = theme === "dark" ? "#333333" : "#ffffff";
+    logoImg.style.borderRadius = "50%";
     chatButton.appendChild(logoImg);
 
-    const popup = document.createElement('div');
-    popup.id = 'ai-chat-widget-popup';
+    const popup = document.createElement("div");
+    popup.id = "ai-chat-widget-popup";
 
-    const header = document.createElement('div');
-    header.id = 'ai-chat-widget-header';
+    const header = document.createElement("div");
+    header.id = "ai-chat-widget-header";
 
-    const title = document.createElement('h3');
-    title.id = 'ai-chat-widget-title';
+    const title = document.createElement("h3");
+    title.id = "ai-chat-widget-title";
     // Replace Font Awesome robot icon with logo image in a themed container
-    title.innerHTML = `<span style="display: inline-flex; align-items: center; justify-content: center; width: 24px; height: 24px; background-color: ${theme === 'dark' ? '#333333' : '#000000'}; border-radius: 50%; margin-right: 8px;"><img src="${base}logo.png" alt="Chat logo" style="width: 20px; height: 20px;"></span> ${agentConfig.title || 'Chat Assistant'}`;
+    title.innerHTML = `<span style="display: inline-flex; align-items: center; justify-content: center; width: 24px; height: 24px; background-color: ${
+      theme === "dark" ? "#333333" : "#ffffff"
+    }; border-radius: 50%; margin-right: 8px;"><img src="${base}logo.png" alt="Chat logo" style="width: 20px; height: 20px; background-color: ${
+      theme === "dark" ? "#333333" : "#ffffff"
+    }; border-radius: 50%;"></span> ${agentConfig.title || "Chat Assistant"}`;
 
-    const closeButton = document.createElement('button');
-    closeButton.id = 'ai-chat-widget-close';
+    const closeButton = document.createElement("button");
+    closeButton.id = "ai-chat-widget-close";
     closeButton.innerHTML = `<i class="fas fa-times"></i>`;
 
-    const messages = document.createElement('div');
-    messages.id = 'ai-chat-widget-messages';
+    const messages = document.createElement("div");
+    messages.id = "ai-chat-widget-messages";
 
-    const loading = document.createElement('div');
-    loading.id = 'ai-chat-widget-loading';
+    const loading = document.createElement("div");
+    loading.id = "ai-chat-widget-loading";
     loading.innerHTML = `
       <div class="ai-chat-widget-dot"></div>
       <div class="ai-chat-widget-dot"></div>
       <div class="ai-chat-widget-dot"></div>
     `;
 
-    const inputContainer = document.createElement('div');
-    inputContainer.id = 'ai-chat-widget-input-container';
+    const inputContainer = document.createElement("div");
+    inputContainer.id = "ai-chat-widget-input-container";
 
-    const input = document.createElement('input');
-    input.id = 'ai-chat-widget-input';
-    input.type = 'text';
-    input.placeholder = 'Type a message...';
+    const input = document.createElement("input");
+    input.id = "ai-chat-widget-input";
+    input.type = "text";
+    input.placeholder = "Type a message...";
 
-    const sendButton = document.createElement('button');
-    sendButton.id = 'ai-chat-widget-send';
+    const sendButton = document.createElement("button");
+    sendButton.id = "ai-chat-widget-send";
     sendButton.innerHTML = `<i class="fas fa-paper-plane"></i>`;
 
     // Find custom placement element or use document.body
-    let targetElement = document.querySelector('tcu-ai') || document.body;
+    let targetElement = document.querySelector("tcu-ai") || document.body;
 
     // Append elements to build the chat widget
     header.appendChild(title);
@@ -1313,44 +1419,50 @@
     let currentStream = null;
 
     // Toggle chat popup
-    chatButton.addEventListener('click', function () {
-      popup.classList.toggle('open');
-      if (popup.classList.contains('open')) {
+    chatButton.addEventListener("click", function () {
+      popup.classList.toggle("open");
+      if (popup.classList.contains("open")) {
         input.focus();
       }
     });
 
     // Close button
-    closeButton.addEventListener('click', function () {
-      popup.classList.remove('open');
+    closeButton.addEventListener("click", function () {
+      popup.classList.remove("open");
     });
 
     // Define showLoading and hideLoading functions before they're used
     function showLoading() {
-      loading.style.display = 'flex';
+      loading.style.display = "flex";
       messages.scrollTop = messages.scrollHeight;
     }
 
     function hideLoading() {
-      loading.style.display = 'none';
+      loading.style.display = "none";
     }
 
     // Send message on button click
-    sendButton.addEventListener('click', sendMessage);
+    sendButton.addEventListener("click", sendMessage);
 
     // Send message on Enter key
-    input.addEventListener('keypress', function (e) {
-      if (e.key === 'Enter') {
+    input.addEventListener("keypress", function (e) {
+      if (e.key === "Enter") {
         sendMessage();
       }
     });
 
     function addUserMessage(text) {
-      const messageContainer = document.createElement('div');
-      messageContainer.classList.add('ai-chat-widget-message-container', 'user');
+      const messageContainer = document.createElement("div");
+      messageContainer.classList.add(
+        "ai-chat-widget-message-container",
+        "user"
+      );
 
-      const message = document.createElement('div');
-      message.classList.add('ai-chat-widget-message', 'ai-chat-widget-message-user');
+      const message = document.createElement("div");
+      message.classList.add(
+        "ai-chat-widget-message",
+        "ai-chat-widget-message-user"
+      );
       message.textContent = text;
 
       messageContainer.appendChild(message);
@@ -1359,33 +1471,36 @@
 
       // Add to conversation history
       conversationHistory.push({
-        role: 'user',
-        content: text
+        role: "user",
+        content: text,
       });
     }
 
     function addBotMessage(text, isStreaming = false, messageId = null) {
-      const messageContainer = document.createElement('div');
-      messageContainer.classList.add('ai-chat-widget-message-container', 'bot');
+      const messageContainer = document.createElement("div");
+      messageContainer.classList.add("ai-chat-widget-message-container", "bot");
 
       // Update avatar icon with a more modern design and themed background
-      const avatar = document.createElement('div');
-      avatar.classList.add('ai-chat-widget-avatar', 'bot');
-      avatar.style.backgroundColor = theme === 'dark' ? '#333333' : '#000000'; // Match theme colorseme, dark gray for dark theme
+      const avatar = document.createElement("div");
+      avatar.classList.add("ai-chat-widget-avatar", "bot");
+      avatar.style.backgroundColor = theme === "dark" ? "#333333" : "#ffffff"; // Match theme colorseme, dark gray for dark theme
       // Replace brain icon with logo image
       avatar.innerHTML = `<img src="${base}logo.png" alt="Bot logo" style="width: 24px; height: 24px;">`;
       messageContainer.appendChild(avatar);
 
-      const messageContent = document.createElement('div');
-      messageContent.classList.add('ai-chat-widget-message-content');
+      const messageContent = document.createElement("div");
+      messageContent.classList.add("ai-chat-widget-message-content");
 
-      const message = document.createElement('div');
-      message.classList.add('ai-chat-widget-message', 'ai-chat-widget-message-bot');
-      message.style.width = 'fit-content'; // Ensure message only takes needed width
+      const message = document.createElement("div");
+      message.classList.add(
+        "ai-chat-widget-message",
+        "ai-chat-widget-message-bot"
+      );
+      message.style.width = "fit-content"; // Ensure message only takes needed width
 
       // Store message ID if provided
       if (messageId) {
-        message.setAttribute('data-message-id', messageId);
+        message.setAttribute("data-message-id", messageId);
       }
 
       // Add message content with simple markdown parsing
@@ -1395,8 +1510,8 @@
 
       // Add blinking cursor for streaming messages
       if (isStreaming) {
-        const cursor = document.createElement('span');
-        cursor.classList.add('cursor-blink');
+        const cursor = document.createElement("span");
+        cursor.classList.add("cursor-blink");
         message.appendChild(cursor);
       }
 
@@ -1413,9 +1528,9 @@
 
       // Add to conversation history
       conversationHistory.push({
-        role: 'assistant',
+        role: "assistant",
         content: text,
-        id: messageId
+        id: messageId,
       });
 
       return message;
@@ -1424,27 +1539,30 @@
     // Add a new function to copy message text
     function copyMessageText(messageId, button) {
       // Find the message element by its ID
-      const messageElement = document.querySelector(`.ai-chat-widget-message[data-message-id="${messageId}"]`);
+      const messageElement = document.querySelector(
+        `.ai-chat-widget-message[data-message-id="${messageId}"]`
+      );
       if (!messageElement) return;
 
       // Get the text content
       const textToCopy = messageElement.textContent.trim();
 
       // Use the Clipboard API to copy the text
-      navigator.clipboard.writeText(textToCopy)
+      navigator.clipboard
+        .writeText(textToCopy)
         .then(() => {
           // Visual feedback on success
-          button.classList.add('copied');
+          button.classList.add("copied");
           button.innerHTML = `<i class="fas fa-check"></i> Copied`;
 
           // Reset the button after 2 seconds
           setTimeout(() => {
-            button.classList.remove('copied');
+            button.classList.remove("copied");
             button.innerHTML = `<i class="fas fa-copy"></i> Copy`;
           }, 2000);
         })
-        .catch(err => {
-          console.error('Could not copy text: ', err);
+        .catch((err) => {
+          console.error("Could not copy text: ", err);
           // Visual feedback on failure
           button.innerHTML = `<i class="fas fa-times"></i> Failed`;
           setTimeout(() => {
@@ -1459,28 +1577,30 @@
       if (!messageId) return;
 
       // Check if feedback buttons already exist
-      if (messageContent.querySelector('.ai-chat-widget-feedback')) return;
+      if (messageContent.querySelector(".ai-chat-widget-feedback")) return;
 
-      const feedbackDiv = document.createElement('div');
-      feedbackDiv.classList.add('ai-chat-widget-feedback');
+      const feedbackDiv = document.createElement("div");
+      feedbackDiv.classList.add("ai-chat-widget-feedback");
 
-      const likeButton = document.createElement('button');
-      likeButton.classList.add('ai-chat-widget-feedback-button', 'like');
+      const likeButton = document.createElement("button");
+      likeButton.classList.add("ai-chat-widget-feedback-button", "like");
       likeButton.innerHTML = `<i class="fas fa-thumbs-up"></i>`;
-      likeButton.setAttribute('aria-label', 'Like');
-      likeButton.onclick = () => submitMessageFeedback(messageId, 'like', feedbackDiv, likeButton);
+      likeButton.setAttribute("aria-label", "Like");
+      likeButton.onclick = () =>
+        submitMessageFeedback(messageId, "like", feedbackDiv, likeButton);
 
-      const dislikeButton = document.createElement('button');
-      dislikeButton.classList.add('ai-chat-widget-feedback-button', 'dislike');
+      const dislikeButton = document.createElement("button");
+      dislikeButton.classList.add("ai-chat-widget-feedback-button", "dislike");
       dislikeButton.innerHTML = `<i class="fas fa-thumbs-down"></i>`;
-      dislikeButton.setAttribute('aria-label', 'Dislike');
-      dislikeButton.onclick = () => submitMessageFeedback(messageId, 'dislike', feedbackDiv, dislikeButton);
+      dislikeButton.setAttribute("aria-label", "Dislike");
+      dislikeButton.onclick = () =>
+        submitMessageFeedback(messageId, "dislike", feedbackDiv, dislikeButton);
 
       // Add copy button
-      const copyButton = document.createElement('button');
-      copyButton.classList.add('ai-chat-widget-copy-button');
+      const copyButton = document.createElement("button");
+      copyButton.classList.add("ai-chat-widget-copy-button");
       copyButton.innerHTML = `<i class="fas fa-copy"></i> Copy`;
-      copyButton.setAttribute('aria-label', 'Copy text');
+      copyButton.setAttribute("aria-label", "Copy text");
       copyButton.onclick = () => copyMessageText(messageId, copyButton);
 
       feedbackDiv.appendChild(likeButton);
@@ -1490,71 +1610,89 @@
     }
 
     // Modify the toggleFeedback function to submit feedback to the API
-    async function submitMessageFeedback(messageId, feedback, container, button) {
+    async function submitMessageFeedback(
+      messageId,
+      feedback,
+      container,
+      button
+    ) {
       // Remove active class from all buttons in this container
-      const buttons = container.querySelectorAll('.ai-chat-widget-feedback-button');
-      buttons.forEach(btn => btn.classList.remove('active'));
+      const buttons = container.querySelectorAll(
+        ".ai-chat-widget-feedback-button"
+      );
+      buttons.forEach((btn) => btn.classList.remove("active"));
 
       // Check if this button was already active (toggle behavior)
-      const wasActive = button.classList.contains('active');
+      const wasActive = button.classList.contains("active");
 
       // If it was active, we're removing feedback, otherwise adding it
       if (!wasActive) {
         // Add active class to the clicked button
-        button.classList.add('active');
+        button.classList.add("active");
       }
 
       try {
         // Send feedback to the API
-        const response = await fetch(`${base}api/messages/${messageId}/feedback`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'x-api-key': apiKey
-          },
-          body: JSON.stringify({ feedback: wasActive ? null : feedback })
-        });
+        const response = await fetch(
+          `${base}api/messages/${messageId}/feedback`,
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "x-api-key": apiKey,
+            },
+            body: JSON.stringify({ feedback: wasActive ? null : feedback }),
+          }
+        );
 
         if (!response.ok) {
-          console.error('Failed to submit feedback:', response.statusText);
+          console.error("Failed to submit feedback:", response.statusText);
           // Revert UI changes on error
-          if (!wasActive) button.classList.remove('active');
+          if (!wasActive) button.classList.remove("active");
         } else {
-          console.log(`User gave ${feedback} feedback for message ID ${messageId}`);
+          console.log(
+            `User gave ${feedback} feedback for message ID ${messageId}`
+          );
         }
       } catch (error) {
-        console.error('Error submitting feedback:', error);
+        console.error("Error submitting feedback:", error);
         // Revert UI changes on error
-        if (!wasActive) button.classList.remove('active');
+        if (!wasActive) button.classList.remove("active");
       }
     }
 
     // Define showLoading and hideLoading functions before they're used
     function showLoading() {
-      loading.style.display = 'flex';
+      loading.style.display = "flex";
       messages.scrollTop = messages.scrollHeight;
     }
 
     function hideLoading() {
-      loading.style.display = 'none';
+      loading.style.display = "none";
     }
 
     // Send message on button click
-    sendButton.addEventListener('click', sendMessage);
+    sendButton.addEventListener("click", sendMessage);
 
     // Send message on Enter key
-    input.addEventListener('keypress', function (e) {
-      if (e.key === 'Enter') {
+    input.addEventListener("keypress", function (e) {
+      if (e.key === "Enter") {
         sendMessage();
       }
     });
 
     function addUserMessage(text) {
-      const messageContainer = document.createElement('div');
-      messageContainer.classList.add('ai-chat-widget-message-container', 'user');
+      const messageContainer = document.createElement("div");
+      messageContainer.classList.add(
+        "ai-chat-widget-message-container",
+        "user"
+      );
 
-      const message = document.createElement('div');
-      message.classList.add('ai-chat-widget-message', 'ai-chat-widget-message-user');
+      const message = document.createElement("div");
+      message.classList.add(
+        "ai-chat-widget-message",
+        "ai-chat-widget-message-user"
+      );
       message.textContent = text;
 
       messageContainer.appendChild(message);
@@ -1563,16 +1701,16 @@
 
       // Add to conversation history
       conversationHistory.push({
-        role: 'user',
-        content: text
+        role: "user",
+        content: text,
       });
     }
 
     function updateBotMessage(messageElement, text, isComplete = false) {
-      console.log('Updating bot message with text:', text);
+      console.log("Updating bot message with text:", text);
 
       // If the message element contains a cursor, remove it first
-      const existingCursor = messageElement.querySelector('.cursor-blink');
+      const existingCursor = messageElement.querySelector(".cursor-blink");
       if (existingCursor) {
         existingCursor.remove();
       }
@@ -1582,13 +1720,15 @@
 
       // Add blinking cursor if still streaming
       if (!isComplete) {
-        const cursor = document.createElement('span');
-        cursor.classList.add('cursor-blink');
+        const cursor = document.createElement("span");
+        cursor.classList.add("cursor-blink");
         messageElement.appendChild(cursor);
       }
 
       // Force scroll to latest message
-      const messagesContainer = document.getElementById('ai-chat-widget-messages');
+      const messagesContainer = document.getElementById(
+        "ai-chat-widget-messages"
+      );
       if (messagesContainer) {
         messagesContainer.scrollTop = messagesContainer.scrollHeight;
       }
@@ -1597,124 +1737,153 @@
     function connectToStream(url, headers, body, messageElement) {
       const controller = new AbortController();
       const signal = controller.signal;
-      let accumulatedText = '';
+      let accumulatedText = "";
       let messageId = null;
       let pendingSources = null; // ตัวแปรสำหรับเก็บ sources ที่มาก่อน message ID
 
-      console.log('Connecting to stream URL:', url);
-      console.log('Request body:', body);
+      console.log("Connecting to stream URL:", url);
+      console.log("Request body:", body);
 
       fetch(url, {
-        method: 'POST',
+        method: "POST",
         headers: headers,
         body: JSON.stringify(body),
-        signal: signal
+        signal: signal,
       })
-        .then(response => {
+        .then((response) => {
           if (!response.ok) {
             throw new Error(`Error: ${response.status}`);
           }
-          console.log('Stream connection established successfully');
+          console.log("Stream connection established successfully");
 
           const reader = response.body.getReader();
           const decoder = new TextDecoder();
 
           function readStream() {
-            reader.read().then(({ done, value }) => {
-              if (done) {
-                // Stream is complete, update UI
-                console.log('Stream complete, final text:', accumulatedText);
-                updateBotMessage(messageElement, accumulatedText, true);
+            reader
+              .read()
+              .then(({ done, value }) => {
+                if (done) {
+                  // Stream is complete, update UI
+                  console.log("Stream complete, final text:", accumulatedText);
+                  updateBotMessage(messageElement, accumulatedText, true);
 
-                // ถ้ามี sources ให้แสดงทุกครั้งหลังจาก answer_chunk สุดท้าย ไม่ว่าจะมี messageId หรือไม่
-                if (pendingSources) {
-                  console.log('Stream ended, displaying sources:', pendingSources);
-                  // หา messageContainer จาก messageElement
-                  const messageContainer = messageElement.closest('.ai-chat-widget-message-container');
-                  if (messageContainer) {
-                    displaySources(messageContainer, pendingSources);
-                  } else {
-                    // ถ้าหา container ไม่พบก็ส่ง messageElement ไปตรงๆ
-                    displaySources(messageElement, pendingSources);
+                  // ถ้ามี sources ให้แสดงทุกครั้งหลังจาก answer_chunk สุดท้าย ไม่ว่าจะมี messageId หรือไม่
+                  if (pendingSources) {
+                    console.log(
+                      "Stream ended, displaying sources:",
+                      pendingSources
+                    );
+                    // หา messageContainer จาก messageElement
+                    const messageContainer = messageElement.closest(
+                      ".ai-chat-widget-message-container"
+                    );
+                    if (messageContainer) {
+                      displaySources(messageContainer, pendingSources);
+                    } else {
+                      // ถ้าหา container ไม่พบก็ส่ง messageElement ไปตรงๆ
+                      displaySources(messageElement, pendingSources);
+                    }
+                    pendingSources = null;
                   }
-                  pendingSources = null;
+
+                  currentStream = null;
+                  hideLoading();
+                  return;
                 }
 
+                // Process the stream chunk
+                const chunk = decoder.decode(value, { stream: true });
+                console.log("Received chunk:", chunk);
+
+                try {
+                  // Each line could be a JSON object
+                  const lines = chunk
+                    .split("\n")
+                    .filter((line) => line.trim() !== "");
+                  console.log("Parsed lines:", lines);
+
+                  for (const line of lines) {
+                    try {
+                      // Parse each line as JSON directly
+                      const data = JSON.parse(line);
+                      console.log("Parsed data:", data);
+
+                      // Check for answer chunk field
+                      if (data.answer_chunk) {
+                        console.log("Found answer chunk:", data.answer_chunk);
+                        accumulatedText += data.answer_chunk;
+
+                        // Make sure we're updating the UI with the new text
+                        updateBotMessage(messageElement, accumulatedText);
+                        console.log(
+                          "Updated bot message with text:",
+                          accumulatedText
+                        );
+                      }
+
+                      // เมื่อพบ sources ให้เก็บไว้ในตัวแปร pendingSources เสมอ
+                      if (data.sources) {
+                        console.log("Found sources in chunk:", data.sources);
+                        pendingSources = data.sources;
+                        updateBotMessage(messageElement, pendingSources);
+                        console.log(
+                          "Updated bot message with text:",
+                          pendingSources
+                        );
+                      }
+
+                      // เมื่อพบ agent_msg_id ให้เก็บไว้ใช้สำหรับการแสดง feedback
+                      if (data.agent_msg_id && !messageId) {
+                        messageId = data.agent_msg_id;
+                        console.log("Received message ID:", messageId);
+
+                        // Store the message ID in the DOM element for feedback
+                        messageElement.setAttribute(
+                          "data-message-id",
+                          messageId
+                        );
+
+                        // Add feedback buttons now that we have a message ID
+                        const messageContainer = messageElement.closest(
+                          ".ai-chat-widget-message-content"
+                        );
+                        if (messageContainer) {
+                          addFeedbackButtons(messageContainer, messageId);
+                        }
+                      }
+                    } catch (e) {
+                      console.error("Error parsing JSON from stream:", e, line);
+                    }
+                  }
+                } catch (e) {
+                  console.error("Error processing stream chunk:", e);
+                }
+
+                // Continue reading
+                readStream();
+              })
+              .catch((error) => {
+                console.error("Error reading stream:", error);
+                updateBotMessage(
+                  messageElement,
+                  accumulatedText + "\n\nError: Connection lost.",
+                  true
+                );
                 currentStream = null;
                 hideLoading();
-                return;
-              }
-
-              // Process the stream chunk
-              const chunk = decoder.decode(value, { stream: true });
-              console.log('Received chunk:', chunk);
-
-              try {
-                // Each line could be a JSON object
-                const lines = chunk.split('\n').filter(line => line.trim() !== '');
-                console.log('Parsed lines:', lines);
-
-                for (const line of lines) {
-                  try {
-                    // Parse each line as JSON directly
-                    const data = JSON.parse(line);
-                    console.log('Parsed data:', data);
-
-                    // Check for answer chunk field
-                    if (data.answer_chunk) {
-                      console.log('Found answer chunk:', data.answer_chunk);
-                      accumulatedText += data.answer_chunk;
-
-                      // Make sure we're updating the UI with the new text
-                      updateBotMessage(messageElement, accumulatedText);
-                      console.log('Updated bot message with text:', accumulatedText);
-                    }
-
-                    // เมื่อพบ sources ให้เก็บไว้ในตัวแปร pendingSources เสมอ
-                    if (data.sources) {
-                      console.log('Found sources in chunk:', data.sources);
-                      pendingSources = data.sources;
-                      updateBotMessage(messageElement, pendingSources);
-                      console.log('Updated bot message with text:', pendingSources);
-                    }
-
-                    // เมื่อพบ agent_msg_id ให้เก็บไว้ใช้สำหรับการแสดง feedback
-                    if (data.agent_msg_id && !messageId) {
-                      messageId = data.agent_msg_id;
-                      console.log('Received message ID:', messageId);
-
-                      // Store the message ID in the DOM element for feedback
-                      messageElement.setAttribute('data-message-id', messageId);
-
-                      // Add feedback buttons now that we have a message ID
-                      const messageContainer = messageElement.closest('.ai-chat-widget-message-content');
-                      if (messageContainer) {
-                        addFeedbackButtons(messageContainer, messageId);
-                      }
-                    }
-                  } catch (e) {
-                    console.error('Error parsing JSON from stream:', e, line);
-                  }
-                }
-              } catch (e) {
-                console.error('Error processing stream chunk:', e);
-              }
-
-              // Continue reading
-              readStream();
-            }).catch(error => {
-              console.error('Error reading stream:', error);
-              updateBotMessage(messageElement, accumulatedText + "\n\nError: Connection lost.", true);
-              currentStream = null;
-              hideLoading();
-            });
+              });
           }
 
           readStream();
         })
-        .catch(error => {
-          console.error('Error connecting to stream:', error);
-          updateBotMessage(messageElement, "I'm sorry, there was an error processing your request.", true);
+        .catch((error) => {
+          console.error("Error connecting to stream:", error);
+          updateBotMessage(
+            messageElement,
+            "I'm sorry, there was an error processing your request.",
+            true
+          );
           currentStream = null;
           hideLoading();
         });
@@ -1736,28 +1905,30 @@
       }
 
       addUserMessage(text);
-      input.value = '';
+      input.value = "";
       showLoading();
 
       try {
         // Generate a unique chat_id if not already present
-        let chat_id = sessionStorage.getItem('share_agent_chat_id');
+        let chat_id = sessionStorage.getItem("share_agent_chat_id");
         if (!chat_id) {
-          chat_id = `chat_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-          sessionStorage.setItem('share_agent_chat_id', chat_id);
+          chat_id = `chat_${Date.now()}_${Math.random()
+            .toString(36)
+            .substr(2, 9)}`;
+          sessionStorage.setItem("share_agent_chat_id", chat_id);
         }
         // Prepare the request data
         const requestBody = {
-          messages: [{ content: text, role: 'user' }],
+          messages: [{ content: text, role: "user" }],
           user_id: 1, // Default user_id or could be made configurable
           model: agentConfig.model,
           department_id: agentConfig.department_id,
           agent_key: agentConfig.agent_key,
-          chat_id: chat_id
+          chat_id: chat_id,
         };
 
         // Check if streaming is supported
-        const useStreaming = script.getAttribute('data-streaming') !== 'false';
+        const useStreaming = script.getAttribute("data-streaming") !== "false";
 
         if (useStreaming) {
           // Handle streaming response
@@ -1765,29 +1936,37 @@
           hideLoading(); // Hide the loading indicator as we'll show streaming text
 
           // Add empty message that will be updated with streaming content
-          const botMessageElement = addBotMessage('', true);
-          console.log('Created empty bot message element for streaming:', botMessageElement);
+          const botMessageElement = addBotMessage("", true);
+          console.log(
+            "Created empty bot message element for streaming:",
+            botMessageElement
+          );
 
           // Set up headers
           const headers = {
-            'Content-Type': 'application/json',
-            'x-api-key': apiKey
+            "Content-Type": "application/json",
+            "x-api-key": apiKey,
           };
 
           // Connect to the stream
-          currentStream = connectToStream(base + chatUrl, headers, requestBody, botMessageElement);
+          currentStream = connectToStream(
+            base + chatUrl,
+            headers,
+            requestBody,
+            botMessageElement
+          );
         } else {
           // Handle non-streaming response
           requestBody.stream = false;
 
           // Get server response
           const response = await fetch(base + chatUrl, {
-            method: 'POST',
+            method: "POST",
             headers: {
-              'Content-Type': 'application/json',
-              'x-api-key': apiKey
+              "Content-Type": "application/json",
+              "x-api-key": apiKey,
             },
-            body: JSON.stringify(requestBody)
+            body: JSON.stringify(requestBody),
           });
 
           if (!response.ok) {
@@ -1800,13 +1979,17 @@
           if (data && data.answer) {
             addBotMessage(data.answer);
           } else {
-            addBotMessage("I'm sorry, I couldn't process your request. Please try again.");
+            addBotMessage(
+              "I'm sorry, I couldn't process your request. Please try again."
+            );
           }
         }
       } catch (error) {
-        console.error('Error:', error);
+        console.error("Error:", error);
         hideLoading();
-        addBotMessage("I'm sorry, there was an error processing your request. Please try again later.");
+        addBotMessage(
+          "I'm sorry, there was an error processing your request. Please try again later."
+        );
       } finally {
         // Re-enable the send button
         sendButton.disabled = false;
@@ -1814,7 +1997,9 @@
     }
 
     // Add welcome message
-    addBotMessage(agentConfig.welcomeMessage || "Hello! How can I help you today?");
+    addBotMessage(
+      agentConfig.welcomeMessage || "Hello! How can I help you today?"
+    );
   }
 
   // Start initialization
