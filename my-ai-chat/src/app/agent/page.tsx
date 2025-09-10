@@ -229,18 +229,14 @@ export default function AgentPage() {
     );
   };
 
-  // Add validation for English-only names
-  const isEnglishOnly = (text: string): boolean => {
-    // This regex allows English letters, numbers, spaces, and common punctuation
-    return /^[A-Za-z0-9\s.,!?()-_]+$/.test(text);
-  };
+  // // Add validation for English-only names
+  // const isEnglishOnly = (text: string): boolean => {
+  //   // This regex allows English letters, numbers, spaces, and common punctuation
+  //   return /^[A-Za-z0-9\s.,!?()-_]+$/.test(text);
+  // };
 
   const generateUniqueAgentKey = (baseName: string): string => {
-    let key = baseName
-      .toLowerCase()
-      .replace(/\s+/g, "-")
-      .replace(/[^a-z0-9-]/g, "")
-      .substring(0, 30);
+    let key = baseName;
 
     if (!isDuplicateAgentKey(key)) {
       return key;
@@ -263,27 +259,9 @@ export default function AgentPage() {
       setLoading(true);
       const agentsData = await getAgents();
       setAgents(agentsData);
-
-      // Get default department ID safely
-      let defaultDepartmentId = 0;
-      if (user && user.departments && user.departments.length > 0) {
-        defaultDepartmentId = user.departments[0].id;
-      }
-
-      // Reset form and selection after refresh
-      setSelectedAgent(null);
-      setSettings({
-        name: "",
-        agent_key: "",
-        model: availableModels.length > 0 ? availableModels[0] : "gpt-4o-mini",
-        temperature: 0.7,
-        max_tokens: 2000,
-        system_prompt: "",
-        knowledge_base_ids: [],
-        department_id: defaultDepartmentId,
-        nftext: "",
-        description: "",
-      });
+      // ไม่ต้องรีเซ็ตฟอร์มและ selection หลัง refresh
+      // setSelectedAgent(null);
+      // setSettings({ ... });
     } catch (error) {
       console.error("Error refreshing data:", error);
       toast.error("Failed to refresh data");
@@ -363,19 +341,19 @@ export default function AgentPage() {
     // Clear summary error if all required fields are filled
     setSummaryError(null);
 
-    // Continue with other validations
-    if (!isEnglishOnly(settings.name)) {
-      setValidationErrors((prev) => ({
-        ...prev,
-        name:
-          t.englishNameOnly ||
-          "Agent name must contain only English characters",
-      }));
-      toast.error(
-        t.englishNameOnly || "Agent name must contain only English characters"
-      );
-      return;
-    }
+    // // Continue with other validations
+    // if (!isEnglishOnly(settings.name)) {
+    //   setValidationErrors((prev) => ({
+    //     ...prev,
+    //     name:
+    //       t.englishNameOnly ||
+    //       "Agent name must contain only English characters",
+    //   }));
+    //   toast.error(
+    //     t.englishNameOnly || "Agent name must contain only English characters"
+    //   );
+    //   return;
+    // }
 
     // Validate max tokens
     if (settings.max_tokens <= 0 || settings.max_tokens > 32000) {
@@ -407,7 +385,10 @@ export default function AgentPage() {
       setLoading(true);
       if (selectedAgent) {
         if (isDuplicateName(settings.name, selectedAgent.id)) {
-          setValidationErrors((prev) => ({ ...prev, name: t.duplicateError }));
+          setValidationErrors((prev: typeof validationErrors) => ({
+            ...prev,
+            name: t.duplicateError,
+          }));
           toast.error(t.duplicateError);
           return;
         }
@@ -417,7 +398,7 @@ export default function AgentPage() {
           settings.agent_key !== selectedAgent.agent_key &&
           isDuplicateAgentKey(settings.agent_key, selectedAgent.id)
         ) {
-          setValidationErrors((prev) => ({
+          setValidationErrors((prev: typeof validationErrors) => ({
             ...prev,
             agent_key: t.duplicateKeyError || "Agent key already exists",
           }));
@@ -432,14 +413,17 @@ export default function AgentPage() {
         await refreshData();
       } else {
         if (isDuplicateName(settings.name)) {
-          setValidationErrors((prev) => ({ ...prev, name: t.duplicateError }));
+          setValidationErrors((prev: typeof validationErrors) => ({
+            ...prev,
+            name: t.duplicateError,
+          }));
           toast.error(t.duplicateError);
           return;
         }
 
         if (settings.agent_key) {
           if (isDuplicateAgentKey(settings.agent_key)) {
-            setValidationErrors((prev) => ({
+            setValidationErrors((prev: typeof validationErrors) => ({
               ...prev,
               agent_key: t.duplicateKeyError || "Agent key already exists",
             }));
@@ -474,7 +458,7 @@ export default function AgentPage() {
     >
   ) => {
     const { name, value } = e.target;
-    setSettings((prev) => ({
+    setSettings((prev: typeof settings) => ({
       ...prev,
       [name]:
         name === "temperature" || name === "max_tokens" ? Number(value) : value,
@@ -482,14 +466,14 @@ export default function AgentPage() {
   };
 
   const handleKnowledgeBaseChange = (knowledgeBaseIds: number[]) => {
-    setSettings((prev) => ({
+    setSettings((prev: typeof settings) => ({
       ...prev,
       knowledge_base_ids: knowledgeBaseIds,
     }));
   };
 
   const handleDepartmentChange = (departmentId: number) => {
-    setSettings((prev) => ({
+    setSettings((prev: typeof settings) => ({
       ...prev,
       department_id: departmentId,
     }));
@@ -549,22 +533,12 @@ export default function AgentPage() {
     try {
       setLoading(true);
       await deleteAgent(agentToDelete);
-      setAgents(agents.filter((agent) => agent.id !== agentToDelete));
+      setAgents(agents.filter((agent: Agent) => agent.id !== agentToDelete));
 
       if (selectedAgent?.id === agentToDelete) {
         setSelectedAgent(null);
-        setSettings({
-          name: "",
-          agent_key: "",
-          model: "gpt-4o-mini",
-          temperature: 0.7,
-          max_tokens: 2000,
-          system_prompt: "",
-          knowledge_base_ids: [],
-          department_id: 0,
-          nftext: "",
-          description: "",
-        });
+        // ไม่ต้องรีเซ็ตฟอร์มหลังลบ agent
+        // setSettings({ ... });
       }
 
       toast.success(t.agentDeleted);
@@ -587,7 +561,7 @@ export default function AgentPage() {
         setFilteredAgents(agents);
       } else {
         const filtered = agents.filter(
-          (agent) =>
+          (agent: Agent) =>
             agent.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
             (agent.description &&
               agent.description
@@ -607,8 +581,11 @@ export default function AgentPage() {
         console.log(departments, "departments without filter");
         setFilteredDepartments(departments);
       } else {
-        const filtered = departments.filter((dept) =>
-          dept.name.toLowerCase().includes(departmentSearchQuery.toLowerCase())
+        const filtered = departments.filter(
+          (dept: { id: number; name: string }) =>
+            dept.name
+              .toLowerCase()
+              .includes(departmentSearchQuery.toLowerCase())
         );
         setFilteredDepartments(filtered);
       }
@@ -625,7 +602,7 @@ export default function AgentPage() {
         setFilteredKnowledgeBases(knowledgeBases);
       } else {
         const filtered = knowledgeBases.filter(
-          (kb) =>
+          (kb: KnowledgeBase) =>
             kb.title.toLowerCase().includes(kbSearchQuery.toLowerCase()) ||
             (kb.description &&
               kb.description
@@ -643,7 +620,7 @@ export default function AgentPage() {
   const getModelsByPlatform = () => {
     const platformGroups: Record<string, any[]> = {};
 
-    fullModelData.forEach((model) => {
+    fullModelData.forEach((model: { Platform: string }) => {
       if (!platformGroups[model.Platform]) {
         platformGroups[model.Platform] = [];
       }

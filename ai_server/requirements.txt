@@ -23,3 +23,5 @@ validators
 playwright
 docx2txt
 rank_llm
+httptools>=0.6.0
+pydantic[email]

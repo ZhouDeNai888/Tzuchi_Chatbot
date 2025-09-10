@@ -744,7 +744,8 @@ async def process_chat_streaming(
         # Create the astream generator from the retrieval chain
         async_stream = retrieval_chain.astream({
             "input": current_message,
-            "chat_history": chat_history
+            "chat_history": chat_history,
+            
         })
         
         full_answer = ""
@@ -757,7 +758,7 @@ async def process_chat_streaming(
                 full_answer += answer_chunk
                 print(f"Answer chunk: {answer_chunk}")
                 yield json.dumps({'answer_chunk': answer_chunk}) + "\n"
-                await asyncio.sleep(0.1)
+                await asyncio.sleep(0)
             
             if context_chunk := chunk.get("context"):
                 full_context = context_chunk
@@ -4271,11 +4272,11 @@ def cleanup_old_chat_histories():
     """Delete chat history files that haven't been accessed in over an hour"""
     try:
         current_time = time.time()
-        one_hour_in_seconds = 10  # 1 hour = 3600 seconds
+        one_hour_in_seconds = 30  # 1 hour = 3600 seconds
         chat_history_last_accessed = load_chat_history_metadata()
         # Check each chat_id in our tracking dictionary
         for chat_id, last_accessed in list(chat_history_last_accessed.items()):
-            print(f'chat_history_items:{chat_history_last_accessed.items()}')
+            # print(f'chat_history_items:{chat_history_last_accessed.items()}')
             print(f"Checking chat_id: {chat_id}, last accessed: {last_accessed}")
             print(f'current_time: {current_time}, last_accessed: {last_accessed}, difference: {current_time - last_accessed}')
             if current_time - last_accessed > one_hour_in_seconds:

@@ -30,6 +30,8 @@ from langchain.retrievers import ContextualCompressionRetriever
 from langchain.retrievers.document_compressors import CrossEncoderReranker
 from langchain_community.cross_encoders import HuggingFaceCrossEncoder
 from langchain_core.documents import Document
+from langchain_core.runnables import RunnableLambda
+import asyncio
 sys.stdout.reconfigure(encoding='utf-8')
 db = Database()
 # ตั้งค่า logging
@@ -338,7 +340,7 @@ class RAG(BaseAIChat):
                 
                 # Create ensemble retriever with MultiQdrant
                 qdrant_retriever = multi_qdrant.as_retriever(search_kwargs={
-                    "k": 5,
+                    "k": 10,
                     "score_threshold": 0.4,  # Adjusted threshold for better recall
                 })
                 
@@ -347,11 +349,11 @@ class RAG(BaseAIChat):
                         self.bm25_docs,
                         preprocess_func=lambda x: x.lower().replace(" ", ""),
                     )
-                    bm25_retriever.k = 5
+                    bm25_retriever.k = 10
                     ensemble_retriever = EnsembleRetriever(
                         retrievers=[qdrant_retriever, bm25_retriever],
                         weights=[0.7, 0.3],
-                        c=100
+                        c=5
                     )
                 else:
                     logger.warning("No BM25 documents found, using only vector search")
@@ -374,7 +376,7 @@ class RAG(BaseAIChat):
 
                     # Increased k and adjusted score threshold for better recall
                     qdrant_retriever = qdrant_db.as_retriever(search_kwargs={
-                        "k": 5,  # Retrieve more candidates
+                        "k": 10,  # Retrieve more candidates
                         "score_threshold": 0.4,  # Adjusted threshold for better recall,  # Lower threshold to catch more potential matches
                     })
 
@@ -384,13 +386,13 @@ class RAG(BaseAIChat):
                             self.bm25_docs,
                             preprocess_func=lambda x: x.lower().replace(" ", ""),  # Case-insensitive matching
                         )
-                        bm25_retriever.k = 5  # Match vector retriever k
+                        bm25_retriever.k = 10  # Match vector retriever k
 
                         # Create ensemble retriever with reweighted combination
                         ensemble_retriever = EnsembleRetriever(
                             retrievers=[qdrant_retriever, bm25_retriever],
                             weights=[0.7, 0.3],
-                            # c=100  # Slightly favor semantic search but keep strong keyword presence
+                            c=5 # Slightly favor semantic search but keep strong keyword presence
                         )
                     else:
                         logger.warning("No BM25 documents found, using only vector search")
@@ -398,7 +400,7 @@ class RAG(BaseAIChat):
                 else:
                     qdrant_db = vectordb
                     qdrant_retriever = qdrant_db.as_retriever(search_kwargs={
-                        "k": 5,
+                        "k": 10,
                         "score_threshold": 0.4,  # Adjusted threshold for better recall  
                     })
                     if self.bm25_docs:
@@ -406,12 +408,11 @@ class RAG(BaseAIChat):
                             self.bm25_docs,
                             preprocess_func=lambda x: x.lower().replace(" ", "")
                         )
-                        bm25_retriever.k = 5
+                        bm25_retriever.k = 10
                         ensemble_retriever = EnsembleRetriever(
                             retrievers=[qdrant_retriever, bm25_retriever],
                             weights=[0.7, 0.3],
-                            # c=100 
-
+                            c=5
                         )
 
                     else:
@@ -430,7 +431,9 @@ class RAG(BaseAIChat):
                 ("human", "{input}"),
             ])
 
-            model = HuggingFaceCrossEncoder(model_name="cross-encoder/ms-marco-MiniLM-L12-v2")
+
+
+            model = HuggingFaceCrossEncoder(model_name="cross-encoder/mmarco-mMiniLMv2-L12-H384-v1")
             compressor = CrossEncoderReranker(model=model, top_n=3)
             compression_retriever = ContextualCompressionRetriever(
                 base_compressor=compressor, base_retriever=ensemble_retriever
@@ -438,66 +441,91 @@ class RAG(BaseAIChat):
 
             history_aware_retriever = create_history_aware_retriever(llm, compression_retriever, contextualize_q_prompt)
 
+            prompt_template = (
+                "Base Prompt:\n"
+                "You are a Tzuchi University AI assistant, providing concise and clear responses based on available information. You do not disclose data details.\n"
+                "Understand the user's language, the context in which it is received, and always respond in the same language as the user.\n"
+                "Please respond in the language that the user uses when asking a question, and analyze the context directly from that language. For example, if the user writes in Chinese, respond in Chinese by understanding the meaning and intent from the Chinese context. However, if the user asks using just a short word in another language (e.g., English) without enough context, reply that you don't understand or need more information.\n"
+                "Please answer completely first. If you can't find the information but there is a link, please give the link.\n"
+                "If greeted (e.g., 'Hello,' 'Good morning'), respond politely.\n"
+                "If the question is partially related, provide the most relevant response using available context.\n"
+                "[Important]If the question is completely irrelevant to the given context or previous context: No information, please reply with '" + nftext + " or I don't know( translate this into the user's language)\n"
+                "When answering, answer in markdown\n"
+                "When the user asks for a format, it must be displayed in that format\n"
+                "Do NOT include your reasoning or chain-of-thought. \n"
+                "Return only the final answer. If helpful, give a brief (≤2 lines) justification without revealing internal steps.\n"
+                "Specific Prompt:\n"
+                ""+prompt+""
+                """context: {context}"""
+            )
+        #     prompt_template = (
+        #     "ROLE SETTINGS\n"
+        #     "You are the Tzu Chi University AI Assistant.\n"
+        #     "Tone: Gentle, respectful, and professional, embodying the humanitarian values of Tzu Chi.\n\n"
+            
+        #     "IMPORTANT INSTRUCTIONS:\n"
+        #     "1. First, analyze if the user's question is related to the provided context.\n"
+        #     "2. If the question is NOT related to the context, respond ONLY with: '" + nftext + "' (translated to user's language) and DO NOT mention or display any context.\n"
+        #     "3. If the question IS related to the context, provide a complete answer based on the relevant information.\n"
+        #     "4. Always respond in the same language as the user's question.\n"
+        #     "5. If greeted (e.g., 'Hello,' 'Good morning'), respond politely without showing context.\n"
+        #     "6. When providing answers, use markdown formatting.\n"
+        #     "7. DO NOT reveal, quote, or reference the context content if the question is unrelated.\n\n"
+            
+        #     "Base Prompt:\n"
+        #     "You are an AI assistant providing concise and clear responses based on available information.\n"
+        #     "Please answer completely first. If you can't find the information but there is a link, please give the link.\n"
+        #     "When the user asks for a specific format, display it in that format.\n\n"
+            
+        #     "Specific Prompt:\n"
+        #     "" + prompt + "\n\n"
+            
+        #     "Context (use only if relevant to the question): {context}"
+        # )
+
             # prompt_template = (
-            #     "Base Prompt:"
-            #     "You are an AI assistant, providing concise and clear responses based on available information. You do not disclose data details."
-            #     "Understand the user's language, the context in which it is received, and always respond in the same language as the user."
-            #     "Please respond in the language that the user uses when asking a question, and analyze the context directly from that language. For example, if the user writes in Chinese, respond in Chinese by understanding the meaning and intent from the Chinese context. However, if the user asks using just a short word in another language (e.g., English) without enough context, reply that you don't understand or need more information."
-            #     "Please answer completely first. If you can't find the information but there is a link, please give the link."
-            #     "If greeted (e.g., 'Hello,' 'Good morning'), respond politely."
-            #     "If the question is partially related, provide the most relevant response using available context."
+            #     "You are an AI assistant dedicated to providing real-time, accurate, and concise information specifically about Tzu Chi University. You are powered by a vector database populated with content extracted from official PDFs, websites, and publicly available data, using embedding models. You must strictly adhere to the following rules:\n"
+            #     "【ROLE SETTINGS】\n"
+            #     "You are the Tzu Chi University AI Assistant.\n"
+            #     "Tone: Gentle, respectful, and professional, embodying the humanitarian values of Tzu Chi.\n"
+            #     "Language: Always respond in the same language as the user input.\n"
+            #     "【KNOWLEDGE & LIMITATIONS】\n"
+            #     "Your answers are limited to retrieved content from:\n"
+            #     "PDF and website content stored in the vector database;\n"
+            #     "Publicly available data sources.\n"
+            #     "Do not:\n"
+            #     "Guess or hallucinate answers;\n"
+            #     "Refer to confidential, internal, or unpublished data.\n"
+            #     "【RESPONSE FORMAT & STYLE】\n"
+            #     "If greeted, reply:\n"
+            #     "\"Hello, I am the Tzu Chi University AI Assistant. I'm happy to assist you. How may I help you today?\"\n"
+            #     "Your answers must be:\n"
+            #     "Clear, well-structured, and concise.\n"
+            #     "If sources are referenced, include:\n"
+            #     "\"【Source: ...】\" or \"According to the retrieved document...\"\n"
+            #     "If a URL is needed, format as:\n"
+            #     "<a href='https://example.com' target='_blank'>Click here</a>\n"
+            #     "If no relevant information is found, reply:\n"
+            #     "\"Sorry, based on the available information, I am unable to answer your question.\"\n"
+            #     "【QUESTION HANDLING GUIDELINES】\n"
+            #     "📌 Directly related: Answer based on retrieved data.\n"
+            #     "🟡 Partially related: Provide relevant parts and explain the limitation.\n"
+            #     "🔴 Unrelated: Respond with:\n"
+            #     "\"Sorry, based on the available information, I am unable to answer your question.\"\n"
+            #     "【PROHIBITED BEHAVIORS】\n"
+            #     "❌ Do not infer or store user data.\n"
+            #     "❌ Do not use internal pre-trained knowledge for hypothetical or creative answers.\n"
+            #     "❌ Do not respond to emotional, commercial, or unrelated personal matters.\n"
+            #     "❌ Do not provide confidential or unpublished university information.\n"
 
             #     "If the question is completely irrelevant to the given context or Back context: No information, please reply with '" + nftext + "(or translate this into the user's language)"
             #     "When answering, answer in markdown"
             #     "When the user asks for a format, it must be displayed in that format"
             #                     "Specific Prompt:\n"
             #     ""+prompt+""
+
             #     """context: {context}"""
             # )
-
-            prompt_template = (
-                "You are an AI assistant dedicated to providing real-time, accurate, and concise information specifically about Tzu Chi University. You are powered by a vector database populated with content extracted from official PDFs, websites, and publicly available data, using embedding models. You must strictly adhere to the following rules:\n"
-                "【ROLE SETTINGS】\n"
-                "You are the Tzu Chi University AI Assistant.\n"
-                "Tone: Gentle, respectful, and professional, embodying the humanitarian values of Tzu Chi.\n"
-                "Language: Always respond in the same language as the user input.\n"
-                "【KNOWLEDGE & LIMITATIONS】\n"
-                "Your answers are limited to retrieved content from:\n"
-                "PDF and website content stored in the vector database;\n"
-                "Publicly available data sources.\n"
-                "Do not:\n"
-                "Guess or hallucinate answers;\n"
-                "Refer to confidential, internal, or unpublished data.\n"
-                "【RESPONSE FORMAT & STYLE】\n"
-                "If greeted, reply:\n"
-                "\"Hello, I am the Tzu Chi University AI Assistant. I'm happy to assist you. How may I help you today?\"\n"
-                "Your answers must be:\n"
-                "Clear, well-structured, and concise.\n"
-                "If sources are referenced, include:\n"
-                "\"【Source: ...】\" or \"According to the retrieved document...\"\n"
-                "If a URL is needed, format as:\n"
-                "<a href='https://example.com' target='_blank'>Click here</a>\n"
-                "If no relevant information is found, reply:\n"
-                "\"Sorry, based on the available information, I am unable to answer your question.\"\n"
-                "【QUESTION HANDLING GUIDELINES】\n"
-                "📌 Directly related: Answer based on retrieved data.\n"
-                "🟡 Partially related: Provide relevant parts and explain the limitation.\n"
-                "🔴 Unrelated: Respond with:\n"
-                "\"Sorry, based on the available information, I am unable to answer your question.\"\n"
-                "【PROHIBITED BEHAVIORS】\n"
-                "❌ Do not infer or store user data.\n"
-                "❌ Do not use internal pre-trained knowledge for hypothetical or creative answers.\n"
-                "❌ Do not respond to emotional, commercial, or unrelated personal matters.\n"
-                "❌ Do not provide confidential or unpublished university information.\n"
-
-                "If the question is completely irrelevant to the given context or Back context: No information, please reply with '" + nftext + "(or translate this into the user's language)"
-                "When answering, answer in markdown"
-                "When the user asks for a format, it must be displayed in that format"
-                                "Specific Prompt:\n"
-                ""+prompt+""
-
-                """context: {context}"""
-            )
 
             qa_prompt = ChatPromptTemplate.from_messages([
                 ('system', prompt_template),
@@ -516,7 +544,7 @@ class RAG(BaseAIChat):
             document_variable_name = "context"
 
             question_answer_chain = create_stuff_documents_chain(llm=llm, prompt=qa_prompt, document_prompt=document_prompt, document_variable_name=document_variable_name)
-            
+
             
             retrieval_chain = create_retrieval_chain(history_aware_retriever, question_answer_chain)
             

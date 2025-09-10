@@ -32,6 +32,7 @@ database_user = os.getenv("DATABASE_USER")
 database_password = os.getenv("DATABASE_PASSWORD")
 
 
+
 class Database():
     def __init__(self) -> None:
         self.conn = None  # Database connection object
